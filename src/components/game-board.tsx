@@ -88,11 +88,6 @@ const GameBoard: FC<GameBoardProps> = ({ board, onSwap, isProcessing }) => {
           />
         ))
       )}
-      {isProcessing && (
-        <div className="absolute inset-0 bg-background/30 flex items-center justify-center rounded-xl z-10">
-           {/* Optional: Add a spinner here */}
-        </div>
-      )}
     </div>
   );
 };
