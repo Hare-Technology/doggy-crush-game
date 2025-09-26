@@ -11,6 +11,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Loader2, PartyPopper, Frown } from 'lucide-react';
 import type { GameState } from '@/lib/types';
+import { useSound } from '@/hooks/use-sound';
 
 interface GameOverDialogProps {
   gameState: GameState;
@@ -28,8 +29,10 @@ export default function GameOverDialog({
   isProcessing,
 }: GameOverDialogProps) {
   const isOpen = gameState === 'win' || gameState === 'lose';
+  const { playSound } = useSound();
 
   const handleActionClick = () => {
+    playSound('click');
     if (gameState === 'win') {
       onNextLevel();
     } else {

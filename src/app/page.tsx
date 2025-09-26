@@ -25,6 +25,7 @@ import { useToast } from '@/hooks/use-toast';
 import { suggestNextLevelParams } from '@/ai/flows/suggest-next-level-params';
 import { useAuth } from '@/hooks/use-auth';
 import { updateUserStats } from '@/lib/firestore';
+import { useSound } from '@/hooks/use-sound';
 
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 
@@ -41,6 +42,7 @@ export default function Home() {
   const [comboMessage, setComboMessage] = useState<string>('');
   const { toast } = useToast();
   const { user } = useAuth();
+  const { playSound } = useSound();
 
   const scoreNeeded = useMemo(
     () => Math.max(0, targetScore - score),
@@ -87,9 +89,12 @@ export default function Home() {
 
         cascadeCount++;
         if (cascadeCount > 1) {
+          playSound('combo');
           const comboText = `Combo x${cascadeCount}!`;
           setComboMessage(comboText);
           setTimeout(() => setComboMessage(''), 1500);
+        } else {
+          playSound('match');
         }
 
         const points = matches.length * 10 * cascadeCount;
@@ -137,7 +142,7 @@ export default function Home() {
 
       return tempBoard;
     },
-    [setIsAnimating]
+    [setIsAnimating, playSound]
   );
 
   useEffect(() => {
@@ -160,6 +165,7 @@ export default function Home() {
       // Handle power-up activation
       const swappedTileWithPowerup = tile1.powerUp ? tile1 : tile2.powerUp ? tile2 : null;
       if(swappedTileWithPowerup) {
+          playSound('bomb');
           const {newBoard, clearedTiles} = activatePowerUp(tempBoard, swappedTileWithPowerup);
           
           setMovesLeft(prev => prev - 1);
@@ -221,11 +227,17 @@ export default function Home() {
       setBoard(finalBoard);
       setIsProcessing(false);
     },
-    [board, isProcessing, gameState, processMatchesAndCascades, toast]
+    [board, isProcessing, gameState, processMatchesAndCascades, toast, playSound]
   );
 
   const handleGameOver = useCallback(
     async (didWin: boolean) => {
+      if (didWin) {
+        playSound('win');
+      } else {
+        playSound('lose');
+      }
+
       if (user && score > 0) {
         setIsProcessing(true);
         try {
@@ -250,7 +262,7 @@ export default function Home() {
         }
       }
     },
-    [user, level, score, toast]
+    [user, level, score, toast, playSound]
   );
 
   useEffect(() => {
