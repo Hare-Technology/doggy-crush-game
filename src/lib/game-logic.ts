@@ -1,3 +1,4 @@
+
 import { BOARD_SIZE, TILE_TYPES } from './constants';
 import type { Board, Tile, PowerUpType } from './types';
 
@@ -53,7 +54,6 @@ export const findMatches = (
   matches: Tile[];
   powerUps: { tile: Tile; powerUp: PowerUpType }[];
 } => {
-  const allTiles = board.flat().filter((t): t is Tile => t !== null);
   const horizontalMatches: Tile[][] = [];
   const verticalMatches: Tile[][] = [];
 
@@ -74,10 +74,12 @@ export const findMatches = (
         if (match.length >= 3) {
           horizontalMatches.push(match);
           col += match.length;
-          continue;
+        } else {
+          col++;
         }
+      } else {
+        col++;
       }
-      col++;
     }
   }
 
@@ -98,10 +100,12 @@ export const findMatches = (
         if (match.length >= 3) {
           verticalMatches.push(match);
           row += match.length;
-          continue;
+        } else {
+          row++;
         }
+      } else {
+        row++;
       }
-      row++;
     }
   }
 
