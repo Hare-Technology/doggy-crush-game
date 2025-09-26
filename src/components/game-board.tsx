@@ -14,9 +14,9 @@ interface GameBoardProps {
 
 const tileEmojiMap: Record<string, string> = {
   paw: '🐾',
-  bone: '🦴',
-  house: '🏠',
-  ball: '🎾',
+  bone: '🐕',
+  house: '🐩',
+  ball: '🦮',
   bowl: '🐶',
 };
 
