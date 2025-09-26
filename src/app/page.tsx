@@ -80,10 +80,11 @@ export default function Home() {
         localStorage.removeItem('doggyCrushGameState');
       }
 
-      let newBoard = createInitialBoard();
-      while (!checkBoardForMoves(newBoard)) {
+      let newBoard: Board;
+      do {
         newBoard = createInitialBoard();
-      }
+      } while (!checkBoardForMoves(newBoard));
+
 
       setBoard(newBoard);
       await delay(100);
@@ -533,37 +534,41 @@ export default function Home() {
 
   useEffect(() => {
     const runLevelEndCascade = async () => {
-      if (gameState !== 'level_end') return;
-  
+      if (gameState !== 'level_end' || isProcessing) return;
+    
       setIsProcessing(true);
-      let currentBoard = board;
-  
-      // Keep activating powerups until there are no more
-      while (currentBoard.flat().some(t => t?.powerUp)) {
-        const powerUpsOnBoard = currentBoard.flat().filter(t => t?.powerUp);
-  
-        for (const tile of powerUpsOnBoard) {
-          if (tile) {
-            const currentTile = currentBoard.flat().find(t => t?.id === tile.id);
-            if (currentTile) {
-              currentBoard = await handleTileClick(currentTile);
-              await delay(500); 
-            }
-          }
+    
+      let powerUpsOnBoard = board.flat().filter((t): t is Tile => !!t?.powerUp);
+    
+      while (powerUpsOnBoard.length > 0) {
+        const tileToClick = powerUpsOnBoard[0];
+        
+        // Find the most up-to-date version of the tile on the board
+        const currentTile = board.flat().find(t => t?.id === tileToClick.id);
+        
+        if (currentTile) {
+          await handleTileClick(currentTile);
+          // After click, the board state is updated inside handleTileClick.
+          // We re-evaluate the powerups on the new board state in the next iteration.
         }
+        
+        // Let state update and animations run before the next check
+        await delay(500); 
+        powerUpsOnBoard = board.flat().filter((t): t is Tile => !!t?.powerUp);
       }
-  
-      // Final check for any remaining matches
-      const finalBoard = await processMatchesAndCascades(currentBoard);
+    
+      // Final check for any remaining matches that might have formed
+      const finalBoard = await processMatchesAndCascades(board);
       setBoard(finalBoard);
       
       setIsProcessing(false);
       handleGameOver(true);
       setGameState('win');
     };
-  
+    
     runLevelEndCascade();
-  }, [gameState]);
+  }, [gameState, board, handleTileClick, processMatchesAndCascades, handleGameOver, isProcessing]);
+  
 
   const handleRestart = useCallback(async () => {
     try {
