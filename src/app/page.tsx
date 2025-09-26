@@ -609,13 +609,37 @@ if (typeof idCounter === 'number') {
     startNewLevel(1, INITIAL_MOVES, INITIAL_TARGET_SCORE);
   }, [startNewLevel]);
 
-  const handleNextLevel = useCallback(() => {
+  const getNextLevelParams = useCallback(() => {
     const nextLevel = level + 1;
-    // Standard progression: harder target, slightly fewer moves over time
-    const newTarget = targetScore + 1000;
-    const newMoves = Math.max(10, INITIAL_MOVES - Math.floor(level / 2) * 2);
+    let targetIncrease = 1000;
+    let moveAdjustment = -2;
+
+    // Player did very well, make it much harder
+    if (movesLeft > 10) {
+        targetIncrease = 2000 + (level * 200);
+        moveAdjustment = -3;
+    } 
+    // Player did okay, standard increase
+    else if (movesLeft > 3) {
+        targetIncrease = 1000 + (level * 100);
+        moveAdjustment = -2;
+    } 
+    // Player struggled, make it slightly harder
+    else {
+        targetIncrease = 500 + (level * 50);
+        moveAdjustment = -1;
+    }
+
+    const newTarget = targetScore + targetIncrease;
+    const newMoves = Math.max(10, movesLeft + moveAdjustment);
+
+    return { nextLevel, newTarget, newMoves };
+  }, [level, movesLeft, targetScore]);
+
+  const handleNextLevel = useCallback(() => {
+    const { nextLevel, newTarget, newMoves } = getNextLevelParams();
     startNewLevel(nextLevel, newMoves, newTarget);
-  }, [level, startNewLevel, targetScore]);
+  }, [startNewLevel, getNextLevelParams]);
 
   const coinBonuses = useMemo(() => {
     if (gameState !== 'win' || levelEndTime === 0) return null;
