@@ -202,7 +202,7 @@ export default function Home() {
       setBoard(boardAfterGravity);
       await delay(300);
 
-      const newFilledBoard = fillEmptyTiles(boardAfterGravity);
+      const newFilledBoard = fillEmptyTiles(boardWithNulls);
       setBoard(newFilledBoard);
       await delay(300);
 
@@ -281,7 +281,6 @@ export default function Home() {
       if (tile.powerUp) {
         setIsProcessing(true);
         setSelectedTile(null);
-        setMovesLeft(prev => prev - 1);
 
         let finalBoard: Board;
 
@@ -342,7 +341,6 @@ export default function Home() {
           checkBoard = await processMatchesAndCascades(reshuffledBoard);
         }
         setBoard(checkBoard);
-        setMovesLeft(prev => prev + 1);
         setIsProcessing(false);
         return;
       }
@@ -376,10 +374,10 @@ export default function Home() {
       if (didWin) {
         playSound('win');
         const timeTaken = Math.round((endTime - levelStartTime) / 1000); // in seconds
-        const timeBonus = Math.max(0, 180 - timeTaken) * 5; // 5 coins per second under 3 minutes
-        const moveBonus = movesLeft * 20; // 20 coins per move left
-        const comboBonus = highestCombo * 50; // 50 coins per max combo
-        const powerUpBonus = powerUpsMade * 30; // 30 coins per power-up created
+        const timeBonus = Math.max(0, 180 - timeTaken) * 2; // 2 coins per second under 3 minutes
+        const moveBonus = movesLeft * 5; // 5 coins per move left
+        const comboBonus = highestCombo * 10; // 10 coins per max combo
+        const powerUpBonus = powerUpsMade * 15; // 15 coins per power-up created
         const coinsEarned = timeBonus + moveBonus + comboBonus + powerUpBonus;
         setCoins(prev => prev + coinsEarned);
         
@@ -444,6 +442,7 @@ export default function Home() {
 
   const handleNextLevel = useCallback(async () => {
     try {
+      setIsProcessing(true);
       toast({
         title: 'Designing Next Level...',
         description: 'Our AI is crafting a new challenge for you!',
@@ -479,10 +478,10 @@ export default function Home() {
     if(gameState !== 'win' || levelEndTime === 0) return null;
     const timeTaken = Math.round((levelEndTime - levelStartTime) / 1000);
     return {
-        movesLeft: movesLeft * 20,
-        highestCombo: highestCombo * 50,
-        powerUpsMade: powerUpsMade * 30,
-        time: Math.max(0, 180 - timeTaken) * 5,
+        movesLeft: movesLeft * 5,
+        highestCombo: highestCombo * 10,
+        powerUpsMade: powerUpsMade * 15,
+        time: Math.max(0, 180 - timeTaken) * 2,
     }
   }, [gameState, levelEndTime, levelStartTime, movesLeft, highestCombo, powerUpsMade]);
 
