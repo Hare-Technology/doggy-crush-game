@@ -30,14 +30,9 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { updateUserStats, getUserCoins } from '@/lib/firestore';
 import { useSound } from '@/hooks/use-sound';
+import { adaptLevel } from '@/ai/flows/adapt-level-flow';
 
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
-
-const getNextLevelParams = (level: number) => {
-  const suggestedMoves = Math.max(10, INITIAL_MOVES - Math.floor(level / 2) * 2);
-  const suggestedTargetScore = INITIAL_TARGET_SCORE + level * 750;
-  return { suggestedMoves, suggestedTargetScore };
-};
 
 export default function Home() {
   const [board, setBoard] = useState<Board>([]);
@@ -424,7 +419,7 @@ if (typeof idCounter === 'number') {
     } else {
       // This is the first tile selection
       if (tile.powerUp && tile.powerUp !== 'rainbow') {
-        // Power-ups that activate on click
+        // Power-ups that activate on click don't use a move
         setIsProcessing(true);
 
         const { clearedTiles, secondaryExplosions } = activatePowerUp(board, tile);
@@ -606,9 +601,36 @@ if (typeof idCounter === 'number') {
   
   const handleRestart = useCallback(async () => {
     setIsProcessing(true);
-    const { suggestedMoves, suggestedTargetScore } = getNextLevelParams(level);
-    startNewLevel(level, suggestedMoves, suggestedTargetScore);
-  }, [startNewLevel, level]);
+    try {
+      toast({ title: 'The AI is designing your level...' });
+      const response = await adaptLevel({
+        level: level,
+        score: score,
+        targetScore: targetScore,
+        movesLeft: 0, // Restarting means they lost
+        highestCombo: highestCombo,
+        didWin: false,
+      });
+      toast({
+        title: "The Architect's Notes",
+        description: response.reasoning,
+      });
+      startNewLevel(level, response.suggestedMoves, response.suggestedTargetScore);
+    } catch (e) {
+      console.error(e);
+      toast({
+        title: 'AI Error',
+        description: 'The AI failed. Using standard level parameters.',
+        variant: 'destructive',
+      });
+      // Fallback to a simpler logic
+      const newTarget = Math.max(1000, targetScore - 500);
+      const newMoves = movesLeft + 5;
+      startNewLevel(level, newMoves, newTarget);
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [startNewLevel, level, score, targetScore, highestCombo, toast]);
 
   const handleNewGame = useCallback(() => {
     startNewLevel(1, INITIAL_MOVES, INITIAL_TARGET_SCORE);
@@ -617,16 +639,36 @@ if (typeof idCounter === 'number') {
   const handleNextLevel = useCallback(async () => {
     setIsProcessing(true);
     const nextLevel = level + 1;
-    const { suggestedMoves, suggestedTargetScore } = getNextLevelParams(nextLevel);
-    
-    toast({
-      title: `Level ${nextLevel} Ready!`,
-      description: `You have ${suggestedMoves} moves to reach ${suggestedTargetScore.toLocaleString()} points. Good luck!`,
-    });
-
-    startNewLevel(nextLevel, suggestedMoves, suggestedTargetScore);
-    setIsProcessing(false);
-  }, [level, startNewLevel, toast]);
+    try {
+      toast({ title: 'The AI is designing your next challenge...' });
+      const response = await adaptLevel({
+        level,
+        score,
+        targetScore,
+        movesLeft,
+        highestCombo,
+        didWin: true,
+      });
+      toast({
+        title: "The Architect's Notes",
+        description: response.reasoning,
+      });
+      startNewLevel(nextLevel, response.suggestedMoves, response.suggestedTargetScore);
+    } catch(e) {
+       console.error(e);
+      toast({
+        title: 'AI Error',
+        description: 'The AI failed to respond. Using standard level progression.',
+        variant: 'destructive',
+      });
+      // Fallback to a simpler logic
+      const newTarget = targetScore + 1000;
+      const newMoves = Math.max(10, INITIAL_MOVES - Math.floor(level / 2) * 2);
+      startNewLevel(nextLevel, newMoves, newTarget);
+    } finally {
+        setIsProcessing(false);
+    }
+  }, [level, startNewLevel, toast, score, targetScore, movesLeft, highestCombo]);
 
   const coinBonuses = useMemo(() => {
     if (gameState !== 'win' || levelEndTime === 0) return null;
