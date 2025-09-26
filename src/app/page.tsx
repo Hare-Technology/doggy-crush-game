@@ -119,15 +119,14 @@ export default function Home() {
         if (powerUp) {
           const { tile: powerUpTile, powerUp: powerUpType } = powerUp;
           // Find the tile on the board to update.
-          const tileToUpdate = newBoardWithNulls
-            .flat()
-            .find(t => t?.id === powerUpTile.id);
-          if (tileToUpdate) {
-            newBoardWithNulls[tileToUpdate.row][tileToUpdate.col] = {
-              ...tileToUpdate,
-              powerUp: powerUpType,
-            };
-          }
+          newBoardWithNulls = newBoardWithNulls.map(row =>
+            row.map(t => {
+              if (t && t.id === powerUpTile.id) {
+                return { ...t, powerUp: powerUpType };
+              }
+              return t;
+            })
+          );
         }
 
         setBoard(newBoardWithNulls);
@@ -153,12 +152,9 @@ export default function Home() {
     },
     [playSound]
   );
-  
+
   const processBoardChanges = useCallback(
-    async (
-      initialBoard: Board,
-      clearedTiles: Tile[]
-    ): Promise<Board> => {
+    async (initialBoard: Board, clearedTiles: Tile[]): Promise<Board> => {
       const clearedTileIds = new Set(clearedTiles.map(t => t.id));
       setIsAnimating(prev => new Set([...prev, ...clearedTileIds]));
       playSound('bomb');
@@ -169,8 +165,8 @@ export default function Home() {
           if (!tile) return null;
           // Don't clear other powerups unless they are the one being activated
           if (tile.powerUp && !clearedTileIds.has(tile.id)) {
-             return tile;
-           }
+            return tile;
+          }
           if (clearedTileIds.has(tile.id)) {
             return null;
           }
@@ -188,7 +184,7 @@ export default function Home() {
       const newFilledBoard = fillEmptyTiles(boardAfterGravity);
       setBoard(newFilledBoard);
       await delay(300);
-      
+
       const boardAfterCascade = await processMatchesAndCascades(newFilledBoard);
       setBoard(boardAfterCascade);
 
@@ -196,7 +192,6 @@ export default function Home() {
     },
     [playSound, processMatchesAndCascades]
   );
-
 
   useEffect(() => {
     if (board.length === 0 && typeof window !== 'undefined') {
@@ -208,9 +203,9 @@ export default function Home() {
     async (tile1: Tile, tile2: Tile) => {
       if (isProcessing || gameState !== 'playing') return;
       if (!areTilesAdjacent(tile1, tile2)) return;
-      
+
       if (tile1.powerUp || tile2.powerUp) {
-        setSelectedTile(null); 
+        setSelectedTile(null);
         setIsProcessing(false);
         return;
       }
@@ -227,7 +222,7 @@ export default function Home() {
 
       tempBoard[r1][c1] = landingTileForT1;
       tempBoard[r2][c2] = landingTileForT2;
-      
+
       setBoard(tempBoard);
       await delay(300);
 
@@ -239,7 +234,7 @@ export default function Home() {
         setMovesLeft(prev => prev + 1); // Revert move count
         return;
       }
-      
+
       const boardAfterMatches = await processMatchesAndCascades(tempBoard);
 
       let finalBoard = boardAfterMatches;
@@ -269,76 +264,81 @@ export default function Home() {
         setMovesLeft(prev => prev - 1);
 
         if (tile.powerUp === 'bomb') {
-            // --- First Explosion ---
-            const { clearedTiles, randomBombTile } = activatePowerUp(board, tile);
-            setScore(prev => prev + clearedTiles.length * 10);
-            let boardAfterFirstExplosion = await processBoardChanges(board, [
-              ...clearedTiles,
-            ]);
+          // --- First Explosion ---
+          const { clearedTiles, randomBombTile } = activatePowerUp(board, tile);
+          setScore(prev => prev + clearedTiles.length * 10);
+          let boardAfterFirstExplosion = await processBoardChanges(board, [
+            ...clearedTiles,
+          ]);
 
-            if (randomBombTile) {
-              // --- Second Explosion (Delayed) ---
-              // 1. Visually turn the random tile into a bomb
-              let tempBoardWithNewBomb = boardAfterFirstExplosion.map(row =>
-                row.map(t => {
-                  if (t && t.id === randomBombTile.id) {
-                    return { ...t, powerUp: 'bomb' as 'bomb' };
-                  }
-                  return t;
-                })
+          if (randomBombTile) {
+            // --- Second Explosion (Delayed) ---
+            // 1. Visually turn the random tile into a bomb
+            let tempBoardWithNewBomb = boardAfterFirstExplosion.map(row =>
+              row.map(t => {
+                if (t && t.id === randomBombTile.id) {
+                  return { ...t, powerUp: 'bomb' as 'bomb' };
+                }
+                return t;
+              })
+            );
+            setBoard(tempBoardWithNewBomb);
+            await delay(0);
+
+            // 2. Find the new bomb's current position after potential shifts
+            const currentSecondBombTile = tempBoardWithNewBomb
+              .flat()
+              .find(t => t?.id === randomBombTile.id);
+
+            if (currentSecondBombTile) {
+              const { clearedTiles: secondClearedTiles } = activatePowerUp(
+                tempBoardWithNewBomb,
+                currentSecondBombTile
               );
-              setBoard(tempBoardWithNewBomb);
-              await delay(0); 
+              // Add the new bomb tile itself to the cleared list for the second explosion
+              secondClearedTiles.push(currentSecondBombTile);
 
-              // 2. Find the new bomb's current position after potential shifts
-              const currentSecondBombTile = tempBoardWithNewBomb
-                .flat()
-                .find(t => t?.id === randomBombTile.id);
-              
-              if (currentSecondBombTile) {
-                const { clearedTiles: secondClearedTiles } = activatePowerUp(
-                  tempBoardWithNewBomb,
-                  currentSecondBombTile
-                );
-                // Add the new bomb tile itself to the cleared list for the second explosion
-                secondClearedTiles.push(currentSecondBombTile);
-
-                setScore(prev => prev + secondClearedTiles.length * 10);
-                boardAfterFirstExplosion = await processBoardChanges(
-                  tempBoardWithNewBomb,
-                  [...secondClearedTiles]
-                );
-              }
+              setScore(prev => prev + secondClearedTiles.length * 10);
+              boardAfterFirstExplosion = await processBoardChanges(
+                tempBoardWithNewBomb,
+                [...secondClearedTiles]
+              );
             }
-            
-            let finalBoard = boardAfterFirstExplosion;
-            while (!checkBoardForMoves(finalBoard)) {
-              toast({ title: 'No moves left, reshuffling!' });
-              await delay(500);
-              let reshuffledBoard = createInitialBoard();
-              setBoard(reshuffledBoard);
-              await delay(300);
-              finalBoard = await processMatchesAndCascades(reshuffledBoard);
-            }
+          }
 
-            setBoard(finalBoard);
-        } else if (tile.powerUp === 'column_clear' || tile.powerUp === 'row_clear') {
-            const { clearedTiles } = activatePowerUp(board, tile);
-            setScore(prev => prev + clearedTiles.length * 10);
-            let boardAfterExplosion = await processBoardChanges(board, clearedTiles);
+          let finalBoard = boardAfterFirstExplosion;
+          while (!checkBoardForMoves(finalBoard)) {
+            toast({ title: 'No moves left, reshuffling!' });
+            await delay(500);
+            let reshuffledBoard = createInitialBoard();
+            setBoard(reshuffledBoard);
+            await delay(300);
+            finalBoard = await processMatchesAndCascades(reshuffledBoard);
+          }
 
-            let finalBoard = boardAfterExplosion;
-            while (!checkBoardForMoves(finalBoard)) {
-              toast({ title: 'No moves left, reshuffling!' });
-              await delay(500);
-              let reshuffledBoard = createInitialBoard();
-              setBoard(reshuffledBoard);
-              await delay(300);
-              finalBoard = await processMatchesAndCascades(reshuffledBoard);
-            }
-            setBoard(finalBoard);
+          setBoard(finalBoard);
+        } else if (
+          tile.powerUp === 'column_clear' ||
+          tile.powerUp === 'row_clear'
+        ) {
+          const { clearedTiles } = activatePowerUp(board, tile);
+          setScore(prev => prev + clearedTiles.length * 10);
+          let boardAfterExplosion = await processBoardChanges(
+            board,
+            clearedTiles
+          );
+
+          let finalBoard = boardAfterExplosion;
+          while (!checkBoardForMoves(finalBoard)) {
+            toast({ title: 'No moves left, reshuffling!' });
+            await delay(500);
+            let reshuffledBoard = createInitialBoard();
+            setBoard(reshuffledBoard);
+            await delay(300);
+            finalBoard = await processMatchesAndCascades(reshuffledBoard);
+          }
+          setBoard(finalBoard);
         }
-
 
         setIsProcessing(false);
         return;
@@ -354,7 +354,16 @@ export default function Home() {
         setSelectedTile(tile);
       }
     },
-    [isProcessing, gameState, selectedTile, handleSwap, board, processBoardChanges, processMatchesAndCascades, toast]
+    [
+      isProcessing,
+      gameState,
+      selectedTile,
+      handleSwap,
+      board,
+      processBoardChanges,
+      processMatchesAndCascades,
+      toast,
+    ]
   );
 
   const handleGameOver = useCallback(
@@ -419,7 +428,6 @@ export default function Home() {
     startNewLevel(1, INITIAL_MOVES, INITIAL_TARGET_SCORE);
   }, [startNewLevel]);
 
-
   const handleNextLevel = useCallback(async () => {
     setIsProcessing(true);
     try {
@@ -427,7 +435,7 @@ export default function Home() {
         title: 'Designing Next Level...',
         description: 'Our AI is crafting a new challenge for you!',
       });
-      
+
       const result = await suggestNextLevelParams({
         currentLevel: level,
         currentScore: score,
