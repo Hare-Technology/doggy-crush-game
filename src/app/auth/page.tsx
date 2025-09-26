@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
+  updateProfile,
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import Header from '@/components/header';
@@ -22,10 +23,13 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { PawPrint, Loader2 } from 'lucide-react';
+import { setUserDisplayName } from '@/lib/firestore';
 
 export default function AuthPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [displayName, setDisplayName] = useState('');
+  const [isSignUp, setIsSignUp] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
@@ -38,12 +42,28 @@ export default function AuthPage() {
     }
   }, [user, authLoading, router]);
 
-  const handleAuthAction = async (action: 'signup' | 'login') => {
+  const handleAuthAction = async () => {
+    if (isSignUp && !displayName) {
+        setError('Display name is required for sign up.');
+        toast({
+            title: 'Display Name Required',
+            description: 'Please enter a name to display on the leaderboard.',
+            variant: 'destructive',
+        });
+        return;
+    }
+
     setIsLoading(true);
     setError('');
     try {
-      if (action === 'signup') {
-        await createUserWithEmailAndPassword(auth, email, password);
+      if (isSignUp) {
+        const userCredential = await createUserWithEmailAndPassword(
+          auth,
+          email,
+          password
+        );
+        await updateProfile(userCredential.user, { displayName });
+        await setUserDisplayName(userCredential.user.uid, displayName);
         toast({
           title: 'Account Created!',
           description: "You've been successfully signed up.",
@@ -52,7 +72,7 @@ export default function AuthPage() {
         await signInWithEmailAndPassword(auth, email, password);
         toast({
           title: 'Signed In!',
-          description: "Welcome back to DoggyCrush.",
+          description: 'Welcome back to DoggyCrush.',
         });
       }
       router.push('/');
@@ -84,13 +104,28 @@ export default function AuthPage() {
           <CardHeader className="text-center">
             <CardTitle className="flex items-center justify-center gap-2 text-2xl">
               <PawPrint className="w-8 h-8 text-primary" />
-              Player Account
+              {isSignUp ? 'Create Your Player Account' : 'Player Login'}
             </CardTitle>
             <CardDescription>
-              Sign up or log in to save your progress
+              {isSignUp
+                ? 'Sign up to save your progress and compete!'
+                : 'Log in to continue your journey.'}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {isSignUp && (
+                 <div className="space-y-2">
+                    <Label htmlFor="displayName">Display Name</Label>
+                    <Input
+                      id="displayName"
+                      type="text"
+                      placeholder="YourPlayerName"
+                      value={displayName}
+                      onChange={e => setDisplayName(e.target.value)}
+                      disabled={isLoading}
+                    />
+                </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -119,26 +154,24 @@ export default function AuthPage() {
           <CardFooter className="flex flex-col gap-4">
             <Button
               className="w-full"
-              onClick={() => handleAuthAction('login')}
+              onClick={handleAuthAction}
               disabled={isLoading}
             >
               {isLoading ? (
                 <Loader2 className="animate-spin" />
               ) : (
-                'Login'
+                isSignUp ? 'Sign Up' : 'Login'
               )}
             </Button>
             <Button
               className="w-full"
               variant="outline"
-              onClick={() => handleAuthAction('signup')}
+              onClick={() => setIsSignUp(!isSignUp)}
               disabled={isLoading}
             >
-              {isLoading ? (
-                <Loader2 className="animate-spin" />
-              ) : (
-                'Sign Up'
-              )}
+              {isSignUp
+                ? 'Already have an account? Login'
+                : "Don't have an account? Sign Up"}
             </Button>
           </CardFooter>
         </Card>

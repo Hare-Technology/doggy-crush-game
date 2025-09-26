@@ -22,6 +22,8 @@ import {
 } from '@/lib/game-logic';
 import { useToast } from '@/hooks/use-toast';
 import { suggestNextLevelParams } from '@/ai/flows/suggest-next-level-params';
+import { useAuth } from '@/hooks/use-auth';
+import { updateUserStats } from '@/lib/firestore';
 
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 
@@ -34,9 +36,10 @@ export default function Home() {
   const [movesLeft, setMovesLeft] = useState(INITIAL_MOVES);
   const [gameState, setGameState] = useState<GameState>('playing');
   const [isProcessing, setIsProcessing] = useState(true);
-  const [isAnimating, setIsAnimating] = useState<Set<number>>(new Set());
+  const [isAnimating, setIsAnimating] = new Set<number>();
   const [comboMessage, setComboMessage] = useState<string>('');
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const scoreNeeded = useMemo(
     () => Math.max(0, targetScore - score),
@@ -44,7 +47,6 @@ export default function Home() {
   );
 
   useEffect(() => {
-    // Load high score from localStorage on component mount
     const savedHighScore = localStorage.getItem('doggyCrushHighScore');
     if (savedHighScore) {
       setHighScore(parseInt(savedHighScore, 10));
@@ -120,9 +122,8 @@ export default function Home() {
   );
 
   useEffect(() => {
-    // Generate the initial board on the client side to avoid hydration errors
     if (board.length === 0 && typeof window !== 'undefined') {
-       startNewLevel(1, INITIAL_MOVES, INITIAL_TARGET_SCORE);
+      startNewLevel(1, INITIAL_MOVES, INITIAL_TARGET_SCORE);
     }
   }, [board.length, startNewLevel]);
 
@@ -145,7 +146,6 @@ export default function Home() {
 
       const matches = findMatches(tempBoard);
       if (matches.length === 0) {
-        // No match, swap back
         setBoard(board);
         await delay(300);
         setIsProcessing(false);
@@ -162,7 +162,6 @@ export default function Home() {
         let reshuffledBoard = createInitialBoard();
         setBoard(reshuffledBoard);
         await delay(300);
-        // We need to process any matches that might have been created by the shuffle
         finalBoard = await processMatchesAndCascades(reshuffledBoard);
       }
       
@@ -171,6 +170,32 @@ export default function Home() {
     },
     [board, isProcessing, gameState, processMatchesAndCascades, toast]
   );
+    
+  const handleGameOver = useCallback(async (didWin: boolean) => {
+    if (user && score > 0) {
+      setIsProcessing(true);
+      try {
+        await updateUserStats({
+            userId: user.uid,
+            level,
+            score,
+            didWin,
+        });
+        toast({
+            title: "Score Saved!",
+            description: "Your progress has been saved to the leaderboard.",
+        });
+      } catch (error) {
+        toast({
+            title: "Sync Error",
+            description: "Could not save your score. Please try again later.",
+            variant: "destructive",
+        });
+      } finally {
+        setIsProcessing(false);
+      }
+    }
+  }, [user, level, score, toast]);
 
   useEffect(() => {
     if (isProcessing || board.length === 0) return;
@@ -182,10 +207,12 @@ export default function Home() {
 
     if (score >= targetScore) {
       setGameState('win');
+      handleGameOver(true);
     } else if (movesLeft <= 0) {
       setGameState('lose');
+      handleGameOver(false);
     }
-  }, [score, movesLeft, targetScore, isProcessing, board.length, highScore]);
+  }, [score, movesLeft, targetScore, isProcessing, board.length, highScore, handleGameOver]);
 
   const handleRestart = useCallback(() => {
     startNewLevel(level, INITIAL_MOVES, targetScore);
@@ -217,7 +244,6 @@ export default function Home() {
         description: 'Could not generate next level. Using default settings.',
         variant: 'destructive',
       });
-      // Fallback to a simple progression
       startNewLevel(
         level + 1,
         Math.max(10, INITIAL_MOVES - level),
