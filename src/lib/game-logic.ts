@@ -75,21 +75,29 @@ export const findMatches = (
       }
 
       if (match.length >= 3) {
-        match.forEach(t => matches.add(String(t.id)));
-
+        let powerUpTile: Tile | null = null;
         if (match.length >= 5 && !powerUp) {
-          const powerUpTile = match[Math.floor(match.length / 2)];
+          powerUpTile = match[Math.floor(match.length / 2)];
           powerUp = {
             tile: powerUpTile,
             powerUp: 'bomb',
           };
         } else if (match.length === 4 && !powerUp) {
-          const powerUpTile = match[Math.floor(match.length / 2)];
+          powerUpTile = match[Math.floor(match.length / 2)];
           powerUp = {
             tile: powerUpTile,
             powerUp: isVertical ? 'column_clear' : 'row_clear',
           };
         }
+        
+        match.forEach(t => {
+          // If a powerup is being created, don't add its source tile to the matches list.
+          if (powerUpTile && powerUpTile.id === t.id) {
+            return;
+          }
+          matches.add(String(t.id));
+        });
+
 
         i += match.length - 1; // Skip ahead
       }
@@ -111,12 +119,7 @@ export const findMatches = (
 
   const matchedTiles = allTiles.filter(t => matches.has(String(t.id)));
 
-  // If a powerup is being created, ensure its source tile is not in the final match list to be cleared immediately
-  const finalMatches = powerUp
-    ? matchedTiles.filter(t => t.id !== powerUp!.tile.id)
-    : matchedTiles;
-
-  return { matches: finalMatches, powerUp };
+  return { matches: matchedTiles, powerUp };
 };
 
 export const applyGravity = (
