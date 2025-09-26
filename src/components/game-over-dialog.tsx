@@ -113,15 +113,6 @@ export default function GameOverDialog({
           {gameState === 'win' && (
             <>
               <Button
-                onClick={handleRestartClick}
-                disabled={isProcessing}
-                size="lg"
-                variant="outline"
-              >
-                <RefreshCw className="mr-2 h-5 w-5" />
-                Replay
-              </Button>
-              <Button
                 onClick={handleNextLevelClick}
                 disabled={isProcessing}
                 size="lg"
