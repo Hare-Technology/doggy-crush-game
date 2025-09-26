@@ -64,7 +64,7 @@ const Tile: FC<{
     height: `calc(${100 / BOARD_SIZE}% - 4px)`,
     margin: '2px',
     backgroundColor: `hsl(var(--tile-color-${tile.type}))`,
-    transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)',
+    transitionTimingFunction: 'cubic-bezier(0.34, 1.56, 0.64, 1)',
   };
 
   if (isShuffling) {
