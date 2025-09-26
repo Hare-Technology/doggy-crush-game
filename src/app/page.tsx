@@ -279,7 +279,7 @@ export default function Home() {
       setBoard(boardAfterGravity);
       await delay(300);
 
-      const newFilledBoard = fillEmptyTiles(boardAfterGravity);
+      const newFilledBoard = fillEmptyTiles(boardWithNulls);
       setBoard(newFilledBoard);
       await delay(300);
 
@@ -357,7 +357,6 @@ export default function Home() {
 
       if (rainbowTile && otherTile && !otherTile.powerUp) {
         setIsProcessing(true);
-        setMovesLeft(prev => prev - 1);
         
         // Activate rainbow power-up by swapping
         const { clearedTiles } = activatePowerUp(board, rainbowTile, otherTile.type);
