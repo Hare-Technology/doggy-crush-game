@@ -51,30 +51,35 @@ export const findMatches = (
   const allTiles = board.flat().filter((t): t is Tile => t !== null);
 
   const checkLine = (line: (Tile | null)[]) => {
-    for (let i = 0; i < line.length - 2; ) {
+    if (line.length < 3) return;
+
+    for (let i = 0; i <= line.length - 3; i++) {
       const tile1 = line[i];
-      if (tile1 && !tile1.powerUp) {
-        const match: Tile[] = [tile1];
-        for (let j = i + 1; j < line.length; j++) {
-          const nextTile = line[j];
-          if (nextTile && !nextTile.powerUp && nextTile.type === tile1.type) {
-            match.push(nextTile);
-          } else {
-            break;
-          }
+      if (!tile1 || tile1.powerUp) continue;
+
+      let match = [tile1];
+      for (let j = i + 1; j < line.length; j++) {
+        const tile2 = line[j];
+        if (tile2 && !tile2.powerUp && tile2.type === tile1.type) {
+          match.push(tile2);
+        } else {
+          break;
         }
-        if (match.length >= 3) {
-          match.forEach(t => {
-            if (!t.powerUp) matches.add(String(t.id));
-          });
-          if (match.length >= 5 && !powerUp) {
-            // Create bomb on the middle tile of the 5-match
-            powerUp = { tile: match[2], powerUp: 'bomb' };
-          }
+      }
+
+      if (match.length >= 3) {
+        match.forEach(t => matches.add(String(t.id)));
+
+        // Create a bomb for a 5+ match
+        if (match.length >= 5 && !powerUp) {
+          // The bomb is created on the middle tile of the match
+          const powerUpTile = match[Math.floor(match.length / 2)];
+          powerUp = {
+            tile: powerUpTile,
+            powerUp: 'bomb',
+          };
         }
-        i += match.length > 1 ? match.length : 1;
-      } else {
-        i++;
+        i += match.length - 1; // Skip ahead past the current match
       }
     }
   };
@@ -89,12 +94,16 @@ export const findMatches = (
     checkLine(board.map(row => row[col]));
   }
 
-  const matchedTiles = allTiles.filter(
-    t => !t.powerUp && matches.has(String(t.id))
-  );
+  const matchedTiles = allTiles.filter(t => matches.has(String(t.id)));
 
-  return { matches: matchedTiles, powerUp };
+  // If a powerup is being created, ensure its source tile is not in the final match list to be cleared immediately
+  const finalMatches = powerUp
+    ? matchedTiles.filter(t => t.id !== powerUp!.tile.id)
+    : matchedTiles;
+
+  return { matches: finalMatches, powerUp };
 };
+
 
 export const applyGravity = (
   board: Board

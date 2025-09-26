@@ -108,8 +108,7 @@ export default function Home() {
         let newBoardWithNulls = tempBoard.map(row =>
           row.map(tile => {
             if (!tile) return null;
-            // Prevent power-ups from being cleared by matches
-            if (matchedTileIds.has(tile.id) && !tile.powerUp) {
+            if (matchedTileIds.has(tile.id)) {
               return null;
             }
             return tile;
@@ -118,17 +117,12 @@ export default function Home() {
         
         if (powerUp) {
           const { tile: powerUpTile, powerUp: powerUpType } = powerUp;
-          // Find the tile on the board to update
-          const targetTile = newBoardWithNulls
-            .flat()
-            .find(t => t?.id === powerUpTile.id);
-          
-          if (targetTile) {
-            newBoardWithNulls[targetTile.row][targetTile.col] = {
-              ...targetTile,
-              powerUp: powerUpType,
-            };
-          }
+          // Find the tile on the board to update.
+          // It's crucial to do this on `newBoardWithNulls` in case the tile was part of a match that is now null.
+          newBoardWithNulls[powerUpTile.row][powerUpTile.col] = {
+            ...powerUpTile,
+            powerUp: powerUpType,
+          };
         }
 
 
@@ -153,7 +147,7 @@ export default function Home() {
 
       return tempBoard;
     },
-    [setIsAnimating, playSound]
+    [playSound]
   );
   
   const processBoardChanges = useCallback(
@@ -169,9 +163,9 @@ export default function Home() {
       let boardWithNulls = initialBoard.map(row =>
         row.map(tile => {
           if (!tile) return null;
-          // Don't clear other powerups unless they were part of the activation
           if (clearedTileIds.has(tile.id)) {
-             if (tile.powerUp && !clearedTileIds.has(tile.id)) {
+            // Do not clear other power-ups unless they were part of the activation
+            if (tile.powerUp && !clearedTileIds.has(tile.id)) {
                return tile;
              }
             return null;
@@ -210,15 +204,14 @@ export default function Home() {
     async (tile1: Tile, tile2: Tile) => {
       if (isProcessing || gameState !== 'playing') return;
       if (!areTilesAdjacent(tile1, tile2)) return;
-
-      setIsProcessing(true);
       
-      // Prevent swapping with a power-up, as they are click-activated
       if (tile1.powerUp || tile2.powerUp) {
+        setSelectedTile(null); // Clear selection if a powerup is involved
         setIsProcessing(false);
         return;
       }
 
+      setIsProcessing(true);
       setMovesLeft(prev => prev - 1);
 
       let tempBoard = board.map(r => r.map(tile => (tile ? { ...tile } : null)));
@@ -268,6 +261,7 @@ export default function Home() {
       // If a power-up is clicked, activate it
       if (tile.powerUp === 'bomb') {
         setIsProcessing(true);
+        setSelectedTile(null); // Clear selection
         setMovesLeft(prev => prev - 1);
 
         // --- First Explosion ---
@@ -322,7 +316,6 @@ export default function Home() {
 
         setBoard(finalBoard);
         setIsProcessing(false);
-        setSelectedTile(null); // Clear selection
         return;
       }
 
