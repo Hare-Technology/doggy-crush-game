@@ -65,9 +65,17 @@ export default function Home() {
         setBoard(newBoardWithNulls);
         await delay(500); // Animation for tiles disappearing
 
-        const boardAfterGravity = applyGravity(newBoardWithNulls);
+        const { newBoard: boardAfterGravity, movedTiles } = applyGravity(newBoardWithNulls);
+        const boardWithMovedFlags = boardAfterGravity.map((row) =>
+          row.map((tile) => {
+            if (tile && movedTiles.has(tile.id)) {
+              return { ...tile, isNew: true }; // Use isNew to trigger animation
+            }
+            return tile;
+          })
+        );
         
-        setBoard(boardAfterGravity);
+        setBoard(boardWithMovedFlags);
         await delay(500); // Animation for gravity
 
         const newFilledBoard = fillEmptyTiles(boardAfterGravity, true);
@@ -123,13 +131,15 @@ export default function Home() {
 
       setIsProcessing(true);
 
-      const tempBoard = board.map(r => [...r]);
+      const tempBoard = board.map(r => r.map(tile => tile ? {...tile} : null));
       const { row: r1, col: c1 } = tile1;
       const { row: r2, col: c2 } = tile2;
 
       // Swap tiles in the board
-      tempBoard[r1][c1] = { ...tile2, row: r1, col: c1 };
-      tempBoard[r2][c2] = { ...tile1, row: r2, col: c2 };
+      const swappedTile1 = { ...tile2, row: r1, col: c1 };
+      const swappedTile2 = { ...tile1, row: r2, col: c2 };
+      tempBoard[r1][c1] = swappedTile1;
+      tempBoard[r2][c2] = swappedTile2;
       
       setBoard(tempBoard);
       await delay(500);
@@ -137,7 +147,9 @@ export default function Home() {
       const matches = findMatches(tempBoard);
 
       if (matches.length === 0) {
-        setBoard(board); // Swap back
+        // Create the original board state to swap back
+        const originalBoard = board.map(r => r.map(tile => tile ? {...tile} : null));
+        setBoard(originalBoard);
         await delay(500);
         setIsProcessing(false);
         return;

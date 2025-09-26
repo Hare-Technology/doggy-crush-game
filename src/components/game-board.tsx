@@ -1,7 +1,7 @@
 'use client';
 
 import type { FC } from 'react';
-import { memo, useState, useCallback } from 'react';
+import { memo, useState, useCallback, useEffect, useRef } from 'react';
 import type { Board, Tile as TileType } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { PawIcon, BoneIcon, DogHouseIcon, BallIcon, FoodBowlIcon } from '@/components/dog-icons';
@@ -32,15 +32,25 @@ const MemoizedTile: FC<{
   const size = tileSize - tileGap;
   const offset = tileGap / 2;
 
+  const tileRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (tile.isNew && tileRef.current) {
+      tileRef.current.classList.remove('animate-drop-in');
+      void tileRef.current.offsetWidth; // Trigger reflow
+      tileRef.current.classList.add('animate-drop-in');
+    }
+  }, [tile.isNew, tile.id]);
+
   return (
     <div
+      ref={tileRef}
       onClick={() => onClick(tile)}
       className={cn(
-        'absolute aspect-square rounded-lg flex items-center justify-center cursor-pointer transition-all duration-300 ease-in-out',
+        'absolute aspect-square rounded-lg flex items-center justify-center cursor-pointer transition-all duration-500 ease-out',
         'transform-gpu',
         isSelected && 'ring-4 ring-offset-2 ring-white z-10 scale-110',
         'shadow-md',
-        tile.isNew && 'animate-drop-in',
         'bg-[hsl(var(--tile-color))]'
       )}
       style={
@@ -129,9 +139,9 @@ const GameBoard: FC<GameBoardProps> = ({ board, onSwap, isProcessing }) => {
 
       {/* Tiles */}
       <div className="absolute top-2 left-2 right-2 bottom-2">
-        {flattenedBoard.map((tile, i) => (
+        {flattenedBoard.map((tile) => (
             <MemoizedTile
-              key={tile.id || i}
+              key={tile.id}
               tile={tile}
               onClick={handleTileClick}
               isSelected={!!(selectedTile && tile && selectedTile.id === tile.id)}

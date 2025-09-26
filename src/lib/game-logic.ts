@@ -69,7 +69,24 @@ export const createInitialBoard = (): Board => {
       }
   }
 
-  return board.map(row => row.map(tile => (tile ? { ...tile, isNew: false } : null)));
+  // Set isNew to false for the final board state before starting the game
+  const finalBoard = board.map(row => row.map(tile => {
+    if (tile) {
+      return {...tile, isNew: true}; // Start with animation
+    }
+    return null;
+  }));
+
+  // A brief delay to allow the initial animation to be seen
+  setTimeout(() => {
+    finalBoard.forEach(row => row.forEach(tile => {
+      if (tile) {
+        tile.isNew = false;
+      }
+    }));
+  }, 500);
+
+  return finalBoard;
 };
 
 export const findMatches = (board: Board): Tile[] => {
@@ -135,22 +152,25 @@ export const findMatches = (board: Board): Tile[] => {
 };
 
 
-export const applyGravity = (board: Board): Board => {
+export const applyGravity = (board: Board): { newBoard: Board; movedTiles: Set<number> } => {
     const newBoard = board.map(row => [...row]);
+    const movedTiles = new Set<number>();
 
     for (let col = 0; col < BOARD_SIZE; col++) {
         let emptyRow = BOARD_SIZE - 1;
         for (let row = BOARD_SIZE - 1; row >= 0; row--) {
             if (newBoard[row][col]) {
                 if (emptyRow !== row) {
-                    newBoard[emptyRow][col] = { ...newBoard[row][col]!, row: emptyRow, col };
+                    const tile = newBoard[row][col]!;
+                    newBoard[emptyRow][col] = { ...tile, row: emptyRow };
+                    movedTiles.add(tile.id);
                     newBoard[row][col] = null;
                 }
                 emptyRow--;
             }
         }
     }
-    return newBoard;
+    return { newBoard, movedTiles };
 };
 
 export const fillEmptyTiles = (board: Board, isNew = false): Board => {
@@ -165,6 +185,11 @@ export const fillEmptyTiles = (board: Board, isNew = false): Board => {
                     col,
                     isNew,
                 };
+            } else {
+                // Ensure existing tiles don't have isNew flag unless they just moved
+                if (newBoard[row][col]!.isNew && !isNew) {
+                    newBoard[row][col] = { ...newBoard[row][col]!, isNew: false };
+                }
             }
         }
     }
