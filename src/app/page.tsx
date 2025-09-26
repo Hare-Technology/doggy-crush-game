@@ -279,7 +279,11 @@ export default function Home() {
       let hasEmptySpaces = true;
       while (hasEmptySpaces) {
         const { newBoard: boardAfterGravity } = applyGravity(workingBoard);
-        workingBoard = fillEmptyTiles(boardAfterGravity);
+        setBoard(boardAfterGravity); // show gravity in action
+        await delay(200);
+
+        const boardWithNewTiles = fillEmptyTiles(boardAfterGravity);
+        workingBoard = boardWithNewTiles;
         setBoard(workingBoard);
         await delay(200);
 
@@ -296,8 +300,7 @@ export default function Home() {
 
   const handleRegularSwap = useCallback(async (tile1: Tile, tile2: Tile) => {
     setIsProcessing(true);
-    setMovesLeft(prev => prev - 1);
-
+    
     let tempBoard = board.map(r => r.map(tile => (tile ? { ...tile } : null)));
     const { row: r1, col: c1 } = tile1;
     const { row: r2, col: c2 } = tile2;
@@ -316,9 +319,10 @@ export default function Home() {
       setBoard(board); // Swap back
       await delay(300);
       setIsProcessing(false);
-      setMovesLeft(prev => prev + 1); // Revert move count
-      return;
+      return; // Do not decrement moves
     }
+    
+    setMovesLeft(prev => prev - 1); // Decrement moves only on a valid swap
 
     const boardAfterMatches = await processMatchesAndCascades(tempBoard);
 
@@ -360,7 +364,6 @@ export default function Home() {
 
       if (rainbowTile && otherTile && !otherTile.powerUp) {
         setIsProcessing(true);
-        setMovesLeft(prev => prev - 1);
         
         // Activate rainbow power-up by swapping
         const { clearedTiles } = activatePowerUp(board, rainbowTile, otherTile.type);
@@ -377,7 +380,6 @@ export default function Home() {
         }
         
         setBoard(currentBoard);
-        setMovesLeft(prev => prev + 1); // Give back the move
         setIsProcessing(false);
 
       } else if (!tile1.powerUp && !tile2.powerUp) {
