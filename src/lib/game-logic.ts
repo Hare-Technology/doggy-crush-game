@@ -172,47 +172,68 @@ export const findMatches = (
 export const applyGravity = (
   board: Board
 ): { newBoard: Board; movedTiles: Set<number> } => {
-  const newBoard = board.map(row => [...row]);
+  const newBoard: Board = Array.from({ length: BOARD_SIZE }, () => Array(BOARD_SIZE).fill(null));
   const movedTiles = new Set<number>();
 
   for (let col = 0; col < BOARD_SIZE; col++) {
-    let emptyRow = BOARD_SIZE - 1;
-    for (let row = BOARD_SIZE - 1; row >= -BOARD_SIZE; row--) { // Check above the board as well
-      const tile = row >= 0 ? newBoard[row][col] : null;
-
+    const columnTiles: Tile[] = [];
+    // Collect all tiles in the current column, including those off-screen
+    for (let row = BOARD_SIZE - 1; row >= -BOARD_SIZE; row--) {
+      const tile = (row >= 0 && board[row] && board[row][col]) ? board[row][col] : null;
       if (tile) {
-        if (emptyRow !== row) {
-          const newRow = emptyRow;
-          // Temporarily create a copy of the tile to update its row
-          const movedTile = { ...tile, row: newRow };
-          // Find the tile in the flat board and update it
-          let originalRowFound = false;
-          for(let r=0; r < BOARD_SIZE; r++){
-              for(let c=0; c<BOARD_SIZE; c++){
-                  if(newBoard[r][c]?.id === tile.id){
-                      newBoard[r][c] = null;
-                      originalRowFound = true;
-                      break;
-                  }
-              }
-              if(originalRowFound) break;
-          }
-          newBoard[newRow][col] = movedTile;
+        columnTiles.push(tile);
+      }
+    }
+    
+    // Place tiles back into the column from the bottom up
+    let newRow = BOARD_SIZE - 1;
+    for (const tile of columnTiles) {
+      if (newRow >= 0) {
+        const hasMoved = tile.row !== newRow;
+        if(hasMoved) {
           movedTiles.add(tile.id);
         }
-        emptyRow--;
+        newBoard[newRow][col] = { ...tile, row: newRow, col };
+        newRow--;
       }
     }
   }
 
-  const finalBoard: Board = Array.from({ length: BOARD_SIZE }, () => Array(BOARD_SIZE).fill(null));
-  newBoard.flat().forEach(tile => {
-    if (tile && tile.row >= 0 && tile.row < BOARD_SIZE) {
-      finalBoard[tile.row][tile.col] = tile;
-    }
+  // The board is now partially filled from the bottom.
+  // We need to find all tiles on the board, even those that were off-screen.
+  const allTiles: Tile[] = [];
+  board.flat().forEach(tile => {
+    if (tile) allTiles.push(tile);
   });
 
+  const finalBoard: Board = Array.from({ length: BOARD_SIZE }, () => Array(BOARD_SIZE).fill(null));
 
+  for (let col = 0; col < BOARD_SIZE; col++) {
+    const currentColumn: Tile[] = [];
+    // Get all tiles for this column from the original board, including above-board ones
+    allTiles.forEach(tile => {
+      if (tile.col === col) {
+        currentColumn.push(tile);
+      }
+    });
+
+    // Sort them by row to maintain relative order
+    currentColumn.sort((a, b) => a.row - b.row);
+    
+    // Place them in the new board from the bottom up
+    let newRowIndex = BOARD_SIZE - 1;
+    for (let i = currentColumn.length - 1; i >= 0; i--) {
+      if (newRowIndex >= 0) {
+        const tile = currentColumn[i];
+        if (tile.row !== newRowIndex) {
+          movedTiles.add(tile.id);
+        }
+        finalBoard[newRowIndex][col] = { ...tile, row: newRowIndex, col: col };
+        newRowIndex--;
+      }
+    }
+  }
+  
   return { newBoard: finalBoard, movedTiles };
 };
 
