@@ -35,7 +35,6 @@ const MemoizedTile: FC<{
 
   return (
     <div
-      key={tile.id}
       onClick={() => onClick(tile)}
       className={cn(
         'w-full h-full aspect-square rounded-lg flex items-center justify-center cursor-pointer transition-all duration-300',
@@ -76,17 +75,16 @@ const GameBoard: FC<GameBoardProps> = ({ board, onSwap, isProcessing }) => {
   return (
     <div
       className={cn(
-        'relative grid grid-cols-8 grid-rows-8 gap-1 p-2 bg-primary/20 rounded-xl shadow-inner max-w-lg w-full aspect-square',
-        isProcessing && 'pointer-events-none'
+        'relative grid grid-cols-8 grid-rows-8 gap-1 p-2 bg-primary/20 rounded-xl shadow-inner max-w-lg w-full aspect-square'
       )}
     >
       <style jsx global>{`
         :root {
-          --tile-color-paw: 25 90% 85%;
-          --tile-color-bone: 45 95% 85%;
-          --tile-color-house: 190 85% 85%;
-          --tile-color-ball: 300 80% 85%;
-          --tile-color-bowl: 120 85% 85%;
+          --tile-color-paw: 25 90% 75%;
+          --tile-color-bone: 45 95% 75%;
+          --tile-color-house: 190 85% 75%;
+          --tile-color-ball: 300 80% 75%;
+          --tile-color-bowl: 120 85% 75%;
         }
       `}</style>
       {board.map((row, rowIndex) =>
