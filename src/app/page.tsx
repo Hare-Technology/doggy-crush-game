@@ -59,7 +59,7 @@ export default function Home() {
   );
 
   const startNewLevel = useCallback(
-    (newLevel: number, newMoves: number, newTarget: number) => {
+    async (newLevel: number, newMoves: number, newTarget: number) => {
       resetTileIdCounter();
       setLevel(newLevel);
       setMovesLeft(newMoves);
