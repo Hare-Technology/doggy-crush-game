@@ -22,15 +22,17 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
-import { Loader2, PawPrint } from 'lucide-react';
+import { Loader2, PawPrint, Eye, EyeOff } from 'lucide-react';
 import { setUserDisplayName } from '@/lib/firestore';
 
 export default function AuthPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
   const { toast } = useToast();
@@ -43,14 +45,25 @@ export default function AuthPage() {
   }, [user, authLoading, router]);
 
   const handleAuthAction = async () => {
-    if (isSignUp && !displayName) {
-      setError('Display name is required for sign up.');
-      toast({
-        title: 'Display Name Required',
-        description: 'Please enter a name to display on the leaderboard.',
-        variant: 'destructive',
-      });
-      return;
+    if (isSignUp) {
+      if (!displayName) {
+        setError('Display name is required for sign up.');
+        toast({
+          title: 'Display Name Required',
+          description: 'Please enter a name to display on the leaderboard.',
+          variant: 'destructive',
+        });
+        return;
+      }
+      if (password !== confirmPassword) {
+        setError('Passwords do not match.');
+        toast({
+          title: 'Password Mismatch',
+          description: 'Please ensure your passwords match.',
+          variant: 'destructive',
+        });
+        return;
+      }
     }
 
     setIsLoading(true);
@@ -86,6 +99,10 @@ export default function AuthPage() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const togglePasswordVisibility = () => {
+    setShowPassword(prev => !prev);
   };
 
   if (authLoading || user) {
@@ -137,16 +154,56 @@ export default function AuthPage() {
                 disabled={isLoading}
               />
             </div>
-            <div className="space-y-2">
+            <div className="space-y-2 relative">
               <Label htmlFor="password">Password</Label>
               <Input
                 id="password"
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 disabled={isLoading}
+                className="pr-10"
               />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="absolute right-1 top-7 h-7 w-7 text-muted-foreground"
+                onClick={togglePasswordVisibility}
+              >
+                {showPassword ? (
+                  <EyeOff className="h-5 w-5" />
+                ) : (
+                  <Eye className="h-5 w-5" />
+                )}
+              </Button>
             </div>
+            {isSignUp && (
+              <div className="space-y-2 relative">
+                <Label htmlFor="confirmPassword">Confirm Password</Label>
+                <Input
+                  id="confirmPassword"
+                  type={showPassword ? 'text' : 'password'}
+                  value={confirmPassword}
+                  onChange={e => setConfirmPassword(e.target.value)}
+                  disabled={isLoading}
+                  className="pr-10"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-1 top-7 h-7 w-7 text-muted-foreground"
+                  onClick={togglePasswordVisibility}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-5 w-5" />
+                  ) : (
+                    <Eye className="h-5 w-5" />
+                  )}
+                </Button>
+              </div>
+            )}
             {error && (
               <p className="text-sm text-center text-destructive">{error}</p>
             )}
