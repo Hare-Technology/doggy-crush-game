@@ -36,7 +36,7 @@ const MemoizedTile: FC<{
     <div
       onClick={() => onClick(tile)}
       className={cn(
-        'absolute aspect-square rounded-lg flex items-center justify-center cursor-pointer transition-all duration-500 ease-in-out',
+        'absolute aspect-square rounded-lg flex items-center justify-center cursor-pointer transition-all duration-1000 ease-in-out',
         'transform-gpu',
         isSelected && 'ring-4 ring-offset-2 ring-white z-10',
         'shadow-md',
@@ -50,7 +50,7 @@ const MemoizedTile: FC<{
           height: `${size}px`,
           top: `${tile.row * tileSize + offset}px`,
           left: `${tile.col * tileSize + offset}px`,
-          transition: 'top 0.5s ease-in-out, left 0.5s ease-in-out',
+          transition: 'top 1s ease-in-out, left 1s ease-in-out',
         } as React.CSSProperties
       }
     >
