@@ -25,7 +25,7 @@ import { suggestNextLevelParams } from '@/ai/flows/suggest-next-level-params';
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 
 export default function Home() {
-  const [board, setBoard] = useState<Board>(createInitialBoard());
+  const [board, setBoard] = useState<Board>([]);
   const [level, setLevel] = useState(1);
   const [score, setScore] = useState(0);
   const [targetScore, setTargetScore] = useState(INITIAL_TARGET_SCORE);
@@ -104,8 +104,11 @@ export default function Home() {
   );
 
   useEffect(() => {
-    startNewLevel(1, INITIAL_MOVES, INITIAL_TARGET_SCORE);
-  }, [startNewLevel]);
+    // Generate the initial board on the client side to avoid hydration errors
+    if (board.length === 0) {
+      startNewLevel(1, INITIAL_MOVES, INITIAL_TARGET_SCORE);
+    }
+  }, [board.length, startNewLevel]);
 
   const handleSwap = useCallback(
     async (tile1: Tile, tile2: Tile) => {
@@ -152,14 +155,14 @@ export default function Home() {
   );
 
   useEffect(() => {
-    if (isProcessing) return;
+    if (isProcessing || board.length === 0) return;
 
     if (score >= targetScore) {
       setGameState('win');
     } else if (movesLeft <= 0) {
       setGameState('lose');
     }
-  }, [score, movesLeft, targetScore, isProcessing]);
+  }, [score, movesLeft, targetScore, isProcessing, board.length]);
 
   const handleRestart = useCallback(() => {
     startNewLevel(level, INITIAL_MOVES, targetScore);
