@@ -20,14 +20,14 @@ const powerUps: {
     id: 'bomb',
     name: 'Bomb',
     description: 'Clears a 3x3 area.',
-    cost: 500,
+    cost: 250,
     icon: BombIcon,
   },
   {
     id: 'rainbow',
     name: 'Rainbow',
     description: 'Clears all of one color.',
-    cost: 1000,
+    cost: 500,
     icon: RainbowIcon,
   },
   {
