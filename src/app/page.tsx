@@ -27,12 +27,17 @@ import {
   findHint,
 } from '@/lib/game-logic';
 import { useToast } from '@/hooks/use-toast';
-import { suggestNextLevelParams } from '@/ai/flows/suggest-next-level-params';
 import { useAuth } from '@/hooks/use-auth';
 import { updateUserStats, getUserCoins } from '@/lib/firestore';
 import { useSound } from '@/hooks/use-sound';
 
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
+
+const getNextLevelParams = (level: number) => {
+  const suggestedMoves = Math.max(10, INITIAL_MOVES - Math.floor(level / 2) * 2);
+  const suggestedTargetScore = INITIAL_TARGET_SCORE + level * 750;
+  return { suggestedMoves, suggestedTargetScore };
+};
 
 export default function Home() {
   const [board, setBoard] = useState<Board>([]);
@@ -600,27 +605,9 @@ if (typeof idCounter === 'number') {
   
   
   const handleRestart = useCallback(async () => {
-    try {
-      setIsProcessing(true);
-      const result = await suggestNextLevelParams({
-        currentLevel: level,
-        currentScore: 0,
-        movesRemaining: 0,
-      });
-
-      startNewLevel(
-        level,
-        result.suggestedMoves,
-        result.suggestedTargetScore
-      );
-    } catch (error) {
-      console.error('AI level suggestion failed:', error);
-      startNewLevel(
-        level,
-        Math.max(10, INITIAL_MOVES - level),
-        INITIAL_TARGET_SCORE + level * 500
-      );
-    }
+    setIsProcessing(true);
+    const { suggestedMoves, suggestedTargetScore } = getNextLevelParams(level);
+    startNewLevel(level, suggestedMoves, suggestedTargetScore);
   }, [startNewLevel, level]);
 
   const handleNewGame = useCallback(() => {
@@ -628,43 +615,18 @@ if (typeof idCounter === 'number') {
   }, [startNewLevel]);
 
   const handleNextLevel = useCallback(async () => {
-    try {
-      setIsProcessing(true);
-      toast({
-        title: 'The Architect is designing...',
-        description: 'Crafting a new challenge for you!',
-      });
+    setIsProcessing(true);
+    const nextLevel = level + 1;
+    const { suggestedMoves, suggestedTargetScore } = getNextLevelParams(nextLevel);
+    
+    toast({
+      title: `Level ${nextLevel} Ready!`,
+      description: `You have ${suggestedMoves} moves to reach ${suggestedTargetScore.toLocaleString()} points. Good luck!`,
+    });
 
-      const result = await suggestNextLevelParams({
-        currentLevel: level,
-        currentScore: score,
-        movesRemaining: movesLeft,
-      });
-      
-      toast({
-        title: `Level ${level + 1} Ready!`,
-        description: result.reasoning,
-      });
-
-      startNewLevel(
-        level + 1,
-        result.suggestedMoves,
-        result.suggestedTargetScore
-      );
-    } catch (error) {
-      console.error('AI level suggestion failed:', error);
-      toast({
-        title: 'Error',
-        description: 'Could not generate next level. Using default settings.',
-        variant: 'destructive',
-      });
-      startNewLevel(
-        level + 1,
-        Math.max(10, INITIAL_MOVES - level),
-        INITIAL_TARGET_SCORE + level * 500
-      );
-    }
-  }, [level, score, movesLeft, startNewLevel, toast]);
+    startNewLevel(nextLevel, suggestedMoves, suggestedTargetScore);
+    setIsProcessing(false);
+  }, [level, startNewLevel, toast]);
 
   const coinBonuses = useMemo(() => {
     if (gameState !== 'win' || levelEndTime === 0) return null;
