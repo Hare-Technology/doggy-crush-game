@@ -108,7 +108,10 @@ export default function Home() {
         let newBoardWithNulls = tempBoard.map(row =>
           row.map(tile => {
             if (!tile) return null;
-            if (tile.powerUp) return tile; // Don't null out powerups
+            // Prevent power-ups from being cleared by matches
+            if (tile.powerUp && !matchedTileIds.has(tile.id)) {
+              return tile;
+            }
             if (matchedTileIds.has(tile.id)) {
               return null;
             }
@@ -261,7 +264,6 @@ export default function Home() {
       if (tile.powerUp) {
         setIsProcessing(true);
         setSelectedTile(null); // Clear selection
-        setMovesLeft(prev => prev - 1);
 
         let finalBoard: Board;
 
