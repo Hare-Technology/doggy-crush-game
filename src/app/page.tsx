@@ -79,7 +79,7 @@ export default function Home() {
   );
 
   const processMatchesAndCascades = useCallback(
-    async (currentBoard: Board, isSwap: boolean = false, swappedTileForPowerup?: Tile) => {
+    async (currentBoard: Board) => {
       let tempBoard = currentBoard;
       let cascadeCount = 0;
       let totalPoints = 0;
@@ -111,19 +111,14 @@ export default function Home() {
           )
         );
 
-        if (isSwap && powerUp && swappedTileForPowerup) {
-            const { powerUp: powerUpType } = powerUp;
-            const targetTile = swappedTileForPowerup;
-            
-            if(newBoardWithNulls[targetTile.row] && newBoardWithNulls[targetTile.row][targetTile.col] === null) {
-              const originalTile = tempBoard[targetTile.row][targetTile.col]
-              if (originalTile) {
-                newBoardWithNulls[targetTile.row][targetTile.col] = {
-                  ...originalTile,
-                  id: Date.now() + Math.random(), // Ensure new ID
-                  powerUp: powerUpType
-                };
-              }
+        if (powerUp) {
+            const { tile: powerUpTile, powerUp: powerUpType } = powerUp;
+            const targetTile = tempBoard[powerUpTile.row][powerUpTile.col]
+            if (targetTile) {
+              newBoardWithNulls[powerUpTile.row][powerUpTile.col] = {
+                ...targetTile,
+                powerUp: powerUpType
+              };
             }
         }
         
@@ -196,9 +191,15 @@ export default function Home() {
       if (!areTilesAdjacent(tile1, tile2)) return;
 
       setIsProcessing(true);
+      
+      // Prevent swapping with a power-up
+      if (tile1.powerUp || tile2.powerUp) {
+        setIsProcessing(false);
+        return;
+      }
+
       setMovesLeft(prev => prev - 1);
 
-      // Regular swap
       let tempBoard = board.map(r => r.map(tile => (tile ? { ...tile } : null)));
       const { row: r1, col: c1 } = tile1;
       const { row: r2, col: c2 } = tile2;
@@ -217,9 +218,7 @@ export default function Home() {
         return;
       }
       
-      // Determine which tile was swapped *in* to make the match
-      const swappedInTile = tempBoard[r1][c1]!;
-      const boardAfterMatches = await processMatchesAndCascades(tempBoard, true, swappedInTile);
+      const boardAfterMatches = await processMatchesAndCascades(tempBoard);
 
       let finalBoard = boardAfterMatches;
       while (!checkBoardForMoves(finalBoard)) {
@@ -243,12 +242,23 @@ export default function Home() {
     // If a power-up is clicked, activate it
     if (tile.powerUp) {
       setIsProcessing(true);
+      setMovesLeft(prev => prev - 1);
       
       const { clearedTiles } = activatePowerUp(board, tile);
       setScore(prev => prev + clearedTiles.length * 10);
       const finalBoard = await processBoardChanges(board, clearedTiles);
       
-      setBoard(finalBoard);
+      let finalBoardAfterNoMovesCheck = finalBoard;
+      while (!checkBoardForMoves(finalBoardAfterNoMovesCheck)) {
+        toast({ title: 'No moves left, reshuffling!' });
+        await delay(500);
+        let reshuffledBoard = createInitialBoard();
+        setBoard(reshuffledBoard);
+        await delay(300);
+        finalBoardAfterNoMovesCheck = await processMatchesAndCascades(reshuffledBoard);
+      }
+
+      setBoard(finalBoardAfterNoMovesCheck);
       setIsProcessing(false);
       
       setSelectedTile(null); // Clear selection after activation
@@ -264,7 +274,7 @@ export default function Home() {
     } else {
       setSelectedTile(tile);
     }
-  }, [isProcessing, gameState, selectedTile, handleSwap, board, processBoardChanges]);
+  }, [isProcessing, gameState, selectedTile, handleSwap, board, processBoardChanges, processMatchesAndCascades, toast]);
 
   const handleGameOver = useCallback(
     async (didWin: boolean) => {
@@ -327,8 +337,8 @@ export default function Home() {
   ]);
 
   const handleRestart = useCallback(() => {
-    startNewLevel(level, movesLeft, targetScore);
-  }, [level, movesLeft, targetScore, startNewLevel]);
+    startNewLevel(1, INITIAL_MOVES, INITIAL_TARGET_SCORE);
+  }, [startNewLevel]);
 
 
 
