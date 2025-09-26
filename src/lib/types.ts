@@ -5,8 +5,8 @@ export type PowerUpType =
   | 'bomb'
   | 'column_clear'
   | 'row_clear'
-  | 'rainbow'
-  | '+5 moves';
+  | 'rainbow';
+
 
 export type Tile = {
   id: number;

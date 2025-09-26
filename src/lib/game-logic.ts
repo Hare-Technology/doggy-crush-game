@@ -193,13 +193,17 @@ export const applyGravity = (
 };
 
 
-export const fillEmptyTiles = (board: Board): Board => {
+export const fillEmptyTiles = (
+  board: Board,
+  specialPlacements: { row: number; col: number; powerUp: PowerUpType, id: number }[] = []
+): Board => {
   const newBoard = board.map(row => [...row]);
+  const specialPlacedCoords = new Set(specialPlacements.map(p => `${p.row},${p.col}`));
 
   for (let col = 0; col < BOARD_SIZE; col++) {
     let newTileRow = -1;
     for (let row = BOARD_SIZE - 1; row >= 0; row--) {
-      if (newBoard[row][col] === null) {
+      if (newBoard[row][col] === null && !specialPlacedCoords.has(`${row},${col}`)) {
         newBoard[row][col] = {
           id: tileIdCounter++,
           type: getRandomTileType(),
@@ -210,8 +214,20 @@ export const fillEmptyTiles = (board: Board): Board => {
       }
     }
   }
+
+  specialPlacements.forEach(p => {
+    newBoard[p.row][p.col] = {
+        id: p.id,
+        type: getRandomTileType(), // Type doesn't matter much for a bomb
+        row: -1, // Spawn off-screen
+        col: p.col,
+        powerUp: p.powerUp
+    }
+  });
+
   return newBoard;
 };
+
 
 export const areTilesAdjacent = (tile1: Tile, tile2: Tile): boolean => {
   const rowDiff = Math.abs(tile1.row - tile2.row);
@@ -343,7 +359,7 @@ export const activatePowerUp = (
         clearedTilesMap.set(targetTile.id, targetTile);
       }
     }
-  } else if (tile.powerUp === 'rainbow') {
+  } else if (tile.powerUp === 'rainbow' || targetType) {
     let typeToClear = targetType;
     if (!typeToClear) {
         // If no target (e.g. from just clicking), pick a random one
@@ -366,5 +382,3 @@ export const activatePowerUp = (
 
   return { clearedTiles: Array.from(clearedTilesMap.values()), secondaryExplosions };
 };
-
-    

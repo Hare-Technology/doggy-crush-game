@@ -59,6 +59,7 @@ export default function Home() {
   const hintTimer = useRef<NodeJS.Timeout | null>(null);
   const [winStreak, setWinStreak] = useState(0);
   const [canBuyContinue, setCanBuyContinue] = useState(true);
+  const [pendingRainbowPurchase, setPendingRainbowPurchase] = useState(false);
 
   const scoreNeeded = useMemo(
     () => Math.max(0, targetScore - score),
@@ -105,6 +106,8 @@ export default function Home() {
       setLevelEndTime(0);
       setIsShuffling(true);
       setCanBuyContinue(true);
+      setPendingRainbowPurchase(false);
+
 
       if (
         newLevel === 1 &&
@@ -369,27 +372,24 @@ export default function Home() {
       if (emptyCells.length === 0) return boardAfterPrimary;
 
       const spawnLocation = emptyCells[Math.floor(Math.random() * emptyCells.length)];
-
-      // Create and place the new bomb (off-screen initially)
-      const newBomb: Tile = {
-        id: tileIdCounter + 1000, // Use a temporary high ID to avoid collisions
-        type: 'paw', // Type doesn't matter
-        row: -1, // Spawn off-screen
-        col: spawnLocation.col,
-        powerUp: 'bomb',
-      };
       
-      // Manually add the bomb and apply gravity to bring it onto the board
       let tempBoard = boardAfterPrimary.map(r => [...r]);
-      tempBoard[spawnLocation.row][spawnLocation.col] = newBomb;
-      let filledBoard = fillEmptyTiles(tempBoard);
-      const { newBoard: gravityBoard } = applyGravity(filledBoard);
+      const newBombId = tileIdCounter + 1000;
+      tempBoard = fillEmptyTiles(tempBoard, [{
+          row: spawnLocation.row,
+          col: spawnLocation.col,
+          powerUp: 'bomb',
+          id: newBombId,
+      }]);
+
+
+      const { newBoard: gravityBoard } = applyGravity(tempBoard);
 
       setBoard(gravityBoard);
       await delay(700); // Let gravity animation finish
 
       // Now find the bomb on the board to detonate it
-      const bombToDetonate = gravityBoard.flat().find(t => t?.id === newBomb.id);
+      const bombToDetonate = gravityBoard.flat().find(t => t?.id === newBombId);
 
       if (bombToDetonate) {
         await delay(250); // Fuse time
@@ -461,6 +461,47 @@ export default function Home() {
       if (isProcessing || gameState !== 'playing') return;
 
       resetHintTimer();
+
+      if (pendingRainbowPurchase) {
+        if (tile.powerUp) {
+          toast({
+            title: 'Invalid Target',
+            description: 'Cannot target a power-up tile.',
+            variant: 'destructive',
+          });
+          return;
+        }
+
+        setIsProcessing(true);
+        setPendingRainbowPurchase(false);
+        setMovesLeft(prev => prev - 1);
+        setCoins(prev => prev - 300);
+
+        toast({
+          title: 'Power-up Activated!',
+          description: `Rainbow cleared all ${tile.type}s.`,
+        });
+
+        const { clearedTiles } = activatePowerUp(board, tile, tile.type);
+        setScore(prev => prev + clearedTiles.length * 10);
+        let currentBoard = await processBoardChanges(board, clearedTiles);
+
+        while (!checkBoardForMoves(currentBoard)) {
+          toast({ title: 'No moves left, reshuffling!' });
+          await delay(700);
+          setIsShuffling(true);
+          let reshuffledBoard = createInitialBoard();
+          setBoard(reshuffledBoard);
+          await delay(1000);
+          setIsShuffling(false);
+          currentBoard = await processMatchesAndCascades(reshuffledBoard);
+        }
+
+        setBoard(currentBoard);
+        setIsProcessing(false);
+        return;
+      }
+
 
       // Power-ups that activate on click DO NOT use a move
       if (tile.powerUp && !selectedTile) {
@@ -591,6 +632,7 @@ export default function Home() {
       processMatchesAndCascades,
       resetHintTimer,
       handleBombChainReaction,
+      pendingRainbowPurchase,
     ]
   );
 
@@ -892,7 +934,7 @@ export default function Home() {
   ]);
 
   const handlePurchase = useCallback(
-    (powerUp: PowerUpType) => {
+    (powerUp: PowerUpType | '+5 moves') => {
       setIsProcessing(true);
       if (powerUp === '+5 moves') {
         setMovesLeft(prev => prev + 5);
@@ -900,6 +942,13 @@ export default function Home() {
         toast({
           title: 'Power-up Purchased!',
           description: '+5 moves have been added.',
+        });
+        setIsProcessing(false);
+      } else if (powerUp === 'rainbow') {
+        setPendingRainbowPurchase(true);
+        toast({
+          title: 'Rainbow Power-up Ready!',
+          description: 'Click on any color to clear it from the board.',
         });
         setIsProcessing(false);
       } else {
@@ -982,6 +1031,7 @@ export default function Home() {
           onPurchase={handlePurchase}
           isProcessing={isProcessing}
           setCoins={setCoins}
+          pendingRainbowPurchase={pendingRainbowPurchase}
         />
       </main>
       <GameOverDialog
@@ -999,5 +1049,3 @@ export default function Home() {
     </div>
   );
 }
-
-    

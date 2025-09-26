@@ -44,6 +44,7 @@ interface PowerUpShopProps {
   onPurchase: (powerUp: ShopPowerUp) => void;
   isProcessing: boolean;
   setCoins: (updater: (prevCoins: number) => number) => void;
+  pendingRainbowPurchase: boolean;
 }
 
 export default function PowerUpShop({
@@ -51,6 +52,7 @@ export default function PowerUpShop({
   onPurchase,
   isProcessing,
   setCoins,
+  pendingRainbowPurchase,
 }: PowerUpShopProps) {
   const { toast } = useToast();
 
@@ -63,7 +65,10 @@ export default function PowerUpShop({
       });
       return;
     }
-    setCoins(prev => prev - item.cost);
+    // Defer coin deduction for rainbow until after selection
+    if (item.id !== 'rainbow') {
+        setCoins(prev => prev - item.cost);
+    }
     onPurchase(item.id);
   };
 
@@ -86,7 +91,7 @@ export default function PowerUpShop({
               </p>
               <Button
                 onClick={() => handleBuyClick(item)}
-                disabled={isProcessing || coins < item.cost}
+                disabled={isProcessing || coins < item.cost || (pendingRainbowPurchase && item.id !== 'rainbow')}
                 className="w-full"
               >
                 {isProcessing ? (
