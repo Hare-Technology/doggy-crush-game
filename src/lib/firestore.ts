@@ -83,20 +83,25 @@ export async function updateUserStats(stats: UserStats): Promise<void> {
           highestLevel: stats.level,
           wins: stats.didWin ? 1 : 0,
           losses: stats.didWin ? 0 : 1,
-          coins: stats.coins,
+          coins: stats.didWin ? stats.coins : 0,
           // Note: displayName is not available here, it's set on signup
         });
       } else {
         const currentData = userDoc.data();
-        const currentCoins = currentData.coins || 0;
         
+        let newCoinTotal = currentData.coins || 0;
+        if (stats.didWin) {
+            newCoinTotal += stats.coins;
+        } else {
+            newCoinTotal = 0; // Reset coins on loss
+        }
+
         transaction.update(userRef, {
           totalScore: increment(stats.score),
           highestLevel: Math.max(currentData.highestLevel || 1, stats.level),
           wins: increment(stats.didWin ? 1 : 0),
           losses: increment(stats.didWin ? 0 : 1),
-          // Set coins directly instead of incrementing to avoid issues if local and remote are out of sync
-          coins: currentCoins + stats.coins,
+          coins: newCoinTotal,
         });
       }
     });

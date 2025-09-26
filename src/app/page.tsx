@@ -397,7 +397,6 @@ export default function Home() {
           tile.powerUp === 'column_clear' ||
           tile.powerUp === 'row_clear'
         ) {
-          setMovesLeft(prev => prev - 1);
           const { clearedTiles } = activatePowerUp(board, tile);
           setScore(prev => prev + clearedTiles.length * 10);
           finalBoard = await processBoardChanges(board, clearedTiles);
@@ -415,7 +414,6 @@ export default function Home() {
           checkBoard = await processMatchesAndCascades(reshuffledBoard);
         }
         setBoard(checkBoard);
-        setMovesLeft(prev => prev + 1);
         setIsProcessing(false);
         return;
       }
@@ -461,6 +459,7 @@ export default function Home() {
         setCoins(prev => prev + coinsEarned);
       } else {
         playSound('lose');
+        setCoins(0);
       }
 
       if (user) {
@@ -470,7 +469,7 @@ export default function Home() {
             level: didWin ? level : 0, // only update level on win
             score,
             didWin,
-            coins: coinsEarned,
+            coins: didWin ? coinsEarned : 0,
           });
           if (didWin) {
             toast({
