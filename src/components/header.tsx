@@ -7,6 +7,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { auth } from '@/lib/firebase';
 import { signOut } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
+import { PawIcon } from '@/components/dog-icons';
 
 export default function Header() {
   const router = useRouter();
@@ -55,9 +56,9 @@ export default function Header() {
   return (
     <header className="flex flex-col items-center p-4 bg-background/80 backdrop-blur-sm sticky top-0 z-50 border-b">
       <h1 className="text-3xl font-bold flex items-center justify-center gap-2 mb-4">
-        <PawPrint className="w-8 h-8 text-primary scale-x-[-1]" />
+        <PawIcon className="w-8 h-8 text-primary scale-x-[-1]" />
         DoggyCrush
-        <PawPrint className="w-8 h-8 text-primary" />
+        <PawIcon className="w-8 h-8 text-primary" />
       </h1>
       <Tabs value={activeTab} onValueChange={onTabChange}>
         <TabsList>
