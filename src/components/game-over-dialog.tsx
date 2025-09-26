@@ -73,7 +73,7 @@ export default function GameOverDialog({
             )}
           </AlertDialogTitle>
           <AlertDialogDescription className="text-center text-lg">
-            {gameState === 'lose' && "You've been reset to level 1. "}
+            {gameState === 'lose' && "Better luck next time. "}
             Your final score was:{' '}
             <span className="font-bold text-foreground">
               {score.toLocaleString()}
@@ -128,14 +128,14 @@ export default function GameOverDialog({
           {gameState === 'lose' && (
             <>
                <Button
-                onClick={handleNewGameClick}
+                onClick={handleRestartClick}
                 disabled={isProcessing}
                 size="lg"
               >
                 {isProcessing ? (
                   <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                 ) : (
-                   'New Game'
+                   'Try Again'
                 )}
               </Button>
             </>

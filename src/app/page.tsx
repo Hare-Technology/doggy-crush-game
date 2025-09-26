@@ -56,6 +56,7 @@ export default function Home() {
   const [isShuffling, setIsShuffling] = useState(false);
   const [hintTile, setHintTile] = useState<Tile | null>(null);
   const hintTimer = useRef<NodeJS.Timeout | null>(null);
+  const [winStreak, setWinStreak] = useState(0);
 
   const scoreNeeded = useMemo(
     () => Math.max(0, targetScore - score),
@@ -107,6 +108,7 @@ export default function Home() {
         newTarget === INITIAL_TARGET_SCORE
       ) {
         localStorage.removeItem('doggyCrushGameState');
+        setWinStreak(0);
       }
 
       let newBoard: Board;
@@ -143,16 +145,20 @@ export default function Home() {
           targetScore,
           idCounter,
           coins: savedCoins,
+          winStreak: savedWinStreak,
         } = JSON.parse(savedGame);
 
         setBoard(board);
-setLevel(level);
-setScore(score);
-setMovesLeft(movesLeft);
-setTargetScore(targetScore);
-if (typeof idCounter === 'number') {
-  setTileIdCounter(idCounter);
-}
+        setLevel(level);
+        setScore(score);
+        setMovesLeft(movesLeft);
+        setTargetScore(targetScore);
+        if (typeof idCounter === 'number') {
+          setTileIdCounter(idCounter);
+        }
+        if (typeof savedWinStreak === 'number') {
+          setWinStreak(savedWinStreak);
+        }
         // If user logs out, keep their local coins.
         // If they log in, we defer to server coins.
         if (!user) {
@@ -182,10 +188,11 @@ if (typeof idCounter === 'number') {
         targetScore,
         idCounter: tileIdCounter,
         coins,
+        winStreak,
       };
       localStorage.setItem('doggyCrushGameState', JSON.stringify(stateToSave));
     }
-  }, [board, level, score, movesLeft, targetScore, gameState, coins]);
+  }, [board, level, score, movesLeft, targetScore, gameState, coins, winStreak]);
 
   useEffect(() => {
     if (!user) {
@@ -461,6 +468,9 @@ if (typeof idCounter === 'number') {
       setLevelEndTime(endTime);
       if (!didWin) {
         localStorage.removeItem('doggyCrushGameState');
+        setWinStreak(0);
+      } else {
+        setWinStreak(prev => prev + 1);
       }
 
       let coinsEarned = 0;
@@ -503,7 +513,7 @@ if (typeof idCounter === 'number') {
       }
 
       if (!didWin) {
-        setLevel(1);
+        // The restart logic will handle setting the level
       }
     },
     [
@@ -599,11 +609,11 @@ if (typeof idCounter === 'number') {
   
   
   const handleRestart = useCallback(() => {
-    // When restarting a level, make it a bit easier
-    const newTarget = Math.max(1000, targetScore - 500);
-    const newMoves = movesLeft + 5;
+    // When restarting a level after a loss, make it a bit easier
+    const newTarget = Math.max(1000, targetScore - 1000);
+    const newMoves = INITIAL_MOVES - level + 5; // Give more moves than the original attempt
     startNewLevel(level, newMoves, newTarget);
-  }, [startNewLevel, level, targetScore, movesLeft]);
+  }, [startNewLevel, level, targetScore]);
 
   const handleNewGame = useCallback(() => {
     startNewLevel(1, INITIAL_MOVES, INITIAL_TARGET_SCORE);
@@ -623,10 +633,10 @@ if (typeof idCounter === 'number') {
     performanceScore += Math.min(40, movesLeft * 2);
     // 2. Time taken (up to 30 points, less time is better)
     performanceScore += Math.max(0, 30 - (timeTaken - 30) / 5); // Lose points for every 5s over 30s
-    // 3. Powerups made (up to 15 points)
-    performanceScore += Math.min(15, powerUpsMade * 3);
-    // 4. Highest combo (up to 15 points)
-    performanceScore += Math.min(15, (highestCombo - 1) * 2);
+    // 3. Powerups made (up to 20 points)
+    performanceScore += Math.min(20, powerUpsMade * 4);
+    // 4. Highest combo (up to 10 points)
+    performanceScore += Math.min(10, (highestCombo - 1) * 2);
   
     let targetMultiplier = 1.0;
     let moveAdjustment = 0;
@@ -651,12 +661,21 @@ if (typeof idCounter === 'number') {
         moveAdjustment = 3;
         toast({ title: "Don't give up!", description: "Here's a little boost for the next level."});
     }
+
+    if (winStreak >= 3) {
+      targetMultiplier += 0.2; // Extra 20% score target on a streak
+      moveAdjustment -= 2; // 2 fewer moves on a streak
+      toast({
+        title: `On a Roll!`,
+        description: `You've won ${winStreak} in a row! The heat is on!`,
+      });
+    }
   
     const newTarget = Math.round((targetScore + baseTargetIncrease) * targetMultiplier);
     const newMoves = Math.max(10, INITIAL_MOVES - nextLevel + baseMoveAdjustment + moveAdjustment);
   
     return { nextLevel, newTarget: Math.floor(newTarget / 100) * 100, newMoves };
-  }, [level, movesLeft, targetScore, levelStartTime, levelEndTime, powerUpsMade, highestCombo, toast]);
+  }, [level, movesLeft, targetScore, levelStartTime, levelEndTime, powerUpsMade, highestCombo, toast, winStreak]);
 
   const handleNextLevel = useCallback(() => {
     const { nextLevel, newTarget, newMoves } = getNextLevelParams();
