@@ -59,7 +59,7 @@ export default function Home() {
   );
 
   const startNewLevel = useCallback(
-    async (newLevel: number, newMoves: number, newTarget: number) => {
+    (newLevel: number, newMoves: number, newTarget: number) => {
       resetTileIdCounter();
       setLevel(newLevel);
       setMovesLeft(newMoves);
@@ -178,7 +178,7 @@ export default function Home() {
       let localPowerUpsMade = 0;
 
       while (true) {
-        const { matches, powerUp } = findMatches(tempBoard);
+        const { matches, powerUps } = findMatches(tempBoard);
         if (matches.length === 0) break;
 
         cascadeCount++;
@@ -203,27 +203,22 @@ export default function Home() {
         let newBoardWithNulls = tempBoard.map(row =>
           row.map(tile => {
             if (!tile) return null;
-            if (tile.powerUp && !matchedTileIds.has(tile.id)) {
-              return tile;
-            }
             if (matchedTileIds.has(tile.id)) {
               return null;
             }
             return tile;
           })
         );
-
-        if (powerUp) {
-          localPowerUpsMade++;
-          const { tile: powerUpTile, powerUp: powerUpType } = powerUp;
-          let powerupApplied = false;
+        
+        if (powerUps.length > 0) {
+          localPowerUpsMade += powerUps.length;
           newBoardWithNulls = newBoardWithNulls.map(row =>
             row.map(t => {
-              if (t && t.id === powerUpTile.id && !powerupApplied) {
-                powerupApplied = true;
-                return { ...t, powerUp: powerUpType };
-              }
-              return t;
+                const powerUpToApply = powerUps.find(p => p.tile.id === t?.id);
+                if (t && powerUpToApply) {
+                    return { ...t, powerUp: powerUpToApply.powerUp };
+                }
+                return t;
             })
           );
         }
