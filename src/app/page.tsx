@@ -109,6 +109,7 @@ export default function Home() {
           row.map(tile => {
             if (!tile) return null;
             if (matchedTileIds.has(tile.id)) {
+              if (tile.powerUp) return tile; // Don't null out powerups
               return null;
             }
             return tile;
@@ -118,7 +119,6 @@ export default function Home() {
         if (powerUp) {
           const { tile: powerUpTile, powerUp: powerUpType } = powerUp;
           // Find the tile on the board to update.
-          // It's crucial to do this on `newBoardWithNulls` in case the tile was part of a match that is now null.
           newBoardWithNulls[powerUpTile.row][powerUpTile.col] = {
             ...powerUpTile,
             powerUp: powerUpType,
@@ -284,7 +284,7 @@ export default function Home() {
             })
           );
           setBoard(tempBoardWithNewBomb);
-          await delay(1000); // Wait 1 second
+          await delay(0); // Wait 0 seconds
 
           // 2. Find the new bomb's current position after potential shifts
           const currentSecondBombTile = tempBoardWithNewBomb
