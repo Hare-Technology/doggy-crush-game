@@ -1,4 +1,5 @@
 
+
 import { BOARD_SIZE, TILE_TYPES } from './constants';
 import type { Board, Tile, PowerUpType, TileType as TileTypeEnum } from './types';
 
@@ -198,12 +199,14 @@ export const fillEmptyTiles = (board: Board): Board => {
   for (let col = 0; col < BOARD_SIZE; col++) {
     let newTileRow = -1;
     for (let row = BOARD_SIZE - 1; row >= 0; row--) {
-      if (newBoard[row][col] === null) {
+      if (newBoard[row][col] === null || (newBoard[row][col] as any)?.needsBomb) {
+        const needsBomb = (newBoard[row][col] as any)?.needsBomb;
         newBoard[row][col] = {
           id: tileIdCounter++,
-          type: getRandomTileType(),
+          type: needsBomb ? 'paw' : getRandomTileType(), // Type doesn't matter for bomb
           row: newTileRow, // Start above the board
           col,
+          powerUp: needsBomb ? 'bomb' : undefined,
         };
         newTileRow--;
       }
@@ -295,7 +298,7 @@ export const activatePowerUp = (
   board: Board,
   tile: Tile,
   targetType?: TileTypeEnum,
-): { clearedTiles: Tile[]; secondaryExplosions?: Tile[] } => {
+): { clearedTiles: Tile[]; secondaryExplosions?: Tile[]; spawnBomb?: boolean } => {
   const clearedTilesMap = new Map<number, Tile>();
   clearedTilesMap.set(tile.id, tile);
   const secondaryExplosions: Tile[] = [];
@@ -315,6 +318,12 @@ export const activatePowerUp = (
         }
       }
     }
+    // Return a flag to spawn a new bomb
+    return {
+      clearedTiles: Array.from(clearedTilesMap.values()),
+      secondaryExplosions,
+      spawnBomb: true,
+    };
   } else if (tile.powerUp === 'column_clear') {
     for (let r = 0; r < BOARD_SIZE; r++) {
       const targetTile = board[r][tile.col];
