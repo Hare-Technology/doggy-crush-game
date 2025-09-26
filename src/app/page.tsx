@@ -198,12 +198,25 @@ export default function Home() {
 
         const points = matches.length * 10 * cascadeCount;
         totalPoints += points;
+        
+        let boardWithPowerups = tempBoard.map(row => row.map(tile => tile ? {...tile} : null));
+        if (powerUps.length > 0) {
+          localPowerUpsMade += powerUps.length;
+          powerUps.forEach(p => {
+              const { row, col } = p.tile;
+              if (boardWithPowerups[row][col]) {
+                boardWithPowerups[row][col]!.powerUp = p.powerUp;
+              }
+          });
+        }
+        
+        const powerUpTileIds = new Set(powerUps.map(p => p.tile.id));
+        const matchedTileIds = new Set(matches.map(t => t.id).filter(id => !powerUpTileIds.has(id)));
 
-        const matchedTileIds = new Set(matches.map(t => t.id));
         setIsAnimating(prev => new Set([...prev, ...matchedTileIds]));
         await delay(300);
 
-        let newBoardWithNulls = tempBoard.map(row =>
+        let newBoardWithNulls = boardWithPowerups.map(row =>
           row.map(tile => {
             if (!tile) return null;
             if (matchedTileIds.has(tile.id)) {
@@ -213,32 +226,25 @@ export default function Home() {
           })
         );
         
-        if (powerUps.length > 0) {
-          localPowerUpsMade += powerUps.length;
-          newBoardWithNulls = newBoardWithNulls.map((row, rIdx) =>
-            row.map((t, cIdx) => {
-                const powerUpToApply = powerUps.find(p => p.tile.row === rIdx && p.tile.col === cIdx);
-                if (t && powerUpToApply) {
-                    return { ...t, powerUp: powerUpToApply.powerUp };
-                }
-                return t;
-            })
-          );
-        }
-
         setBoard(newBoardWithNulls);
         setIsAnimating(new Set());
         await delay(100);
+        
+        let workingBoard = newBoardWithNulls;
+        let hasEmptyTiles = true;
+        while (hasEmptyTiles) {
+          const { newBoard: boardAfterGravity } = applyGravity(workingBoard);
+          workingBoard = boardAfterGravity;
+          const boardWithNewTiles = fillEmptyTiles(workingBoard);
+          workingBoard = boardWithNewTiles;
+          
+          setBoard(workingBoard);
+          await delay(200);
 
-        const { newBoard: boardAfterGravity } = applyGravity(newBoardWithNulls);
-        setBoard(boardAfterGravity);
-        await delay(300);
+          hasEmptyTiles = workingBoard.flat().some(t => t === null);
+        }
 
-        const newFilledBoard = fillEmptyTiles(boardAfterGravity);
-        setBoard(newFilledBoard);
-        await delay(300);
-
-        tempBoard = newFilledBoard;
+        tempBoard = workingBoard;
       }
 
       if (totalPoints > 0) {
@@ -278,15 +284,18 @@ export default function Home() {
       await delay(100);
 
       let workingBoard = boardWithNulls;
-      
-      const { newBoard: boardAfterGravity } = applyGravity(workingBoard);
-      setBoard(boardAfterGravity); // show gravity in action
-      await delay(200);
+      let hasEmptyTiles = true;
+      while(hasEmptyTiles) {
+        const { newBoard: boardAfterGravity } = applyGravity(workingBoard);
+        workingBoard = boardAfterGravity;
+        const boardWithNewTiles = fillEmptyTiles(workingBoard);
+        workingBoard = boardWithNewTiles;
+        
+        setBoard(workingBoard);
+        await delay(200);
 
-      const boardWithNewTiles = fillEmptyTiles(boardAfterGravity);
-      workingBoard = boardWithNewTiles;
-      setBoard(workingBoard);
-      await delay(200);
+        hasEmptyTiles = workingBoard.flat().some(t => t === null);
+      }
       
       const boardAfterCascade = await processMatchesAndCascades(workingBoard);
       setBoard(boardAfterCascade);

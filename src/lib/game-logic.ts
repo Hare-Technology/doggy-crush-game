@@ -157,12 +157,11 @@ export const findMatches = (
   })
 
   // If a powerup was created, it implies a valid match. We need to ensure `matches` is not empty.
-  if (powerUps.length > 0 && allMatches.size === 0) {
+  if (powerUps.length > 0) {
     const powerUpTileIds = new Set(powerUps.map(p => p.tile.id));
     for (const match of combinedMatches) {
         if (match.some(t => powerUpTileIds.has(t.id))) {
             match.forEach(t => allMatches.add(t));
-            break; // Add the first power-up-creating match and stop.
         }
     }
   }
@@ -196,15 +195,14 @@ export const applyGravity = (
 export const fillEmptyTiles = (board: Board): Board => {
   const newBoard = board.map(row => [...row]);
   for (let col = 0; col < BOARD_SIZE; col++) {
-    for (let row = 0; row < BOARD_SIZE; row++) {
-        if (newBoard[row][col] === null) {
-            newBoard[row][col] = {
-                id: tileIdCounter++,
-                type: getRandomTileType(),
-                row,
-                col,
-            };
-        }
+    // Only create new tiles in the top row if there's an empty space
+    if (newBoard[0][col] === null) {
+      newBoard[0][col] = {
+        id: tileIdCounter++,
+        type: getRandomTileType(),
+        row: 0,
+        col,
+      };
     }
   }
   return newBoard;
