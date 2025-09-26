@@ -100,15 +100,16 @@ export default function Home() {
 
         const points = matches.length * 10 * cascadeCount;
         totalPoints += points;
-        
+
         const matchedTileIds = new Set(matches.map(t => t.id));
         setIsAnimating(prev => new Set([...prev, ...matchedTileIds]));
         await delay(300);
-        
+
         let newBoardWithNulls = tempBoard.map(row =>
           row.map(tile => {
             if (!tile) return null;
-            if (matchedTileIds.has(tile.id)) {
+            // Prevent power-ups from being cleared by matches
+            if (matchedTileIds.has(tile.id) && !tile.powerUp) {
               return null;
             }
             return tile;
@@ -116,16 +117,19 @@ export default function Home() {
         );
 
         if (powerUp) {
-            const { tile: powerUpTile, powerUp: powerUpType } = powerUp;
-            const targetTile = tempBoard[powerUpTile.row][powerUpTile.col]
-            if (targetTile) {
-              newBoardWithNulls[powerUpTile.row][powerUpTile.col] = {
-                ...targetTile,
-                powerUp: powerUpType
-              };
-            }
+          const { tile: powerUpTile, powerUp: powerUpType } = powerUp;
+          // Find the tile on the board to update, as it might have moved
+          const targetTile = newBoardWithNulls
+            .flat()
+            .find(t => t?.id === powerUpTile.id);
+          if (targetTile) {
+            newBoardWithNulls[targetTile.row][targetTile.col] = {
+              ...targetTile,
+              powerUp: powerUpType,
+            };
+          }
         }
-        
+
         setBoard(newBoardWithNulls);
         setIsAnimating(new Set());
         await delay(100);
@@ -140,8 +144,8 @@ export default function Home() {
 
         tempBoard = newFilledBoard;
       }
-      
-      if(totalPoints > 0) {
+
+      if (totalPoints > 0) {
         setScore(prev => prev + totalPoints);
       }
 
@@ -163,11 +167,11 @@ export default function Home() {
       let boardWithNulls = initialBoard.map(row =>
         row.map(tile => {
           if (!tile) return null;
-          // Don't clear other powerups
+          // Don't clear other powerups unless they were part of the activation
           if (clearedTileIds.has(tile.id)) {
-            if(tile.powerUp && !clearedTileIds.has(tile.id)) {
-              return tile;
-            }
+             if (tile.powerUp && !clearedTileIds.has(tile.id)) {
+               return tile;
+             }
             return null;
           }
           return tile;
@@ -193,6 +197,7 @@ export default function Home() {
     [playSound, processMatchesAndCascades]
   );
 
+
   useEffect(() => {
     if (board.length === 0 && typeof window !== 'undefined') {
       startNewLevel(1, INITIAL_MOVES, INITIAL_TARGET_SCORE);
@@ -205,13 +210,12 @@ export default function Home() {
       if (!areTilesAdjacent(tile1, tile2)) return;
 
       setIsProcessing(true);
-
-      // Prevent swapping with a power-up if one is a bomb
-      if (tile1.powerUp === 'bomb' || tile2.powerUp === 'bomb') {
+      
+      // Prevent swapping with a power-up, as they are click-activated
+      if (tile1.powerUp || tile2.powerUp) {
         setIsProcessing(false);
         return;
       }
-      
 
       setMovesLeft(prev => prev - 1);
 
@@ -219,10 +223,9 @@ export default function Home() {
       const { row: r1, col: c1 } = tile1;
       const { row: r2, col: c2 } = tile2;
 
-      // Store the destination of the tile being swapped in
       const landingTileForT1 = { ...tile2, row: r1, col: c1 };
       const landingTileForT2 = { ...tile1, row: r2, col: c2 };
-      
+
       tempBoard[r1][c1] = landingTileForT1;
       tempBoard[r2][c2] = landingTileForT2;
       
@@ -256,45 +259,83 @@ export default function Home() {
     [board, isProcessing, gameState, processMatchesAndCascades, toast]
   );
 
-  const handleTileClick = useCallback(async (tile: Tile) => {
-    if (isProcessing || gameState !== 'playing') return;
-    
-    // If a power-up is clicked, activate it
-    if (tile.powerUp) {
-      setIsProcessing(true);
-      setMovesLeft(prev => prev - 1);
-      
-      const { clearedTiles } = activatePowerUp(board, tile);
-      setScore(prev => prev + clearedTiles.length * 10);
-      const finalBoard = await processBoardChanges(board, clearedTiles);
-      
-      let finalBoardAfterNoMovesCheck = finalBoard;
-      while (!checkBoardForMoves(finalBoardAfterNoMovesCheck)) {
-        toast({ title: 'No moves left, reshuffling!' });
-        await delay(500);
-        let reshuffledBoard = createInitialBoard();
-        setBoard(reshuffledBoard);
-        await delay(300);
-        finalBoardAfterNoMovesCheck = await processMatchesAndCascades(reshuffledBoard);
+  const handleTileClick = useCallback(
+    async (tile: Tile) => {
+      if (isProcessing || gameState !== 'playing') return;
+
+      // If a power-up is clicked, activate it
+      if (tile.powerUp === 'bomb') {
+        setIsProcessing(true);
+        setMovesLeft(prev => prev - 1);
+
+        // --- First Explosion ---
+        const { clearedTiles, randomBombTile } = activatePowerUp(board, tile);
+        setScore(prev => prev + clearedTiles.length * 10);
+        let boardAfterFirstExplosion = await processBoardChanges(board, [
+          ...clearedTiles,
+          tile,
+        ]);
+
+        if (randomBombTile) {
+          // --- Second Explosion (Delayed) ---
+          // 1. Visually turn the random tile into a bomb
+          let tempBoardWithNewBomb = boardAfterFirstExplosion.map(row =>
+            row.map(t => {
+              if (t && t.id === randomBombTile.id) {
+                return { ...t, powerUp: 'bomb' as 'bomb' };
+              }
+              return t;
+            })
+          );
+          setBoard(tempBoardWithNewBomb);
+          await delay(1000); // Wait 1 second
+
+          // 2. Find the new bomb's current position after potential shifts
+          const currentSecondBombTile = tempBoardWithNewBomb
+            .flat()
+            .find(t => t?.id === randomBombTile.id);
+          
+          if (currentSecondBombTile) {
+            const { clearedTiles: secondClearedTiles } = activatePowerUp(
+              tempBoardWithNewBomb,
+              currentSecondBombTile
+            );
+            setScore(prev => prev + secondClearedTiles.length * 10);
+            boardAfterFirstExplosion = await processBoardChanges(
+              tempBoardWithNewBomb,
+              [...secondClearedTiles, currentSecondBombTile]
+            );
+          }
+        }
+        
+        let finalBoard = boardAfterFirstExplosion;
+        while (!checkBoardForMoves(finalBoard)) {
+          toast({ title: 'No moves left, reshuffling!' });
+          await delay(500);
+          let reshuffledBoard = createInitialBoard();
+          setBoard(reshuffledBoard);
+          await delay(300);
+          finalBoard = await processMatchesAndCascades(reshuffledBoard);
+        }
+
+        setBoard(finalBoard);
+        setIsProcessing(false);
+        setSelectedTile(null); // Clear selection
+        return;
       }
 
-      setBoard(finalBoardAfterNoMovesCheck);
-      setIsProcessing(false);
-      
-      setSelectedTile(null); // Clear selection after activation
-      return;
-    }
-
-    // Regular tile selection logic
-    if (selectedTile) {
-      if (selectedTile.id !== tile.id) {
-        await handleSwap(selectedTile, tile);
+      // Regular tile selection logic
+      if (selectedTile) {
+        if (selectedTile.id !== tile.id) {
+          await handleSwap(selectedTile, tile);
+        }
+        setSelectedTile(null);
+      } else {
+        setSelectedTile(tile);
       }
-      setSelectedTile(null);
-    } else {
-      setSelectedTile(tile);
-    }
-  }, [isProcessing, gameState, selectedTile, handleSwap, board, processBoardChanges, processMatchesAndCascades, toast]);
+    },
+    [isProcessing, gameState, selectedTile, handleSwap, board, processBoardChanges, processMatchesAndCascades, toast]
+  );
 
   const handleGameOver = useCallback(
     async (didWin: boolean) => {
@@ -357,7 +398,6 @@ export default function Home() {
   const handleRestart = useCallback(() => {
     startNewLevel(1, INITIAL_MOVES, INITIAL_TARGET_SCORE);
   }, [startNewLevel]);
-
 
 
   const handleNextLevel = useCallback(async () => {
