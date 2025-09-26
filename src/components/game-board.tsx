@@ -3,7 +3,6 @@
 import type { FC } from 'react';
 import { memo, useState } from 'react';
 import type { Board, Tile as TileType } from '@/lib/types';
-import { TILE_COLORS } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 
 interface GameBoardProps {
@@ -32,8 +31,7 @@ const MemoizedTile: FC<{
   }
 
   const emoji = tileEmojiMap[tile.type] || '❓';
-  const color = TILE_COLORS[tile.type as keyof typeof TILE_COLORS] || '240 10% 3.9%';
-
+  
   return (
     <div
       key={tile.id}
@@ -47,7 +45,7 @@ const MemoizedTile: FC<{
       )}
       style={{
         transform: tile ? 'scale(1)' : 'scale(0)',
-        '--tile-color': color,
+        '--tile-color': `var(--tile-color-${tile.type})`,
       } as React.CSSProperties}
     >
       <span className="text-4xl lg:text-5xl drop-shadow-lg">{emoji}</span>
@@ -64,7 +62,9 @@ const GameBoard: FC<GameBoardProps> = ({ board, onSwap, isProcessing }) => {
     if (isProcessing) return;
 
     if (selectedTile) {
-      onSwap(selectedTile, tile);
+      if (selectedTile.id !== tile.id) {
+        onSwap(selectedTile, tile);
+      }
       setSelectedTile(null);
     } else {
       setSelectedTile(tile);
@@ -89,7 +89,7 @@ const GameBoard: FC<GameBoardProps> = ({ board, onSwap, isProcessing }) => {
         ))
       )}
       {isProcessing && (
-        <div className="absolute inset-0 bg-background/30 backdrop-blur-sm flex items-center justify-center rounded-xl z-10">
+        <div className="absolute inset-0 bg-background/30 flex items-center justify-center rounded-xl z-10">
            {/* Optional: Add a spinner here */}
         </div>
       )}
