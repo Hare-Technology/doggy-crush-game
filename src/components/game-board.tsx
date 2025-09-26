@@ -23,6 +23,7 @@ interface GameBoardProps {
   selectedTile: TileType | null;
   isProcessing: boolean;
   isAnimating: Set<number>;
+  isShuffling: boolean;
 }
 
 const tileComponentMap: Record<string, React.ElementType> = {
@@ -46,12 +47,30 @@ const Tile: FC<{
   onClick: () => void;
   isSelected: boolean;
   isAnimating: boolean;
-}> = ({ tile, onClick, isSelected, isAnimating }) => {
+  isShuffling: boolean;
+}> = ({ tile, onClick, isSelected, isAnimating, isShuffling }) => {
   const Icon = tile.powerUp
     ? powerUpComponentMap[tile.powerUp]
     : tileComponentMap[tile.type] || PawIcon;
   const top = (tile.row / BOARD_SIZE) * 100;
   const left = (tile.col / BOARD_SIZE) * 100;
+
+  const style: React.CSSProperties = {
+    top: `${top}%`,
+    left: `${left}%`,
+    width: `calc(${100 / BOARD_SIZE}% - 4px)`,
+    height: `calc(${100 / BOARD_SIZE}% - 4px)`,
+    margin: '2px',
+    backgroundColor: `hsl(var(--tile-color-${tile.type}))`,
+  };
+
+  if (isShuffling) {
+    style['--x'] = `${left}%`;
+    style['--y'] = `${top}%`;
+    style['--center-x'] = '50%';
+    style['--center-y'] = '50%';
+    style['--delay'] = `${Math.random() * 0.3}s`;
+  }
 
   return (
     <div
@@ -61,16 +80,10 @@ const Tile: FC<{
         'shadow-md',
         isSelected && 'ring-4 ring-offset-2 ring-white z-10 scale-110',
         isAnimating && 'animate-pop',
-        tile.powerUp && 'animate-pulse'
+        isShuffling && 'animate-shuffle',
+        tile.powerUp && !isShuffling && 'animate-pulse'
       )}
-      style={{
-        top: `${top}%`,
-        left: `${left}%`,
-        width: `calc(${100 / BOARD_SIZE}% - 4px)`,
-        height: `calc(${100 / BOARD_SIZE}% - 4px)`,
-        margin: '2px',
-        backgroundColor: `hsl(var(--tile-color-${tile.type}))`,
-      }}
+      style={style}
     >
       <Icon className="drop-shadow-lg w-full h-full flex items-center justify-center" />
     </div>
@@ -83,6 +96,7 @@ const GameBoard: FC<GameBoardProps> = ({
   selectedTile,
   isProcessing,
   isAnimating,
+  isShuffling,
 }) => {
   const handleTileClick = (tile: TileType) => {
     if (isProcessing) return;
@@ -149,6 +163,7 @@ const GameBoard: FC<GameBoardProps> = ({
           onClick={() => handleTileClick(tile)}
           isSelected={!!(selectedTile && selectedTile.id === tile.id)}
           isAnimating={isAnimating.has(tile.id)}
+          isShuffling={isShuffling}
         />
       ))}
     </div>

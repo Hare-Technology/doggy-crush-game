@@ -32,3 +32,17 @@
 .animate-combo {
   animation: combo-animation 1.5s ease-out forwards;
 }
+
+@keyframes shuffle {
+  from {
+    transform: translate(calc(var(--center-x) - var(--x)), calc(var(--center-y) - var(--y))) scale(0);
+  }
+  to {
+    transform: translate(0, 0) scale(1);
+  }
+}
+
+.animate-shuffle {
+  animation: shuffle 0.5s ease-out forwards;
+  animation-delay: var(--delay);
+}

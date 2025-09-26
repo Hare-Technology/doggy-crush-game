@@ -52,6 +52,7 @@ export default function Home() {
   const [powerUpsMade, setPowerUpsMade] = useState(0);
   const [levelStartTime, setLevelStartTime] = useState(0);
   const [levelEndTime, setLevelEndTime] = useState(0);
+  const [isShuffling, setIsShuffling] = useState(false);
 
   const scoreNeeded = useMemo(
     () => Math.max(0, targetScore - score),
@@ -71,6 +72,7 @@ export default function Home() {
       setPowerUpsMade(0);
       setLevelStartTime(Date.now());
       setLevelEndTime(0);
+      setIsShuffling(true);
 
       if (
         newLevel === 1 &&
@@ -85,9 +87,9 @@ export default function Home() {
         newBoard = createInitialBoard();
       } while (!checkBoardForMoves(newBoard));
 
-
       setBoard(newBoard);
-      await delay(100);
+      await delay(800); // Wait for shuffle animation
+      setIsShuffling(false);
       setIsProcessing(false);
     },
     []
@@ -330,9 +332,11 @@ export default function Home() {
     while (!checkBoardForMoves(finalBoard)) {
       toast({ title: 'No moves left, reshuffling!' });
       await delay(500);
+      setIsShuffling(true);
       let reshuffledBoard = createInitialBoard();
       setBoard(reshuffledBoard);
-      await delay(300);
+      await delay(800);
+      setIsShuffling(false);
       finalBoard = await processMatchesAndCascades(reshuffledBoard);
     }
     setBoard(finalBoard);
@@ -373,9 +377,11 @@ export default function Home() {
         while (!checkBoardForMoves(currentBoard)) {
             toast({ title: 'No moves left, reshuffling!' });
             await delay(500);
+            setIsShuffling(true);
             let reshuffledBoard = createInitialBoard();
             setBoard(reshuffledBoard);
-            await delay(300);
+            await delay(800);
+            setIsShuffling(false);
             currentBoard = await processMatchesAndCascades(reshuffledBoard);
         }
         
@@ -408,9 +414,11 @@ export default function Home() {
         while (!checkBoardForMoves(currentBoard)) {
             toast({ title: 'No moves left, reshuffling!' });
             await delay(500);
+            setIsShuffling(true);
             let reshuffledBoard = createInitialBoard();
             setBoard(reshuffledBoard);
-            await delay(300);
+            await delay(800);
+            setIsShuffling(false);
             currentBoard = await processMatchesAndCascades(reshuffledBoard);
         }
         
@@ -660,6 +668,7 @@ export default function Home() {
             selectedTile={selectedTile}
             isProcessing={isProcessing}
             isAnimating={isAnimating}
+            isShuffling={isShuffling}
           />
           <ComboEffect message={comboMessage} />
         </div>
