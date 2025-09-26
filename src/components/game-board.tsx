@@ -9,7 +9,6 @@ import {
   DogHouseIcon,
   BallIcon,
   FoodBowlIcon,
-  LeashIcon,
   PawPrintIcon,
   HotdogIcon,
   BombIcon,
@@ -32,7 +31,6 @@ const tileComponentMap: Record<string, React.ElementType> = {
   house: DogHouseIcon,
   ball: BallIcon,
   bowl: FoodBowlIcon,
-  leash: LeashIcon,
   pawprint: PawPrintIcon,
   hotdog: HotdogIcon,
 };
@@ -106,7 +104,6 @@ const GameBoard: FC<GameBoardProps> = ({
           --tile-color-house: 100 85% 80%;
           --tile-color-ball: 300 80% 80%;
           --tile-color-bowl: 0 85% 80%;
-          --tile-color-leash: 345 81% 80%;
           --tile-color-pawprint: 190 81% 80%;
           --tile-color-hotdog: 30 90% 75%;
         }
