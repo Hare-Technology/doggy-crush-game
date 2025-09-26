@@ -77,39 +77,6 @@ export default function Home() {
     []
   );
 
-  const processBoardChanges = useCallback(
-    async (
-      initialBoard: Board,
-      clearedTiles: Tile[]
-    ): Promise<Board> => {
-      const clearedTileIds = new Set(clearedTiles.map(t => t.id));
-      setIsAnimating(prev => new Set([...prev, ...clearedTileIds]));
-      playSound('bomb');
-      await delay(300);
-
-      let boardWithNulls = initialBoard.map(row =>
-        row.map(tile => (tile && clearedTileIds.has(tile.id) ? null : tile))
-      );
-      setBoard(boardWithNulls);
-      setIsAnimating(new Set());
-      await delay(100);
-
-      const { newBoard: boardAfterGravity } = applyGravity(boardWithNulls);
-      setBoard(boardAfterGravity);
-      await delay(300);
-
-      const newFilledBoard = fillEmptyTiles(boardAfterGravity);
-      setBoard(newFilledBoard);
-      await delay(300);
-      
-      const boardAfterCascade = await processMatchesAndCascades(newFilledBoard);
-      setBoard(boardAfterCascade);
-
-      return boardAfterCascade;
-    },
-    [playSound, processMatchesAndCascades]
-  );
-
   const processMatchesAndCascades = useCallback(
     async (currentBoard: Board, isSwap: boolean = false) => {
       let tempBoard = currentBoard;
@@ -176,6 +143,39 @@ export default function Home() {
       return tempBoard;
     },
     [setIsAnimating, playSound]
+  );
+  
+  const processBoardChanges = useCallback(
+    async (
+      initialBoard: Board,
+      clearedTiles: Tile[]
+    ): Promise<Board> => {
+      const clearedTileIds = new Set(clearedTiles.map(t => t.id));
+      setIsAnimating(prev => new Set([...prev, ...clearedTileIds]));
+      playSound('bomb');
+      await delay(300);
+
+      let boardWithNulls = initialBoard.map(row =>
+        row.map(tile => (tile && clearedTileIds.has(tile.id) ? null : tile))
+      );
+      setBoard(boardWithNulls);
+      setIsAnimating(new Set());
+      await delay(100);
+
+      const { newBoard: boardAfterGravity } = applyGravity(boardWithNulls);
+      setBoard(boardAfterGravity);
+      await delay(300);
+
+      const newFilledBoard = fillEmptyTiles(boardAfterGravity);
+      setBoard(newFilledBoard);
+      await delay(300);
+      
+      const boardAfterCascade = await processMatchesAndCascades(newFilledBoard);
+      setBoard(boardAfterCascade);
+
+      return boardAfterCascade;
+    },
+    [playSound, processMatchesAndCascades]
   );
 
   useEffect(() => {
