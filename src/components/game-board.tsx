@@ -3,9 +3,8 @@
 import type { FC } from 'react';
 import { memo, useState } from 'react';
 import type { Board, Tile as TileType } from '@/lib/types';
-import { TILE_TYPES, TILE_COLORS } from '@/lib/constants';
+import { TILE_COLORS } from '@/lib/constants';
 import { cn } from '@/lib/utils';
-import { BoneIcon, PawIcon, DogHouseIcon, BallIcon, FoodBowlIcon } from './dog-icons';
 
 interface GameBoardProps {
   board: Board;
@@ -13,12 +12,12 @@ interface GameBoardProps {
   isProcessing: boolean;
 }
 
-const tileIconMap: Record<string, FC<any>> = {
-  paw: PawIcon,
-  bone: BoneIcon,
-  house: DogHouseIcon,
-  ball: BallIcon,
-  bowl: FoodBowlIcon,
+const tileEmojiMap: Record<string, string> = {
+  paw: '🐾',
+  bone: '🦴',
+  house: '🏠',
+  ball: '🎾',
+  bowl: '🐶',
 };
 
 const MemoizedTile: FC<{ tile: TileType | null; onDragStart: (tile: TileType) => void; onDrop: (tile: TileType) => void }> = memo(({ tile, onDragStart, onDrop }) => {
@@ -28,7 +27,7 @@ const MemoizedTile: FC<{ tile: TileType | null; onDragStart: (tile: TileType) =>
     );
   }
 
-  const IconComponent = tileIconMap[tile.type] || PawIcon;
+  const emoji = tileEmojiMap[tile.type] || '❓';
   const bgColor = TILE_COLORS[tile.type as keyof typeof TILE_COLORS] || 'bg-gray-200';
 
   return (
@@ -49,7 +48,7 @@ const MemoizedTile: FC<{ tile: TileType | null; onDragStart: (tile: TileType) =>
         transform: tile ? 'scale(1)' : 'scale(0)',
       }}
     >
-      <IconComponent className="w-3/4 h-3/4 text-white drop-shadow-lg" />
+      <span className="text-4xl lg:text-5xl drop-shadow-lg">{emoji}</span>
     </div>
   );
 });
