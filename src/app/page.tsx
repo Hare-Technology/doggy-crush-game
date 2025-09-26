@@ -77,6 +77,39 @@ export default function Home() {
     []
   );
 
+  const processBoardChanges = useCallback(
+    async (
+      initialBoard: Board,
+      clearedTiles: Tile[]
+    ): Promise<Board> => {
+      const clearedTileIds = new Set(clearedTiles.map(t => t.id));
+      setIsAnimating(prev => new Set([...prev, ...clearedTileIds]));
+      playSound('bomb');
+      await delay(300);
+
+      let boardWithNulls = initialBoard.map(row =>
+        row.map(tile => (tile && clearedTileIds.has(tile.id) ? null : tile))
+      );
+      setBoard(boardWithNulls);
+      setIsAnimating(new Set());
+      await delay(100);
+
+      const { newBoard: boardAfterGravity } = applyGravity(boardWithNulls);
+      setBoard(boardAfterGravity);
+      await delay(300);
+
+      const newFilledBoard = fillEmptyTiles(boardAfterGravity);
+      setBoard(newFilledBoard);
+      await delay(300);
+      
+      const boardAfterCascade = await processMatchesAndCascades(newFilledBoard);
+      setBoard(boardAfterCascade);
+
+      return boardAfterCascade;
+    },
+    [playSound]
+  );
+
   const processMatchesAndCascades = useCallback(
     async (currentBoard: Board, isSwap: boolean = false) => {
       let tempBoard = currentBoard;
@@ -163,34 +196,31 @@ export default function Home() {
       const { row: r2, col: c2 } = tile2;
 
       // Handle power-up activation
-      const swappedTileWithPowerup = tile1.powerUp ? tile1 : tile2.powerUp ? tile2 : null;
-      if(swappedTileWithPowerup) {
-          playSound('bomb');
-          const {newBoard, clearedTiles} = activatePowerUp(tempBoard, swappedTileWithPowerup);
-          
+      const bombTile = tile1.powerUp === 'bomb' ? tile1 : tile2.powerUp === 'bomb' ? tile2 : null;
+      const otherTile = bombTile === tile1 ? tile2 : tile1;
+      
+      if (bombTile) {
           setMovesLeft(prev => prev - 1);
           
-          const points = clearedTiles.length * 10;
-          setScore(prev => prev + points);
-
-          const clearedTileIds = new Set(clearedTiles.map(t => t.id));
-          setIsAnimating(prev => new Set([...prev, ...clearedTileIds]));
-          await delay(300);
-
-          setBoard(newBoard);
-          setIsAnimating(new Set());
-          await delay(100);
+          // First explosion
+          const { clearedTiles: cleared1 } = activatePowerUp(tempBoard, bombTile);
+          setScore(prev => prev + cleared1.length * 10);
+          let boardAfterFirstExplosion = await processBoardChanges(tempBoard, cleared1);
           
-          const { newBoard: boardAfterGravity } = applyGravity(newBoard);
-          setBoard(boardAfterGravity);
-          await delay(300);
-
-          const newFilledBoard = fillEmptyTiles(boardAfterGravity);
-          setBoard(newFilledBoard);
-          await delay(300);
+          await delay(1000); // 1 second delay
           
-          const boardAfterCascade = await processMatchesAndCascades(newFilledBoard);
-          setBoard(boardAfterCascade);
+          // Find the swapped tile's new position if it moved
+          let currentOtherTile: Tile | null | undefined = boardAfterFirstExplosion.flat().find(t => t?.id === otherTile.id);
+          if (!currentOtherTile) {
+            // It might have been cleared or is off-board, end here
+            setIsProcessing(false);
+            return;
+          }
+
+          // Second explosion
+          const { clearedTiles: cleared2 } = activatePowerUp(boardAfterFirstExplosion, currentOtherTile);
+          setScore(prev => prev + cleared2.length * 10);
+          await processBoardChanges(boardAfterFirstExplosion, cleared2);
 
           setIsProcessing(false);
           return;
@@ -227,7 +257,7 @@ export default function Home() {
       setBoard(finalBoard);
       setIsProcessing(false);
     },
-    [board, isProcessing, gameState, processMatchesAndCascades, toast, playSound]
+    [board, isProcessing, gameState, processMatchesAndCascades, processBoardChanges, toast, playSound]
   );
 
   const handleGameOver = useCallback(
@@ -266,7 +296,7 @@ export default function Home() {
   );
 
   useEffect(() => {
-    if (gameState !== 'playing' || board.length === 0) return;
+    if (gameState !== 'playing' || board.length === 0 || isProcessing) return;
 
     if (score > highScore) {
       setHighScore(score);
@@ -274,11 +304,11 @@ export default function Home() {
     }
 
     if (score >= targetScore) {
-      setIsProcessing(true); // Lock the board
+      setIsProcessing(true);
       setGameState('win');
       handleGameOver(true);
     } else if (movesLeft <= 0) {
-      setIsProcessing(true); // Lock the board
+      setIsProcessing(true);
       setGameState('lose');
       handleGameOver(false);
     }
@@ -290,11 +320,14 @@ export default function Home() {
     highScore,
     handleGameOver,
     gameState,
+    isProcessing
   ]);
 
   const handleRestart = useCallback(() => {
     startNewLevel(level, movesLeft, targetScore);
   }, [level, movesLeft, targetScore, startNewLevel]);
+
+
 
   const handleNextLevel = useCallback(async () => {
     try {

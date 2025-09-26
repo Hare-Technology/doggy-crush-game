@@ -48,7 +48,7 @@ export const findMatches = (
 } => {
   const matches = new Set<string>();
   let powerUp: { tile: Tile; powerUp: PowerUpType } | null = null;
-  let longestMatch = 0;
+  const allTiles = board.flat().filter((t): t is Tile => t !== null);
 
   // Find horizontal matches
   for (let row = 0; row < BOARD_SIZE; row++) {
@@ -66,11 +66,8 @@ export const findMatches = (
         }
         if (match.length >= 3) {
           match.forEach(t => matches.add(String(t.id)));
-          if (match.length > longestMatch) {
-            longestMatch = match.length;
-            if (match.length >= 4) {
-              powerUp = { tile: tile1, powerUp: 'bomb' };
-            }
+          if (match.length >= 5) {
+            powerUp = { tile: tile1, powerUp: 'bomb' };
           }
         }
         col += match.length > 1 ? match.length : 1;
@@ -96,11 +93,8 @@ export const findMatches = (
         }
         if (match.length >= 3) {
           match.forEach(t => matches.add(String(t.id)));
-          if (match.length > longestMatch) {
-            longestMatch = match.length;
-            if (match.length >= 4) {
-              powerUp = { tile: tile1, powerUp: 'bomb' };
-            }
+           if (match.length >= 5) {
+            powerUp = { tile: tile1, powerUp: 'bomb' };
           }
         }
         row += match.length > 1 ? match.length : 1;
@@ -110,28 +104,7 @@ export const findMatches = (
     }
   }
 
-  const allTiles = board.flat().filter((t): t is Tile => t !== null);
   const matchedTiles = allTiles.filter(t => matches.has(String(t.id)));
-
-  // T-shape and L-shape matches for bombs
-  if (matchedTiles.length >= 5 && longestMatch < 5) {
-    // Basic check for intersection point
-    for (const tile of matchedTiles) {
-      const horizontalNeighbors = matchedTiles.filter(t => t.row === tile.row);
-      const verticalNeighbors = matchedTiles.filter(t => t.col === tile.col);
-      if (horizontalNeighbors.length >= 3 && verticalNeighbors.length >= 3) {
-        powerUp = { tile, powerUp: 'bomb' };
-        break;
-      }
-    }
-  }
-
-  // If a 4-match created a bomb, but a 5-match also exists, don't create the bomb.
-  // A 5-match could be reserved for a different power-up later.
-  if (longestMatch >= 5) {
-    // For now, 5-match also creates a bomb.
-    // This can be changed later.
-  }
 
   return { matches: matchedTiles, powerUp };
 };
@@ -224,21 +197,20 @@ export const activatePowerUp = (
   tile: Tile
 ): { newBoard: Board; clearedTiles: Tile[] } => {
   let clearedTiles: Tile[] = [];
-  const { row, col, powerUp } = tile;
+  const { row, col } = tile;
 
-  if (powerUp === 'bomb') {
-    for (let r = row - 1; r <= row + 1; r++) {
-      for (let c = col - 1; c <= col + 1; c++) {
-        if (r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE) {
-          const targetTile = board[r][c];
-          if (targetTile) {
-            clearedTiles.push(targetTile);
-          }
+  // Bomb always clears a 3x3 area
+  for (let r = row - 1; r <= row + 1; r++) {
+    for (let c = col - 1; c <= col + 1; c++) {
+      if (r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE) {
+        const targetTile = board[r][c];
+        if (targetTile) {
+          clearedTiles.push(targetTile);
         }
       }
     }
   }
-
+  
   const clearedTileIds = new Set(clearedTiles.map(t => t.id));
   const newBoard = board.map(r =>
     r.map(t => (t && clearedTileIds.has(t.id) ? null : t))
