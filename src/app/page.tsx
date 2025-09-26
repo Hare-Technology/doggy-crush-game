@@ -327,12 +327,12 @@ export default function Home() {
     tempBoard[r2][c2] = landingTileForT2;
 
     setBoard(tempBoard);
-    await delay(700);
+    await delay(500);
 
     const { matches, powerUps } = findMatches(tempBoard);
     if (matches.length === 0 && powerUps.length === 0) {
       setBoard(board); // Swap back
-      await delay(700);
+      await delay(500);
       setIsProcessing(false);
       return; // Do not decrement moves
     }

@@ -79,7 +79,7 @@ const Tile: FC<{
     <div
       onClick={onClick}
       className={cn(
-        'absolute rounded-lg flex items-center justify-center cursor-pointer transition-all duration-700',
+        'absolute rounded-lg flex items-center justify-center cursor-pointer transition-all duration-500',
         'shadow-md',
         isSelected && 'ring-4 ring-offset-2 ring-white z-10 scale-110',
         isAnimating && 'animate-pop',
