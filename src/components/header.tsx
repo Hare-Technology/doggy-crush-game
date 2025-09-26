@@ -3,7 +3,6 @@
 import { usePathname, useRouter } from 'next/navigation';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Gamepad2, Trophy, User, PawPrint } from 'lucide-react';
-import { cn } from '@/lib/utils';
 
 export default function Header() {
   const router = useRouter();
@@ -30,13 +29,6 @@ export default function Header() {
     }
   };
 
-  const tabTriggerClass = (value: string) => cn(
-    "relative data-[state=active]:text-foreground data-[state=inactive]:text-muted-foreground",
-    "after:content-[''] after:absolute after:bottom-0 after:left-1/2 after:-translate-x-1/2 after:w-0 after:h-0.5 after:bg-primary after:transition-all after:duration-200",
-    activeTab === value && "after:w-4"
-  );
-
-
   return (
     <header className="flex flex-col items-center p-4 bg-background/80 backdrop-blur-sm sticky top-0 z-50 border-b">
       <h1 className="text-3xl font-bold flex items-center justify-center gap-2 mb-4">
@@ -45,16 +37,16 @@ export default function Header() {
         <PawPrint className="w-8 h-8 text-primary" />
       </h1>
       <Tabs value={activeTab} onValueChange={onTabChange}>
-        <TabsList className='bg-transparent p-0'>
-          <TabsTrigger value="game" className={tabTriggerClass('game')}>
+        <TabsList>
+          <TabsTrigger value="game">
             <Gamepad2 className="w-4 h-4 mr-2" />
             Game
           </TabsTrigger>
-          <TabsTrigger value="leaderboard" className={tabTriggerClass('leaderboard')}>
+          <TabsTrigger value="leaderboard">
             <Trophy className="w-4 h-4 mr-2" />
             Leaderboard
           </TabsTrigger>
-          <TabsTrigger value="auth" className={tabTriggerClass('auth')}>
+          <TabsTrigger value="auth">
             <User className="w-4 h-4 mr-2" />
             Signup/Login
           </TabsTrigger>
