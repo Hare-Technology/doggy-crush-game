@@ -26,7 +26,7 @@ export const createInitialBoard = (): Board => {
   while (findMatches(board).length > 0) {
     const matches = findMatches(board);
     matches.forEach(tile => {
-        if (board[tile.row]) {
+        if (board[tile.row] && board[tile.row][tile.col]) {
             board[tile.row][tile.col] = {
                 id: tileIdCounter++,
                 type: getRandomTileType(),
@@ -47,21 +47,13 @@ export const createInitialBoard = (): Board => {
 
 export const findMatches = (board: Board): Tile[] => {
   const matches = new Set<string>();
-  const matchedTiles: Tile[] = [];
-
-  const addMatch = (tile: Tile) => {
-    if (!matches.has(String(tile.id))) {
-      matches.add(String(tile.id));
-      matchedTiles.push(tile);
-    }
-  }
 
   // Find horizontal matches
   for (let row = 0; row < BOARD_SIZE; row++) {
     for (let col = 0; col < BOARD_SIZE - 2; ) {
       const tile1 = board[row][col];
       if (tile1) {
-        const match = [tile1];
+        const match: Tile[] = [tile1];
         for (let i = col + 1; i < BOARD_SIZE; i++) {
           const nextTile = board[row][i];
           if (nextTile && nextTile.type === tile1.type) {
@@ -71,9 +63,9 @@ export const findMatches = (board: Board): Tile[] => {
           }
         }
         if (match.length >= 3) {
-          match.forEach(t => addMatch(t));
+          match.forEach(t => matches.add(String(t.id)));
         }
-        col += match.length > 1 ? match.length : 1;
+        col += match.length;
       } else {
         col++;
       }
@@ -85,7 +77,7 @@ export const findMatches = (board: Board): Tile[] => {
     for (let row = 0; row < BOARD_SIZE - 2; ) {
       const tile1 = board[row][col];
       if (tile1) {
-        const match = [tile1];
+        const match: Tile[] = [tile1];
         for (let i = row + 1; i < BOARD_SIZE; i++) {
           const nextTile = board[i][col];
           if (nextTile && nextTile.type === tile1.type) {
@@ -95,16 +87,17 @@ export const findMatches = (board: Board): Tile[] => {
           }
         }
         if (match.length >= 3) {
-          match.forEach(t => addMatch(t));
+          match.forEach(t => matches.add(String(t.id)));
         }
-        row += match.length > 1 ? match.length : 1;
+        row += match.length;
       } else {
         row++;
       }
     }
   }
 
-  return matchedTiles;
+  const allTiles = board.flat().filter((t): t is Tile => t !== null);
+  return allTiles.filter(t => matches.has(String(t.id)));
 };
 
 

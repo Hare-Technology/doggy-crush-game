@@ -71,6 +71,13 @@ export default function Home() {
         const matches = findMatches(tempBoard);
         if (matches.length === 0) break;
 
+        if (cascadeCount > 1) {
+          toast({
+            title: `Combo x${cascadeCount}!`,
+            description: `+${matches.length * 10 * cascadeCount} points!`,
+          });
+        }
+
         const points = matches.length * 10 * cascadeCount;
         setScore(prev => prev + points);
 
@@ -100,7 +107,7 @@ export default function Home() {
       }
       return tempBoard;
     },
-    []
+    [toast]
   );
 
   useEffect(() => {
