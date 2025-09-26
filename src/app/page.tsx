@@ -266,7 +266,7 @@ export default function Home() {
   );
 
   useEffect(() => {
-    if (isProcessing || board.length === 0) return;
+    if (isProcessing || board.length === 0 || gameState !== 'playing') return;
 
     if (score > highScore) {
       setHighScore(score);
@@ -274,9 +274,11 @@ export default function Home() {
     }
 
     if (score >= targetScore) {
+      setIsProcessing(true);
       setGameState('win');
       handleGameOver(true);
     } else if (movesLeft <= 0) {
+      setIsProcessing(true);
       setGameState('lose');
       handleGameOver(false);
     }
@@ -288,6 +290,7 @@ export default function Home() {
     board.length,
     highScore,
     handleGameOver,
+    gameState,
   ]);
 
   const handleRestart = useCallback(() => {
