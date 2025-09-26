@@ -1,7 +1,6 @@
 'use client';
 
 import type { FC } from 'react';
-import { useState } from 'react';
 import type { Board, Tile as TileType } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import {
@@ -16,7 +15,8 @@ import { BOARD_SIZE } from '@/lib/constants';
 
 interface GameBoardProps {
   board: Board;
-  onSwap: (tile1: TileType, tile2: TileType) => void;
+  onTileClick: (tile: TileType) => void;
+  selectedTile: TileType | null;
   isProcessing: boolean;
   isAnimating: Set<number>;
 }
@@ -66,23 +66,14 @@ const Tile: FC<{
 
 const GameBoard: FC<GameBoardProps> = ({
   board,
-  onSwap,
+  onTileClick,
+  selectedTile,
   isProcessing,
   isAnimating,
 }) => {
-  const [selectedTile, setSelectedTile] = useState<TileType | null>(null);
-
   const handleTileClick = (tile: TileType) => {
     if (isProcessing) return;
-
-    if (selectedTile) {
-      if (selectedTile.id !== tile.id) {
-        onSwap(selectedTile, tile);
-      }
-      setSelectedTile(null);
-    } else {
-      setSelectedTile(tile);
-    }
+    onTileClick(tile);
   };
 
   const allTiles = board.flat().filter(Boolean) as TileType[];

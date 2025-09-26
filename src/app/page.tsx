@@ -38,6 +38,7 @@ export default function Home() {
   const [movesLeft, setMovesLeft] = useState(INITIAL_MOVES);
   const [gameState, setGameState] = useState<GameState>('playing');
   const [isProcessing, setIsProcessing] = useState(true);
+  const [selectedTile, setSelectedTile] = useState<Tile | null>(null);
   const [isAnimating, setIsAnimating] = useState(new Set<number>());
   const [comboMessage, setComboMessage] = useState<string>('');
   const { toast } = useToast();
@@ -193,37 +194,6 @@ export default function Home() {
       
       let tempBoard = board.map(r => r.map(tile => (tile ? { ...tile } : null)));
       
-      // Handle power-up activation
-      const bombTile = tile1.powerUp === 'bomb' ? tile1 : tile2.powerUp === 'bomb' ? tile2 : null;
-      const otherTile = bombTile === tile1 ? tile2 : tile1;
-      
-      if (bombTile) {
-          setMovesLeft(prev => prev - 1);
-          
-          // Store the position of the second tile before any changes
-          const otherTilePos = { row: otherTile.row, col: otherTile.col };
-
-          // First explosion at bomb's original location
-          const { clearedTiles: cleared1 } = activatePowerUp(tempBoard, bombTile);
-          setScore(prev => prev + cleared1.length * 10);
-          let boardAfterFirstExplosion = await processBoardChanges(tempBoard, cleared1);
-          
-          await delay(1000); // 1 second delay
-          
-          // The tile to explode next is whatever is now at the otherTile's original position
-          const tileForSecondExplosion = boardAfterFirstExplosion[otherTilePos.row][otherTilePos.col];
-
-          if (tileForSecondExplosion) {
-            // Second explosion
-            const { clearedTiles: cleared2 } = activatePowerUp(boardAfterFirstExplosion, tileForSecondExplosion);
-            setScore(prev => prev + cleared2.length * 10);
-            await processBoardChanges(boardAfterFirstExplosion, cleared2);
-          }
-
-          setIsProcessing(false);
-          return;
-      }
-
       // Regular swap
       const { row: r1, col: c1 } = tile1;
       const { row: r2, col: c2 } = tile2;
@@ -257,8 +227,34 @@ export default function Home() {
       setBoard(finalBoard);
       setIsProcessing(false);
     },
-    [board, isProcessing, gameState, processMatchesAndCascades, processBoardChanges, toast]
+    [board, isProcessing, gameState, processMatchesAndCascades, toast]
   );
+
+  const handleTileClick = useCallback(async (tile: Tile) => {
+    if (isProcessing || gameState !== 'playing') return;
+
+    if (tile.powerUp === 'bomb') {
+      setIsProcessing(true);
+      setMovesLeft(prev => prev - 1);
+
+      const { clearedTiles } = activatePowerUp(board, tile);
+      setScore(prev => prev + clearedTiles.length * 10);
+      const finalBoard = await processBoardChanges(board, clearedTiles);
+      
+      setBoard(finalBoard);
+      setIsProcessing(false);
+    } else {
+      // Regular tile selection for swapping
+      if (selectedTile) {
+        if (selectedTile.id !== tile.id) {
+          handleSwap(selectedTile, tile);
+        }
+        setSelectedTile(null);
+      } else {
+        setSelectedTile(tile);
+      }
+    }
+  }, [board, isProcessing, gameState, selectedTile, handleSwap, processBoardChanges]);
 
   const handleGameOver = useCallback(
     async (didWin: boolean) => {
@@ -376,7 +372,8 @@ export default function Home() {
         <div className="w-full max-w-lg flex items-center justify-center relative">
           <GameBoard
             board={board}
-            onSwap={handleSwap}
+            onTileClick={handleTileClick}
+            selectedTile={selectedTile}
             isProcessing={isProcessing}
             isAnimating={isAnimating}
           />

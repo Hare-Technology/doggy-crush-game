@@ -195,11 +195,11 @@ const swapTiles = (
 export const activatePowerUp = (
   board: Board,
   tile: Tile
-): { newBoard: Board; clearedTiles: Tile[] } => {
+): { clearedTiles: Tile[] } => {
   let clearedTiles: Tile[] = [];
   const { row, col } = tile;
 
-  // Bomb always clears a 3x3 area
+  // Bomb clears a 3x3 area
   for (let r = row - 1; r <= row + 1; r++) {
     for (let c = col - 1; c <= col + 1; c++) {
       if (r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE) {
@@ -210,11 +210,6 @@ export const activatePowerUp = (
       }
     }
   }
-  
-  const clearedTileIds = new Set(clearedTiles.map(t => t.id));
-  const newBoard = board.map(r =>
-    r.map(t => (t && clearedTileIds.has(t.id) ? null : t))
-  );
 
-  return { newBoard, clearedTiles };
+  return { clearedTiles };
 };
