@@ -617,7 +617,7 @@ if (typeof idCounter === 'number') {
     const baseTargetIncrease = 500 + level * 150;
     const baseMoveAdjustment = -1;
   
-    // Performance Score (0-100)
+    // Performance Score (0-100+)
     let performanceScore = 0;
     // 1. Moves left (up to 40 points)
     performanceScore += Math.min(40, movesLeft * 2);
@@ -628,21 +628,29 @@ if (typeof idCounter === 'number') {
     // 4. Highest combo (up to 15 points)
     performanceScore += Math.min(15, (highestCombo - 1) * 2);
   
-    let targetMultiplier = 1;
+    let targetMultiplier = 1.0;
     let moveAdjustment = 0;
   
-    if (performanceScore > 85) { // Exceptional performance
-      targetMultiplier = 1.5;
-      moveAdjustment = -3;
-      toast({ title: "Wow!", description: "That was amazing! Let's see how you handle this..."});
-    } else if (performanceScore > 60) { // Strong performance
-      targetMultiplier = 1.2;
-      moveAdjustment = -2;
-    } else if (performanceScore < 25) { // Struggled
-      targetMultiplier = 0.8;
-      moveAdjustment = 1;
-       toast({ title: "Close Call!", description: "That was a tough one. Let's try something a bit easier."});
-    } // Standard performance is the default
+    if (performanceScore > 90) { // Exceptional+
+        targetMultiplier = 1.6;
+        moveAdjustment = -4;
+        toast({ title: "Incredible!", description: "A true master! Prepare for a real challenge."});
+    } else if (performanceScore > 75) { // Strong
+        targetMultiplier = 1.3;
+        moveAdjustment = -2;
+        toast({ title: "Great job!", description: "You're getting good at this. Let's ramp it up."});
+    } else if (performanceScore > 40) { // Average
+        targetMultiplier = 1.1;
+        moveAdjustment = 0;
+    } else if (performanceScore > 20) { // Struggled
+        targetMultiplier = 0.9;
+        moveAdjustment = 2;
+        toast({ title: "Phew, that was close!", description: "Let's try a slightly easier one."});
+    } else { // Mercy
+        targetMultiplier = 0.75;
+        moveAdjustment = 3;
+        toast({ title: "Don't give up!", description: "Here's a little boost for the next level."});
+    }
   
     const newTarget = Math.round((targetScore + baseTargetIncrease) * targetMultiplier);
     const newMoves = Math.max(10, INITIAL_MOVES - nextLevel + baseMoveAdjustment + moveAdjustment);
