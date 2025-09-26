@@ -8,8 +8,8 @@ export const TILE_TYPES: TileType[] = ['paw', 'bone', 'house', 'ball', 'bowl'];
 
 export const TILE_COLORS: Record<TileType, string> = {
     paw: 'bg-red-400',
-    bone: 'bg-blue-400',
-    house: 'bg-green-400',
-    ball: 'bg-purple-400',
-    bowl: 'bg-yellow-400',
+    bone: 'bg-sky-400',
+    house: 'bg-emerald-400',
+    ball: 'bg-amber-400',
+    bowl: 'bg-violet-400',
 };
