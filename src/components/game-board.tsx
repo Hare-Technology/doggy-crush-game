@@ -49,7 +49,7 @@ const MemoizedTile: FC<{
         } as React.CSSProperties
       }
     >
-      <Icon className="w-8 h-8 lg:w-10 lg:h-10 drop-shadow-lg" />
+      <Icon className="drop-shadow-lg" />
     </div>
   );
 });
@@ -79,11 +79,11 @@ const GameBoard: FC<GameBoardProps> = ({ board, onSwap, isProcessing }) => {
     >
       <style jsx global>{`
         :root {
-          --tile-color-paw: 25 90% 85%;
-          --tile-color-bone: 45 95% 85%;
-          --tile-color-house: 190 85% 85%;
-          --tile-color-ball: 300 80% 85%;
-          --tile-color-bowl: 120 85% 85%;
+          --tile-color-paw: 25 90% 80%;
+          --tile-color-bone: 45 95% 80%;
+          --tile-color-house: 190 85% 80%;
+          --tile-color-ball: 300 80% 80%;
+          --tile-color-bowl: 120 85% 80%;
         }
       `}</style>
       {board.map((row, rowIndex) =>
