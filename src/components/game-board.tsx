@@ -4,6 +4,8 @@ import type { FC } from 'react';
 import { memo, useState } from 'react';
 import type { Board, Tile as TileType } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { TILE_TYPES } from '@/lib/constants';
+import { PawIcon, BoneIcon, DogHouseIcon, BallIcon, FoodBowlIcon } from '@/components/dog-icons';
 
 interface GameBoardProps {
   board: Board;
@@ -11,15 +13,15 @@ interface GameBoardProps {
   isProcessing: boolean;
 }
 
-const tileEmojiMap: Record<string, string> = {
-  paw: '🐾',
-  bone: '🐕',
-  house: '🐩',
-  ball: '🦮',
-  bowl: '🐶',
+const tileComponentMap: Record<string, React.ElementType> = {
+  paw: PawIcon,
+  bone: BoneIcon,
+  house: DogHouseIcon,
+  ball: BallIcon,
+  bowl: FoodBowlIcon,
 };
 
-const MemoizedTile: FC<{ 
+const MemoizedTile: FC<{
   tile: TileType | null;
   onClick: (tile: TileType) => void;
   isSelected: boolean;
@@ -30,8 +32,8 @@ const MemoizedTile: FC<{
     );
   }
 
-  const emoji = tileEmojiMap[tile.type] || '❓';
-  
+  const Icon = tileComponentMap[tile.type] || PawIcon;
+
   return (
     <div
       key={tile.id}
@@ -43,17 +45,18 @@ const MemoizedTile: FC<{
         'bg-[hsl(var(--tile-color))]',
         isSelected && 'ring-4 ring-offset-2 ring-white'
       )}
-      style={{
-        transform: tile ? 'scale(1)' : 'scale(0)',
-        '--tile-color': `var(--tile-color-${tile.type})`,
-      } as React.CSSProperties}
+      style={
+        {
+          transform: tile ? 'scale(1)' : 'scale(0)',
+          '--tile-color': `var(--tile-color-${tile.type})`,
+        } as React.CSSProperties
+      }
     >
-      <span className="text-4xl lg:text-5xl drop-shadow-lg">{emoji}</span>
+      <Icon className="w-8 h-8 lg:w-10 lg:h-10 drop-shadow-lg" />
     </div>
   );
 });
 MemoizedTile.displayName = 'MemoizedTile';
-
 
 const GameBoard: FC<GameBoardProps> = ({ board, onSwap, isProcessing }) => {
   const [selectedTile, setSelectedTile] = useState<TileType | null>(null);
@@ -78,10 +81,19 @@ const GameBoard: FC<GameBoardProps> = ({ board, onSwap, isProcessing }) => {
         isProcessing && 'pointer-events-none'
       )}
     >
+      <style jsx global>{`
+        :root {
+          --tile-color-paw: 25 80% 80%;
+          --tile-color-bone: 45 85% 80%;
+          --tile-color-house: 190 75% 80%;
+          --tile-color-ball: 300 70% 80%;
+          --tile-color-bowl: 120 75% 80%;
+        }
+      `}</style>
       {board.map((row, rowIndex) =>
-        row.map((tile, colIndex) => (
+        row.map((tile) => (
           <MemoizedTile
-            key={`${rowIndex}-${colIndex}-${tile?.id}`}
+            key={`${rowIndex}-${tile?.col}-${tile?.id}`}
             tile={tile}
             onClick={handleTileClick}
             isSelected={!!(selectedTile && tile && selectedTile.id === tile.id)}
