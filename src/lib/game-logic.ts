@@ -158,7 +158,7 @@ export const findMatches = (
   })
 
   // If a powerup was created, it implies a valid match. We need to ensure `matches` is not empty.
-  if (powerUps.length > 0) {
+  if (powerUps.length > 0 && allMatches.size === 0) {
     const powerUpOriginalTileIds = new Set(powerUps.map(p => {
         const originalMatch = combinedMatches.find(m => m.some(t => t.row === p.tile.row && t.col === p.tile.col && t.type === p.tile.type));
         return originalMatch ? originalMatch.map(t => t.id) : [];
@@ -166,7 +166,11 @@ export const findMatches = (
     
     for (const match of combinedMatches) {
         if (match.some(t => powerUpOriginalTileIds.has(t.id))) {
-            match.forEach(t => allMatches.add(t));
+            match.forEach(t => {
+                if(!tilesInPowerups.has(t.id)) {
+                    allMatches.add(t);
+                }
+            });
         }
     }
   }
@@ -192,12 +196,14 @@ export const applyGravity = (
     }
 
     let newRowIndex = BOARD_SIZE - 1;
-    columnTiles.reverse().forEach(tile => {
-      if (tile.row !== newRowIndex || tile.col !== col) {
-        movedTiles.add(tile.id);
+    columnTiles.sort((a,b) => a.row - b.row).reverse().forEach(tile => {
+      if (newRowIndex >= 0) {
+        if (tile.row !== newRowIndex || tile.col !== col) {
+          movedTiles.add(tile.id);
+        }
+        newBoard[newRowIndex][col] = { ...tile, row: newRowIndex, col };
+        newRowIndex--;
       }
-      newBoard[newRowIndex][col] = { ...tile, row: newRowIndex, col };
-      newRowIndex--;
     });
   }
 
@@ -212,13 +218,7 @@ export const fillEmptyTiles = (board: Board): Board => {
     let newTileRow = -1;
     for (let row = BOARD_SIZE - 1; row >= 0; row--) {
       if (newBoard[row][col] === null) {
-        // Find the first empty spot from the top to place the new off-screen tile
-        let finalRow = row;
-        while(finalRow > 0 && newBoard[finalRow - 1][col] === null) {
-          finalRow--;
-        }
-
-        newBoard[finalRow][col] = {
+        newBoard[row][col] = {
           id: tileIdCounter++,
           type: getRandomTileType(),
           row: newTileRow, // Start above the board

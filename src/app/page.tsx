@@ -243,7 +243,7 @@ if (typeof idCounter === 'number') {
         setIsAnimating(prev => new Set([...prev, ...matchedTileIds]));
         await delay(500);
 
-        let newBoardWithNulls = boardWithPowerups.map(row =>
+        let newBoardWithNulls = tempBoard.map(row =>
           row.map(tile => {
             if (!tile) return null;
             if (matchedTileIds.has(tile.id)) {
@@ -252,6 +252,13 @@ if (typeof idCounter === 'number') {
             return tile;
           })
         );
+
+        if (powerUps.length > 0) {
+          powerUps.forEach(p => {
+            const {row, col} = p.tile;
+            newBoardWithNulls[row][col] = {...p.tile, powerUp: p.powerUp};
+          });
+        }
         
         setIsAnimating(new Set());
 
