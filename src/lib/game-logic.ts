@@ -298,6 +298,7 @@ export const activatePowerUp = (
   board: Board,
   tile: Tile,
   targetType?: TileTypeEnum,
+  isPrimaryActivation = false
 ): { clearedTiles: Tile[]; secondaryExplosions?: Tile[]; spawnBomb?: boolean } => {
   const clearedTilesMap = new Map<number, Tile>();
   clearedTilesMap.set(tile.id, tile);
@@ -318,11 +319,11 @@ export const activatePowerUp = (
         }
       }
     }
-    // Return a flag to spawn a new bomb
+    // Only spawn a new bomb on the primary activation
     return {
       clearedTiles: Array.from(clearedTilesMap.values()),
       secondaryExplosions,
-      spawnBomb: true,
+      spawnBomb: isPrimaryActivation,
     };
   } else if (tile.powerUp === 'column_clear') {
     for (let r = 0; r < BOARD_SIZE; r++) {

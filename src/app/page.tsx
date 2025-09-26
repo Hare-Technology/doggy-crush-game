@@ -418,7 +418,7 @@ export default function Home() {
     [board, processMatchesAndCascades, toast]
   );
 
-  const handleTileInteraction = useCallback(
+  const handleTileClick = useCallback(
     async (tile: Tile) => {
       if (isProcessing || gameState !== 'playing') return;
 
@@ -428,8 +428,12 @@ export default function Home() {
       if (tile.powerUp && !selectedTile) {
         setIsProcessing(true);
 
-        const { clearedTiles, secondaryExplosions, spawnBomb } =
-          activatePowerUp(board, tile);
+        const { clearedTiles, secondaryExplosions, spawnBomb } = activatePowerUp(
+          board,
+          tile,
+          undefined,
+          true // isPrimaryActivation
+        );
         setScore(prev => prev + clearedTiles.length * 10);
         let currentBoard = await processBoardChanges(
           board,
@@ -440,28 +444,32 @@ export default function Home() {
         if (secondaryExplosions && secondaryExplosions.length > 0) {
           let chainBoard = currentBoard;
           for (const secondaryTile of secondaryExplosions) {
-            const {
-              clearedTiles: secondClearedTiles,
-              spawnBomb: secondSpawnBomb,
-            } = activatePowerUp(chainBoard, secondaryTile);
+            const { clearedTiles: secondClearedTiles } = activatePowerUp(
+              chainBoard,
+              secondaryTile
+            );
             setScore(prev => prev + secondClearedTiles.length * 10);
             chainBoard = await processBoardChanges(
               chainBoard,
               secondClearedTiles,
-              secondSpawnBomb
+              false // Secondary explosions don't spawn more bombs
             );
           }
           currentBoard = chainBoard;
         }
 
+        // If a bomb was spawned, trigger its explosion after a short fuse
         if (spawnBomb) {
+          // The new bomb will be on the board after processBoardChanges.
+          // We need to find it. It will be the only bomb not in the original cleared tiles.
           const newBomb = currentBoard
             .flat()
             .find(
               t => t?.powerUp === 'bomb' && !clearedTiles.some(ct => ct.id === t.id)
             );
+
           if (newBomb) {
-            setTimeout(() => handleTileInteraction(newBomb), 250);
+            setTimeout(() => handleTileClick(newBomb), 250);
           }
         }
 
@@ -514,7 +522,11 @@ export default function Home() {
           setMovesLeft(prev => prev - 1);
 
           // Activate rainbow power-up by swapping
-          const { clearedTiles } = activatePowerUp(board, rainbowTile, otherTile.type);
+          const { clearedTiles } = activatePowerUp(
+            board,
+            rainbowTile,
+            otherTile.type
+          );
           setScore(prev => prev + clearedTiles.length * 10);
           let currentBoard = await processBoardChanges(board, clearedTiles);
 
@@ -828,7 +840,7 @@ export default function Home() {
 
   const handleNextLevel = useCallback(() => {
     const { nextLevel, newTarget, newMoves } = getNextLevelParams();
-    startNewLevel(nextLevel, newMoves, newTarget);
+    startNewLevel(nextLevel, newTarget, newMoves);
   }, [startNewLevel, getNextLevelParams]);
 
   const coinBonuses = useMemo(() => {
@@ -927,7 +939,7 @@ export default function Home() {
         <div className="w-full max-w-lg flex items-center justify-center relative">
           <GameBoard
             board={board}
-            onTileClick={handleTileInteraction}
+            onTileClick={handleTileClick}
             selectedTile={selectedTile}
             isProcessing={isProcessing}
             isAnimating={isAnimating}
