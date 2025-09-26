@@ -36,3 +36,7 @@ export const FoodBowlIcon = (props: HTMLAttributes<HTMLSpanElement>) => (
 export const BombIcon = (props: HTMLAttributes<HTMLSpanElement>) => (
   <Emoji emoji="💣" {...props} />
 );
+
+export const ColumnClearIcon = (props: HTMLAttributes<HTMLSpanElement>) => (
+  <Emoji emoji="⚡" {...props} />
+);

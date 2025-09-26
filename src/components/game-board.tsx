@@ -10,6 +10,7 @@ import {
   BallIcon,
   FoodBowlIcon,
   BombIcon,
+  ColumnClearIcon,
 } from '@/components/dog-icons';
 import { BOARD_SIZE } from '@/lib/constants';
 
@@ -29,14 +30,20 @@ const tileComponentMap: Record<string, React.ElementType> = {
   bowl: FoodBowlIcon,
 };
 
+const powerUpComponentMap: Record<string, React.ElementType> = {
+  bomb: BombIcon,
+  column_clear: ColumnClearIcon,
+};
+
 const Tile: FC<{
   tile: TileType;
   onClick: () => void;
   isSelected: boolean;
   isAnimating: boolean;
 }> = ({ tile, onClick, isSelected, isAnimating }) => {
-  const Icon =
-    tile.powerUp === 'bomb' ? BombIcon : tileComponentMap[tile.type] || PawIcon;
+  const Icon = tile.powerUp
+    ? powerUpComponentMap[tile.powerUp]
+    : tileComponentMap[tile.type] || PawIcon;
   const top = (tile.row / BOARD_SIZE) * 100;
   const left = (tile.col / BOARD_SIZE) * 100;
 

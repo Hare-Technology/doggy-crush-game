@@ -50,7 +50,7 @@ export const findMatches = (
   let powerUp: { tile: Tile; powerUp: PowerUpType } | null = null;
   const allTiles = board.flat().filter((t): t is Tile => t !== null);
 
-  const checkLine = (line: (Tile | null)[]) => {
+  const checkLine = (line: (Tile | null)[], isVertical = false) => {
     if (line.length < 3) return;
 
     for (let i = 0; i <= line.length - 3; i++) {
@@ -70,28 +70,36 @@ export const findMatches = (
       if (match.length >= 3) {
         match.forEach(t => matches.add(String(t.id)));
 
-        // Create a bomb for a 5+ match
         if (match.length >= 5 && !powerUp) {
-          // The bomb is created on the middle tile of the match
           const powerUpTile = match[Math.floor(match.length / 2)];
           powerUp = {
             tile: powerUpTile,
             powerUp: 'bomb',
           };
+        } else if (match.length === 4 && isVertical && !powerUp) {
+          const powerUpTile = match[Math.floor(match.length / 2)];
+          powerUp = {
+            tile: powerUpTile,
+            powerUp: 'column_clear',
+          };
         }
-        i += match.length - 1; // Skip ahead past the current match
+
+        i += match.length - 1; // Skip ahead
       }
     }
   };
 
   // Find horizontal matches
   for (let row = 0; row < BOARD_SIZE; row++) {
-    checkLine(board[row]);
+    checkLine(board[row], false);
   }
 
   // Find vertical matches
   for (let col = 0; col < BOARD_SIZE; col++) {
-    checkLine(board.map(row => row[col]));
+    checkLine(
+      board.map(row => row[col]),
+      true
+    );
   }
 
   const matchedTiles = allTiles.filter(t => matches.has(String(t.id)));
@@ -103,7 +111,6 @@ export const findMatches = (
 
   return { matches: finalMatches, powerUp };
 };
-
 
 export const applyGravity = (
   board: Board
@@ -199,25 +206,19 @@ export const activatePowerUp = (
   const clearedTiles = new Set<Tile>();
   let randomBombTile: Tile | null = null;
 
-  // Bomb clears a 3x3 area
   if (tile.powerUp === 'bomb') {
-    // 1. Clear 3x3 area around the clicked bomb
     for (let r = tile.row - 1; r <= tile.row + 1; r++) {
       for (let c = tile.col - 1; c <= tile.col + 1; c++) {
         if (r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE) {
           const targetTile = board[r][c];
           if (targetTile) {
-            // Do not destroy other powerups unless it's the bomb itself
-            if (targetTile.powerUp && targetTile.id !== tile.id) {
-              continue;
-            }
+            if (targetTile.powerUp && targetTile.id !== tile.id) continue;
             clearedTiles.add(targetTile);
           }
         }
       }
     }
 
-    // 2. Select a random tile to become the next bomb
     const allOtherTiles = board
       .flat()
       .filter(
@@ -228,6 +229,14 @@ export const activatePowerUp = (
     if (allOtherTiles.length > 0) {
       randomBombTile =
         allOtherTiles[Math.floor(Math.random() * allOtherTiles.length)];
+    }
+  } else if (tile.powerUp === 'column_clear') {
+    for (let r = 0; r < BOARD_SIZE; r++) {
+      const targetTile = board[r][tile.col];
+      if (targetTile) {
+        if (targetTile.powerUp && targetTile.id !== tile.id) continue;
+        clearedTiles.add(targetTile);
+      }
     }
   }
 
