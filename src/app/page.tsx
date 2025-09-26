@@ -368,6 +368,40 @@ if (typeof idCounter === 'number') {
 
     resetHintTimer();
 
+    // Power-ups that activate on click DO NOT use a move
+    if (tile.powerUp && !selectedTile) {
+      setIsProcessing(true);
+
+      const { clearedTiles, secondaryExplosions } = activatePowerUp(board, tile);
+      setScore(prev => prev + clearedTiles.length * 10);
+      let currentBoard = await processBoardChanges(board, clearedTiles);
+
+      if (secondaryExplosions && secondaryExplosions.length > 0) {
+        let chainBoard = currentBoard;
+        for (const secondaryTile of secondaryExplosions) {
+          const { clearedTiles: secondClearedTiles } = activatePowerUp(chainBoard, secondaryTile);
+          setScore(prev => prev + secondClearedTiles.length * 10);
+          chainBoard = await processBoardChanges(chainBoard, secondClearedTiles);
+        }
+        currentBoard = chainBoard;
+      }
+
+      while (!checkBoardForMoves(currentBoard)) {
+          toast({ title: 'No moves left, reshuffling!' });
+          await delay(700);
+          setIsShuffling(true);
+          let reshuffledBoard = createInitialBoard();
+          setBoard(reshuffledBoard);
+          await delay(1000);
+          setIsShuffling(false);
+          currentBoard = await processMatchesAndCascades(reshuffledBoard);
+      }
+      
+      setBoard(currentBoard);
+      setIsProcessing(false);
+      return;
+    }
+
     if (selectedTile) {
       // This is the second tile selection
       const tile1 = selectedTile;
@@ -416,42 +450,8 @@ if (typeof idCounter === 'number') {
       }
 
     } else {
-      // This is the first tile selection
-      if (tile.powerUp && tile.powerUp !== 'rainbow') {
-        // Power-ups that activate on click DO NOT use a move
-        setIsProcessing(true);
-
-        const { clearedTiles, secondaryExplosions } = activatePowerUp(board, tile);
-        setScore(prev => prev + clearedTiles.length * 10);
-        let currentBoard = await processBoardChanges(board, clearedTiles);
-
-        if (secondaryExplosions && secondaryExplosions.length > 0) {
-          let chainBoard = currentBoard;
-          for (const secondaryTile of secondaryExplosions) {
-            const { clearedTiles: secondClearedTiles } = activatePowerUp(chainBoard, secondaryTile);
-            setScore(prev => prev + secondClearedTiles.length * 10);
-            chainBoard = await processBoardChanges(chainBoard, secondClearedTiles);
-          }
-          currentBoard = chainBoard;
-        }
-
-        while (!checkBoardForMoves(currentBoard)) {
-            toast({ title: 'No moves left, reshuffling!' });
-            await delay(700);
-            setIsShuffling(true);
-            let reshuffledBoard = createInitialBoard();
-            setBoard(reshuffledBoard);
-            await delay(1000);
-            setIsShuffling(false);
-            currentBoard = await processMatchesAndCascades(reshuffledBoard);
-        }
-        
-        setBoard(currentBoard);
-        setIsProcessing(false);
-      } else {
-        // It's a regular tile or a rainbow tile, set it as selected
-        setSelectedTile(tile);
-      }
+      // It's a regular tile or a rainbow tile, set it as selected
+      setSelectedTile(tile);
     }
   }, [isProcessing, gameState, selectedTile, board, handleRegularSwap, processBoardChanges, toast, processMatchesAndCascades, resetHintTimer]);
 
@@ -611,30 +611,44 @@ if (typeof idCounter === 'number') {
 
   const getNextLevelParams = useCallback(() => {
     const nextLevel = level + 1;
-    let targetIncrease = 1000;
-    let moveAdjustment = -2;
-
-    // Player did very well, make it much harder
-    if (movesLeft > 10) {
-        targetIncrease = 2000 + (level * 200);
-        moveAdjustment = -3;
-    } 
-    // Player did okay, standard increase
-    else if (movesLeft > 3) {
-        targetIncrease = 1000 + (level * 100);
-        moveAdjustment = -2;
-    } 
-    // Player struggled, make it slightly harder
-    else {
-        targetIncrease = 500 + (level * 50);
-        moveAdjustment = -1;
-    }
-
-    const newTarget = targetScore + targetIncrease;
-    const newMoves = Math.max(10, movesLeft + moveAdjustment);
-
-    return { nextLevel, newTarget, newMoves };
-  }, [level, movesLeft, targetScore]);
+    const timeTaken = Math.max(1, Math.round((levelEndTime - levelStartTime) / 1000));
+  
+    // Base progression
+    const baseTargetIncrease = 500 + level * 150;
+    const baseMoveAdjustment = -1;
+  
+    // Performance Score (0-100)
+    let performanceScore = 0;
+    // 1. Moves left (up to 40 points)
+    performanceScore += Math.min(40, movesLeft * 2);
+    // 2. Time taken (up to 30 points, less time is better)
+    performanceScore += Math.max(0, 30 - (timeTaken - 30) / 5); // Lose points for every 5s over 30s
+    // 3. Powerups made (up to 15 points)
+    performanceScore += Math.min(15, powerUpsMade * 3);
+    // 4. Highest combo (up to 15 points)
+    performanceScore += Math.min(15, (highestCombo - 1) * 2);
+  
+    let targetMultiplier = 1;
+    let moveAdjustment = 0;
+  
+    if (performanceScore > 85) { // Exceptional performance
+      targetMultiplier = 1.5;
+      moveAdjustment = -3;
+      toast({ title: "Wow!", description: "That was amazing! Let's see how you handle this..."});
+    } else if (performanceScore > 60) { // Strong performance
+      targetMultiplier = 1.2;
+      moveAdjustment = -2;
+    } else if (performanceScore < 25) { // Struggled
+      targetMultiplier = 0.8;
+      moveAdjustment = 1;
+       toast({ title: "Close Call!", description: "That was a tough one. Let's try something a bit easier."});
+    } // Standard performance is the default
+  
+    const newTarget = Math.round((targetScore + baseTargetIncrease) * targetMultiplier);
+    const newMoves = Math.max(10, INITIAL_MOVES - nextLevel + baseMoveAdjustment + moveAdjustment);
+  
+    return { nextLevel, newTarget: Math.floor(newTarget / 100) * 100, newMoves };
+  }, [level, movesLeft, targetScore, levelStartTime, levelEndTime, powerUpsMade, highestCombo, toast]);
 
   const handleNextLevel = useCallback(() => {
     const { nextLevel, newTarget, newMoves } = getNextLevelParams();
