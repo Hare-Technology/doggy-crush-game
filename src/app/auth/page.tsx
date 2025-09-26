@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   createUserWithEmailAndPassword,
@@ -20,6 +20,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/use-auth';
 import { PawPrint, Loader2 } from 'lucide-react';
 
 export default function AuthPage() {
@@ -29,6 +30,13 @@ export default function AuthPage() {
   const [error, setError] = useState('');
   const router = useRouter();
   const { toast } = useToast();
+  const { user, loading: authLoading } = useAuth();
+
+  useEffect(() => {
+    if (!authLoading && user) {
+      router.push('/');
+    }
+  }, [user, authLoading, router]);
 
   const handleAuthAction = async (action: 'signup' | 'login') => {
     setIsLoading(true);
@@ -59,6 +67,14 @@ export default function AuthPage() {
       setIsLoading(false);
     }
   };
+  
+  if (authLoading || user) {
+    return (
+       <div className="flex flex-col min-h-screen bg-background items-center justify-center">
+        <Loader2 className="w-12 h-12 animate-spin text-primary" />
+       </div>
+    )
+  }
 
   return (
     <div className="flex flex-col min-h-screen bg-background">

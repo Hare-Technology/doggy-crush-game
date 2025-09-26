@@ -2,11 +2,34 @@
 
 import { usePathname, useRouter } from 'next/navigation';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Gamepad2, Trophy, User, PawPrint } from 'lucide-react';
+import { Gamepad2, Trophy, User, LogOut } from 'lucide-react';
+import { useAuth } from '@/hooks/use-auth';
+import { auth } from '@/lib/firebase';
+import { signOut } from 'firebase/auth';
+import { useToast } from '@/hooks/use-toast';
 
 export default function Header() {
   const router = useRouter();
   const pathname = usePathname();
+  const { user, loading } = useAuth();
+  const { toast } = useToast();
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      toast({
+        title: 'Signed Out',
+        description: 'You have been successfully signed out.',
+      });
+      router.push('/');
+    } catch (error) {
+      toast({
+        title: 'Error Signing Out',
+        description: 'Something went wrong.',
+        variant: 'destructive',
+      });
+    }
+  };
 
   // Determine active tab from pathname
   const activeTab = pathname.startsWith('/leaderboard')
@@ -46,10 +69,18 @@ export default function Header() {
             <Trophy className="w-4 h-4 mr-2" />
             Leaderboard
           </TabsTrigger>
-          <TabsTrigger value="auth">
-            <User className="w-4 h-4 mr-2" />
-            Signup/Login
-          </TabsTrigger>
+          {!loading &&
+            (user ? (
+              <TabsTrigger value="logout" onClick={handleLogout}>
+                <LogOut className="w-4 h-4 mr-2" />
+                Logout
+              </TabsTrigger>
+            ) : (
+              <TabsTrigger value="auth">
+                <User className="w-4 h-4 mr-2" />
+                Signup/Login
+              </TabsTrigger>
+            ))}
         </TabsList>
       </Tabs>
     </header>
