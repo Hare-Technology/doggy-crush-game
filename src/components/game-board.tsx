@@ -36,7 +36,7 @@ const MemoizedTile: FC<{
     <div
       onClick={() => onClick(tile)}
       className={cn(
-        'absolute aspect-square rounded-lg flex items-center justify-center cursor-pointer transition-all duration-300',
+        'absolute aspect-square rounded-lg flex items-center justify-center cursor-pointer transition-all duration-500 ease-in-out',
         'transform-gpu',
         isSelected && 'ring-4 ring-offset-2 ring-white z-10',
         'shadow-md',
@@ -50,7 +50,7 @@ const MemoizedTile: FC<{
           height: `${size}px`,
           top: `${tile.row * tileSize + offset}px`,
           left: `${tile.col * tileSize + offset}px`,
-          transition: 'top 0.2s ease-out, left 0.2s ease-out',
+          transition: 'top 0.5s ease-in-out, left 0.5s ease-in-out',
         } as React.CSSProperties
       }
     >
@@ -67,7 +67,6 @@ const GameBoard: FC<GameBoardProps> = ({ board, onSwap, isProcessing }) => {
   const tileGap = 4; // The gap in pixels
   const tileSize = containerSize / BOARD_SIZE;
   const gridCellSize = tileSize - tileGap;
-  const gridOffset = tileGap / 2;
 
 
   const boardRef = useCallback((node: HTMLDivElement | null) => {
