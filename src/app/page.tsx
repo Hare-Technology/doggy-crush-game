@@ -43,12 +43,12 @@ export default function Home() {
   const [comboMessage, setComboMessage] = useState<string>('');
   const { toast } = useToast();
   const { user } = useAuth();
-    const { playSound } = useSound();
-    const [coins, setCoins] = useState(0);
-    const [highestCombo, setHighestCombo] = useState(0);
-    const [powerUpsMade, setPowerUpsMade] = useState(0);
-    const [levelStartTime, setLevelStartTime] = useState(0);
-    const [levelEndTime, setLevelEndTime] = useState(0);
+  const { playSound } = useSound();
+  const [coins, setCoins] = useState(0);
+  const [highestCombo, setHighestCombo] = useState(0);
+  const [powerUpsMade, setPowerUpsMade] = useState(0);
+  const [levelStartTime, setLevelStartTime] = useState(0);
+  const [levelEndTime, setLevelEndTime] = useState(0);
 
   const scoreNeeded = useMemo(
     () => Math.max(0, targetScore - score),
@@ -65,7 +65,7 @@ export default function Home() {
       setCoins(parseInt(savedCoins, 10));
     }
   }, []);
-    
+
   useEffect(() => {
     localStorage.setItem('doggyCrushCoins', coins.toString());
   }, [coins]);
@@ -107,7 +107,7 @@ export default function Home() {
 
         cascadeCount++;
         if (cascadeCount > highestCombo) {
-            setHighestCombo(cascadeCount);
+          setHighestCombo(cascadeCount);
         }
         if (cascadeCount > 1) {
           playSound('combo');
@@ -281,7 +281,6 @@ export default function Home() {
       if (tile.powerUp) {
         setSelectedTile(null);
         setIsProcessing(true);
-
         let finalBoard: Board;
 
         if (tile.powerUp === 'bomb') {
@@ -330,7 +329,7 @@ export default function Home() {
         } else {
           finalBoard = board;
         }
-        
+
         let checkBoard = finalBoard;
         while (!checkBoardForMoves(checkBoard)) {
           toast({ title: 'No moves left, reshuffling!' });
@@ -370,17 +369,16 @@ export default function Home() {
     async (didWin: boolean) => {
       const endTime = Date.now();
       setLevelEndTime(endTime);
-      
+
       if (didWin) {
         playSound('win');
         const timeTaken = Math.round((endTime - levelStartTime) / 1000); // in seconds
         const timeBonus = Math.floor(Math.max(0, 180 - timeTaken) * 0.5); // 0.5 coin per second under 3 minutes
-        const moveBonus = movesLeft * 5; // 5 coins per move left
+        const moveBonus = movesLeft * 2; // 2 coins per move left
         const comboBonus = highestCombo * 10; // 10 coins per max combo
         const powerUpBonus = powerUpsMade * 15; // 15 coins per power-up created
         const coinsEarned = timeBonus + moveBonus + comboBonus + powerUpBonus;
         setCoins(prev => prev + coinsEarned);
-        
       } else {
         playSound('lose');
       }
@@ -407,7 +405,18 @@ export default function Home() {
         }
       }
     },
-    [user, level, score, toast, playSound, levelStartTime, movesLeft, highestCombo, powerUpsMade, coins]
+    [
+      user,
+      level,
+      score,
+      toast,
+      playSound,
+      levelStartTime,
+      movesLeft,
+      highestCombo,
+      powerUpsMade,
+      coins,
+    ]
   );
 
   useEffect(() => {
@@ -475,15 +484,22 @@ export default function Home() {
   }, [level, score, movesLeft, startNewLevel, toast]);
 
   const coinBonuses = useMemo(() => {
-    if(gameState !== 'win' || levelEndTime === 0) return null;
+    if (gameState !== 'win' || levelEndTime === 0) return null;
     const timeTaken = Math.round((levelEndTime - levelStartTime) / 1000);
     return {
-        movesLeft: movesLeft * 5,
-        highestCombo: highestCombo * 10,
-        powerUpsMade: powerUpsMade * 15,
-        time: Math.floor(Math.max(0, 180 - timeTaken) * 0.5),
-    }
-  }, [gameState, levelEndTime, levelStartTime, movesLeft, highestCombo, powerUpsMade]);
+      movesLeft: movesLeft * 2,
+      highestCombo: highestCombo * 10,
+      powerUpsMade: powerUpsMade * 15,
+      time: Math.floor(Math.max(0, 180 - timeTaken) * 0.5),
+    };
+  }, [
+    gameState,
+    levelEndTime,
+    levelStartTime,
+    movesLeft,
+    highestCombo,
+    powerUpsMade,
+  ]);
 
   return (
     <div className="flex flex-col min-h-screen bg-background font-headline">
