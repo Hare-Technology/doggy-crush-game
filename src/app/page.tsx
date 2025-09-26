@@ -115,13 +115,14 @@ export default function Home() {
             return tile;
           })
         );
-
+        
         if (powerUp) {
           const { tile: powerUpTile, powerUp: powerUpType } = powerUp;
-          // Find the tile on the board to update, as it might have moved
+          // Find the tile on the board to update
           const targetTile = newBoardWithNulls
             .flat()
             .find(t => t?.id === powerUpTile.id);
+          
           if (targetTile) {
             newBoardWithNulls[targetTile.row][targetTile.col] = {
               ...targetTile,
@@ -129,6 +130,7 @@ export default function Home() {
             };
           }
         }
+
 
         setBoard(newBoardWithNulls);
         setIsAnimating(new Set());
