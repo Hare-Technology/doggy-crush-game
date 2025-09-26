@@ -259,7 +259,7 @@ export default function Home() {
         const { newBoard: boardAfterGravity } = applyGravity(boardWithNewTiles);
         
         setBoard(boardAfterGravity);
-        await delay(300);
+        await delay(500);
         
         tempBoard = boardAfterGravity;
       }
@@ -303,7 +303,7 @@ export default function Home() {
       const { newBoard: boardAfterGravity } = applyGravity(boardWithNewTiles);
       
       setBoard(boardAfterGravity);
-      await delay(300);
+      await delay(500);
       
       const boardAfterCascade = await processMatchesAndCascades(boardAfterGravity);
       setBoard(boardAfterCascade);
@@ -327,12 +327,12 @@ export default function Home() {
     tempBoard[r2][c2] = landingTileForT2;
 
     setBoard(tempBoard);
-    await delay(300);
+    await delay(500);
 
     const { matches, powerUps } = findMatches(tempBoard);
     if (matches.length === 0 && powerUps.length === 0) {
       setBoard(board); // Swap back
-      await delay(300);
+      await delay(500);
       setIsProcessing(false);
       return; // Do not decrement moves
     }
@@ -383,7 +383,6 @@ export default function Home() {
 
       if (rainbowTile && otherTile && !otherTile.powerUp) {
         setIsProcessing(true);
-        setMovesLeft(prev => prev - 1);
         
         // Activate rainbow power-up by swapping
         const { clearedTiles } = activatePowerUp(board, rainbowTile, otherTile.type);

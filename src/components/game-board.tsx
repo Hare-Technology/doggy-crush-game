@@ -64,7 +64,7 @@ const Tile: FC<{
     height: `calc(${100 / BOARD_SIZE}% - 4px)`,
     margin: '2px',
     backgroundColor: `hsl(var(--tile-color-${tile.type}))`,
-    transitionTimingFunction: 'ease-out',
+    transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)',
   };
 
   if (isShuffling) {
@@ -79,7 +79,7 @@ const Tile: FC<{
     <div
       onClick={onClick}
       className={cn(
-        'absolute rounded-lg flex items-center justify-center cursor-pointer transition-all duration-300',
+        'absolute rounded-lg flex items-center justify-center cursor-pointer transition-all duration-500',
         'shadow-md',
         isSelected && 'ring-4 ring-offset-2 ring-white z-10 scale-110',
         isAnimating && 'animate-pop',
