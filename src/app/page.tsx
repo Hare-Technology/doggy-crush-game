@@ -631,14 +631,19 @@ if (typeof idCounter === 'number') {
     try {
       setIsProcessing(true);
       toast({
-        title: 'Designing Next Level...',
-        description: 'Our AI is crafting a new challenge for you!',
+        title: 'The Architect is designing...',
+        description: 'Crafting a new challenge for you!',
       });
 
       const result = await suggestNextLevelParams({
         currentLevel: level,
         currentScore: score,
         movesRemaining: movesLeft,
+      });
+      
+      toast({
+        title: `Level ${level + 1} Ready!`,
+        description: result.reasoning,
       });
 
       startNewLevel(

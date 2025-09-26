@@ -27,6 +27,9 @@ const SuggestNextLevelParamsOutputSchema = z.object({
   suggestedTargetScore: z
     .number()
     .describe('The suggested target score for the next level.'),
+  reasoning: z
+    .string()
+    .describe('A brief explanation for the suggested parameters.'),
 });
 export type SuggestNextLevelParamsOutput = z.infer<typeof SuggestNextLevelParamsOutputSchema>;
 
@@ -40,24 +43,22 @@ const prompt = ai.definePrompt({
   name: 'suggestNextLevelParamsPrompt',
   input: {schema: SuggestNextLevelParamsInputSchema},
   output: {schema: SuggestNextLevelParamsOutputSchema},
-  prompt: `You are an expert game designer, specializing in level design and difficulty curve.
+  prompt: `You are a master game designer AI, known as 'The Architect', specializing in creating perfectly balanced difficulty curves for match-3 games. The game is called DoggyCrush.
 
-You are designing the next level for a match 3 game. The game is called DoggyCrush and it has dog-themed tiles.
+Your task is to design the next level by suggesting the number of moves and the target score. Analyze the player's performance on the current level to make an informed decision.
 
-Based on the player's performance on the current level, suggest the number of moves and the target score for the next level to make it appropriately challenging.
+Player Performance Data:
+- Current Level: {{{currentLevel}}}
+- Final Score: {{{currentScore}}}
+- Moves Remaining: {{{movesRemaining}}}
 
-Here's the player's performance on the current level:
-- Current level: {{{currentLevel}}}
-- Current score: {{{currentScore}}}
-- Moves remaining: {{{movesRemaining}}}
+Your design principles are:
+1.  **Engagement is Key**: The next level should be challenging but fair. Avoid sudden, frustrating difficulty spikes.
+2.  **Reward Skill**: If a player finished with many moves left, they are skilled. Reward them with a slightly tougher challenge that respects their ability.
+3.  **Encourage Improvement**: If a player barely passed, ease up slightly on the next level's difficulty increase to build their confidence.
+4.  **Steady Progression**: As levels increase, the baseline difficulty should gently rise.
 
-Consider the following when suggesting the number of moves and the target score:
-- The number of moves should be enough to allow the player to reach the target score, but not too many that it becomes too easy.
-- The target score should be high enough to be challenging, but not so high that it becomes frustrating.
-- The higher the level is, the more difficult it should be. But consider how well the player did on the previous level, and don't increase difficulty too sharply.
-
-Suggested number of moves: {{suggestedMoves}}
-Suggested target score: {{suggestedTargetScore}}`,
+Based on these principles and the player's performance, provide the suggested moves, target score, and a brief reasoning for your choices.`,
 });
 
 const suggestNextLevelParamsFlow = ai.defineFlow(
