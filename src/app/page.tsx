@@ -819,8 +819,8 @@ export default function Home() {
     );
 
     // Base progression
-    const baseTargetIncrease = 500 + level * 150;
-    const baseMoveAdjustment = -1;
+    const baseTargetIncrease = 1000 + level * 250;
+    const baseMoveAdjustment = -2;
 
     // Performance Score (0-100+)
     let performanceScore = 0;
@@ -838,23 +838,23 @@ export default function Home() {
 
     if (performanceScore > 90) {
       // Exceptional+
-      targetMultiplier = 1.6;
-      moveAdjustment = -4;
+      targetMultiplier = 1.8;
+      moveAdjustment = -5;
       toast({
         title: 'Incredible!',
         description: 'A true master! Prepare for a real challenge.',
       });
     } else if (performanceScore > 75) {
       // Strong
-      targetMultiplier = 1.3;
-      moveAdjustment = -2;
+      targetMultiplier = 1.5;
+      moveAdjustment = -3;
       toast({
         title: 'Great job!',
         description: "You're getting good at this. Let's ramp it up.",
       });
     } else if (performanceScore > 40) {
       // Average
-      targetMultiplier = 1.1;
+      targetMultiplier = 1.2;
       moveAdjustment = 0;
     } else if (performanceScore > 20) {
       // Struggled
@@ -867,7 +867,7 @@ export default function Home() {
     } else {
       // Mercy
       targetMultiplier = 0.75;
-      moveAdjustment = 3;
+      moveAdjustment = 4;
       toast({
         title: "Don't give up!",
         description: "Here's a little boost for the next level.",
@@ -875,8 +875,8 @@ export default function Home() {
     }
 
     if (winStreak >= 3) {
-      targetMultiplier += 0.2; // Extra 20% score target on a streak
-      moveAdjustment -= 2; // 2 fewer moves on a streak
+      targetMultiplier += 0.25; // Extra 25% score target on a streak
+      moveAdjustment -= 3; // 3 fewer moves on a streak
       toast({
         title: `On a Roll!`,
         description: `You've won ${winStreak} in a row! The heat is on!`,
@@ -887,7 +887,7 @@ export default function Home() {
       (targetScore + baseTargetIncrease) * targetMultiplier
     );
     const newMoves = Math.max(
-      10,
+      8,
       INITIAL_MOVES - nextLevel + baseMoveAdjustment + moveAdjustment
     );
 
