@@ -67,7 +67,7 @@ export const findMatches = (
         if (match.length >= 3) {
           match.forEach(t => matches.add(String(t.id)));
           if (match.length >= 5) {
-            powerUp = { tile: tile1, powerUp: 'bomb' };
+            powerUp = { tile: match[2], powerUp: 'bomb' }; // Bomb on middle tile
           }
         }
         col += match.length > 1 ? match.length : 1;
@@ -94,7 +94,7 @@ export const findMatches = (
         if (match.length >= 3) {
           match.forEach(t => matches.add(String(t.id)));
            if (match.length >= 5) {
-            powerUp = { tile: tile1, powerUp: 'bomb' };
+            powerUp = { tile: match[2], powerUp: 'bomb' }; // Bomb on middle tile
           }
         }
         row += match.length > 1 ? match.length : 1;

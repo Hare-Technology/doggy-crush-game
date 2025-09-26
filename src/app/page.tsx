@@ -79,7 +79,7 @@ export default function Home() {
   );
 
   const processMatchesAndCascades = useCallback(
-    async (currentBoard: Board, isSwap: boolean = false) => {
+    async (currentBoard: Board, isSwap: boolean = false, swappedTileForPowerup?: Tile) => {
       let tempBoard = currentBoard;
       let cascadeCount = 0;
       let totalPoints = 0;
@@ -112,10 +112,12 @@ export default function Home() {
         );
 
         if (isSwap && powerUp) {
-            const { tile, powerUp: powerUpType } = powerUp;
-            if(newBoardWithNulls[tile.row]) {
-              newBoardWithNulls[tile.row][tile.col] = {
-                ...tile,
+            const { powerUp: powerUpType } = powerUp;
+            const targetTile = swappedTileForPowerup || powerUp.tile;
+            
+            if(newBoardWithNulls[targetTile.row]) {
+              newBoardWithNulls[targetTile.row][targetTile.col] = {
+                ...targetTile,
                 id: Date.now() + Math.random(), // Ensure new ID
                 powerUp: powerUpType
               };
@@ -191,10 +193,32 @@ export default function Home() {
       if (!areTilesAdjacent(tile1, tile2)) return;
 
       setIsProcessing(true);
-      
-      let tempBoard = board.map(r => r.map(tile => (tile ? { ...tile } : null)));
-      
+      setMovesLeft(prev => prev - 1);
+
+      // Check for bomb swap
+      const bombTile = tile1.powerUp === 'bomb' ? tile1 : tile2.powerUp === 'bomb' ? tile2 : null;
+      const otherTile = bombTile === tile1 ? tile2 : tile1;
+
+      if (bombTile) {
+        // First explosion
+        const { clearedTiles: cleared1 } = activatePowerUp(board, bombTile);
+        setScore(prev => prev + cleared1.length * 10);
+        let boardAfterFirstExplosion = await processBoardChanges(board, cleared1);
+        
+        await delay(1000);
+
+        // Second explosion
+        const { clearedTiles: cleared2 } = activatePowerUp(boardAfterFirstExplosion, otherTile);
+        setScore(prev => prev + cleared2.length * 10);
+        const finalBoard = await processBoardChanges(boardAfterFirstExplosion, cleared2);
+        
+        setBoard(finalBoard);
+        setIsProcessing(false);
+        return;
+      }
+
       // Regular swap
+      let tempBoard = board.map(r => r.map(tile => (tile ? { ...tile } : null)));
       const { row: r1, col: c1 } = tile1;
       const { row: r2, col: c2 } = tile2;
       tempBoard[r1][c1] = { ...tile2, row: r1, col: c1 };
@@ -208,11 +232,11 @@ export default function Home() {
         setBoard(board);
         await delay(300);
         setIsProcessing(false);
+        setMovesLeft(prev => prev + 1); // Revert move count
         return;
       }
 
-      setMovesLeft(prev => prev - 1);
-      const boardAfterMatches = await processMatchesAndCascades(tempBoard, true);
+      const boardAfterMatches = await processMatchesAndCascades(tempBoard, true, otherTile);
 
       let finalBoard = boardAfterMatches;
       while (!checkBoardForMoves(finalBoard)) {
@@ -227,34 +251,21 @@ export default function Home() {
       setBoard(finalBoard);
       setIsProcessing(false);
     },
-    [board, isProcessing, gameState, processMatchesAndCascades, toast]
+    [board, isProcessing, gameState, processMatchesAndCascades, processBoardChanges, toast]
   );
 
   const handleTileClick = useCallback(async (tile: Tile) => {
     if (isProcessing || gameState !== 'playing') return;
 
-    if (tile.powerUp === 'bomb') {
-      setIsProcessing(true);
-      setMovesLeft(prev => prev - 1);
-
-      const { clearedTiles } = activatePowerUp(board, tile);
-      setScore(prev => prev + clearedTiles.length * 10);
-      const finalBoard = await processBoardChanges(board, clearedTiles);
-      
-      setBoard(finalBoard);
-      setIsProcessing(false);
-    } else {
-      // Regular tile selection for swapping
-      if (selectedTile) {
-        if (selectedTile.id !== tile.id) {
-          handleSwap(selectedTile, tile);
-        }
-        setSelectedTile(null);
-      } else {
-        setSelectedTile(tile);
+    if (selectedTile) {
+      if (selectedTile.id !== tile.id) {
+        handleSwap(selectedTile, tile);
       }
+      setSelectedTile(null);
+    } else {
+      setSelectedTile(tile);
     }
-  }, [board, isProcessing, gameState, selectedTile, handleSwap, processBoardChanges]);
+  }, [isProcessing, gameState, selectedTile, handleSwap]);
 
   const handleGameOver = useCallback(
     async (didWin: boolean) => {
@@ -265,7 +276,6 @@ export default function Home() {
       }
 
       if (user && score > 0) {
-        setIsProcessing(true);
         try {
           await updateUserStats({
             userId: user.uid,
@@ -283,8 +293,6 @@ export default function Home() {
             description: 'Could not save your score. Please try again later.',
             variant: 'destructive',
           });
-        } finally {
-          setIsProcessing(false);
         }
       }
     },
@@ -300,11 +308,9 @@ export default function Home() {
     }
 
     if (score >= targetScore) {
-      setIsProcessing(true);
       setGameState('win');
       handleGameOver(true);
     } else if (movesLeft <= 0) {
-      setIsProcessing(true);
       setGameState('lose');
       handleGameOver(false);
     }
@@ -385,7 +391,7 @@ export default function Home() {
         score={score}
         onNextLevel={handleNextLevel}
         onRestart={handleRestart}
-        isProcessing={isProcessing}
+        isProcessing={isProcessing || gameState === 'win' || gameState === 'lose'}
       />
     </div>
   );
