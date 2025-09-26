@@ -21,6 +21,7 @@ export interface LeaderboardEntry {
   highestLevel: number;
   wins: number;
   losses: number;
+  coins: number;
 }
 
 export async function isDisplayNameTaken(displayName: string): Promise<boolean> {
@@ -43,6 +44,7 @@ export async function getLeaderboard(): Promise<LeaderboardEntry[]> {
       highestLevel: doc.data().highestLevel || 1,
       wins: doc.data().wins || 0,
       losses: doc.data().losses || 0,
+      coins: doc.data().coins || 0,
     }));
     return leaderboardList;
   } catch (error) {
@@ -56,6 +58,7 @@ interface UserStats {
   level: number;
   score: number;
   didWin: boolean;
+  coins: number;
 }
 
 export async function updateUserStats(stats: UserStats): Promise<void> {
@@ -78,6 +81,7 @@ export async function updateUserStats(stats: UserStats): Promise<void> {
           highestLevel: stats.level,
           wins: stats.didWin ? 1 : 0,
           losses: stats.didWin ? 0 : 1,
+          coins: stats.coins,
         });
       } else {
         const currentData = userDoc.data();
@@ -86,6 +90,7 @@ export async function updateUserStats(stats: UserStats): Promise<void> {
           highestLevel: Math.max(currentData.highestLevel || 1, stats.level),
           wins: increment(stats.didWin ? 1 : 0),
           losses: increment(stats.didWin ? 0 : 1),
+          coins: increment(stats.coins),
         });
       }
     });

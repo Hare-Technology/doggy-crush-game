@@ -43,7 +43,12 @@ export default function Home() {
   const [comboMessage, setComboMessage] = useState<string>('');
   const { toast } = useToast();
   const { user } = useAuth();
-  const { playSound } = useSound();
+    const { playSound } = useSound();
+    const [coins, setCoins] = useState(0);
+    const [highestCombo, setHighestCombo] = useState(0);
+    const [powerUpsMade, setPowerUpsMade] = useState(0);
+    const [levelStartTime, setLevelStartTime] = useState(0);
+    const [levelEndTime, setLevelEndTime] = useState(0);
 
   const scoreNeeded = useMemo(
     () => Math.max(0, targetScore - score),
@@ -55,7 +60,15 @@ export default function Home() {
     if (savedHighScore) {
       setHighScore(parseInt(savedHighScore, 10));
     }
+    const savedCoins = localStorage.getItem('doggyCrushCoins');
+    if (savedCoins) {
+      setCoins(parseInt(savedCoins, 10));
+    }
   }, []);
+    
+  useEffect(() => {
+    localStorage.setItem('doggyCrushCoins', coins.toString());
+  }, [coins]);
 
   const startNewLevel = useCallback(
     async (newLevel: number, newMoves: number, newTarget: number) => {
@@ -65,6 +78,10 @@ export default function Home() {
       setScore(0);
       setGameState('playing');
       setIsProcessing(true);
+      setHighestCombo(0);
+      setPowerUpsMade(0);
+      setLevelStartTime(Date.now());
+      setLevelEndTime(0);
 
       let newBoard = createInitialBoard();
       while (!checkBoardForMoves(newBoard)) {
@@ -89,6 +106,9 @@ export default function Home() {
         if (matches.length === 0) break;
 
         cascadeCount++;
+        if (cascadeCount > highestCombo) {
+            setHighestCombo(cascadeCount);
+        }
         if (cascadeCount > 1) {
           playSound('combo');
           const comboText = `Combo x${cascadeCount}!`;
@@ -108,7 +128,6 @@ export default function Home() {
         let newBoardWithNulls = tempBoard.map(row =>
           row.map(tile => {
             if (!tile) return null;
-            // Prevent power-ups from being cleared by matches
             if (tile.powerUp && !matchedTileIds.has(tile.id)) {
               return tile;
             }
@@ -120,8 +139,8 @@ export default function Home() {
         );
 
         if (powerUp) {
+          setPowerUpsMade(prev => prev + 1);
           const { tile: powerUpTile, powerUp: powerUpType } = powerUp;
-          // Find the tile on the board to update.
           newBoardWithNulls = newBoardWithNulls.map(row =>
             row.map(t => {
               if (t && t.id === powerUpTile.id) {
@@ -153,7 +172,7 @@ export default function Home() {
 
       return tempBoard;
     },
-    [playSound]
+    [playSound, highestCombo]
   );
 
   const processBoardChanges = useCallback(
@@ -166,7 +185,6 @@ export default function Home() {
       let boardWithNulls = initialBoard.map(row =>
         row.map(tile => {
           if (!tile) return null;
-          // Don't clear other powerups unless they are the one being activated
           if (tile.powerUp && !clearedTileIds.has(tile.id)) {
             return tile;
           }
@@ -260,15 +278,14 @@ export default function Home() {
     async (tile: Tile) => {
       if (isProcessing || gameState !== 'playing') return;
 
-      // If a power-up is clicked, activate it
       if (tile.powerUp) {
         setIsProcessing(true);
-        setSelectedTile(null); // Clear selection
+        setSelectedTile(null);
+        setMovesLeft(prev => prev - 1);
 
         let finalBoard: Board;
 
         if (tile.powerUp === 'bomb') {
-          // --- First Explosion ---
           const { clearedTiles, randomBombTile } = activatePowerUp(board, tile);
           setScore(prev => prev + clearedTiles.length * 10);
           let boardAfterFirstExplosion = await processBoardChanges(board, [
@@ -276,8 +293,6 @@ export default function Home() {
           ]);
 
           if (randomBombTile) {
-            // --- Second Explosion (Delayed) ---
-            // 1. Visually turn the random tile into a bomb
             let tempBoardWithNewBomb = boardAfterFirstExplosion.map(row =>
               row.map(t => {
                 if (t && t.id === randomBombTile.id) {
@@ -289,19 +304,16 @@ export default function Home() {
             setBoard(tempBoardWithNewBomb);
             await delay(0);
 
-            // 2. Find the new bomb's current position after potential shifts
             const currentSecondBombTile = tempBoardWithNewBomb
               .flat()
               .find(t => t?.id === randomBombTile.id);
 
             if (currentSecondBombTile) {
-              // Get the 3x3 area for the second bomb
               const { clearedTiles: secondClearedTiles } = activatePowerUp(
                 tempBoardWithNewBomb,
                 currentSecondBombTile
               );
               setScore(prev => prev + secondClearedTiles.length * 10);
-              // Process the second explosion
               boardAfterFirstExplosion = await processBoardChanges(
                 tempBoardWithNewBomb,
                 secondClearedTiles
@@ -320,7 +332,6 @@ export default function Home() {
           finalBoard = board;
         }
 
-        // Common finalization logic
         let checkBoard = finalBoard;
         while (!checkBoardForMoves(checkBoard)) {
           toast({ title: 'No moves left, reshuffling!' });
@@ -331,11 +342,11 @@ export default function Home() {
           checkBoard = await processMatchesAndCascades(reshuffledBoard);
         }
         setBoard(checkBoard);
+        setMovesLeft(prev => prev + 1);
         setIsProcessing(false);
         return;
       }
 
-      // Regular tile selection logic
       if (selectedTile) {
         if (selectedTile.id !== tile.id) {
           await handleSwap(selectedTile, tile);
@@ -359,8 +370,19 @@ export default function Home() {
 
   const handleGameOver = useCallback(
     async (didWin: boolean) => {
+      const endTime = Date.now();
+      setLevelEndTime(endTime);
+      
       if (didWin) {
         playSound('win');
+        const timeTaken = Math.round((endTime - levelStartTime) / 1000); // in seconds
+        const timeBonus = Math.max(0, 180 - timeTaken) * 5; // 5 coins per second under 3 minutes
+        const moveBonus = movesLeft * 20; // 20 coins per move left
+        const comboBonus = highestCombo * 50; // 50 coins per max combo
+        const powerUpBonus = powerUpsMade * 30; // 30 coins per power-up created
+        const coinsEarned = timeBonus + moveBonus + comboBonus + powerUpBonus;
+        setCoins(prev => prev + coinsEarned);
+        
       } else {
         playSound('lose');
       }
@@ -372,6 +394,7 @@ export default function Home() {
             level,
             score,
             didWin,
+            coins: didWin ? coins : 0, // Only save coin updates on win
           });
           toast({
             title: 'Score Saved!',
@@ -386,7 +409,7 @@ export default function Home() {
         }
       }
     },
-    [user, level, score, toast, playSound]
+    [user, level, score, toast, playSound, levelStartTime, movesLeft, highestCombo, powerUpsMade, coins]
   );
 
   useEffect(() => {
@@ -420,7 +443,6 @@ export default function Home() {
   }, [startNewLevel]);
 
   const handleNextLevel = useCallback(async () => {
-    setIsProcessing(true);
     try {
       toast({
         title: 'Designing Next Level...',
@@ -453,6 +475,17 @@ export default function Home() {
     }
   }, [level, score, movesLeft, startNewLevel, toast]);
 
+  const coinBonuses = useMemo(() => {
+    if(gameState !== 'win' || levelEndTime === 0) return null;
+    const timeTaken = Math.round((levelEndTime - levelStartTime) / 1000);
+    return {
+        movesLeft: movesLeft * 20,
+        highestCombo: highestCombo * 50,
+        powerUpsMade: powerUpsMade * 30,
+        time: Math.max(0, 180 - timeTaken) * 5,
+    }
+  }, [gameState, levelEndTime, levelStartTime, movesLeft, highestCombo, powerUpsMade]);
+
   return (
     <div className="flex flex-col min-h-screen bg-background font-headline">
       <Header />
@@ -462,6 +495,7 @@ export default function Home() {
         highScore={highScore}
         movesLeft={movesLeft}
         targetScore={targetScore}
+        coins={coins}
       />
       <main className="flex-grow container mx-auto p-4 flex flex-col items-center justify-center">
         <div className="w-full max-w-lg flex items-center justify-center relative">
@@ -481,6 +515,7 @@ export default function Home() {
         onNextLevel={handleNextLevel}
         onRestart={handleRestart}
         isProcessing={isProcessing}
+        coinBonuses={coinBonuses}
       />
     </div>
   );

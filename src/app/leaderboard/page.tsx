@@ -14,7 +14,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { getLeaderboard } from '@/lib/firestore';
-import { Trophy } from 'lucide-react';
+import { Trophy, Coins } from 'lucide-react';
 
 export default async function LeaderboardPage() {
   const leaderboardData = await getLeaderboard();
@@ -39,6 +39,7 @@ export default async function LeaderboardPage() {
                     <TableHead className="w-[80px] text-center">Rank</TableHead>
                     <TableHead>Player</TableHead>
                     <TableHead className="text-right">Total Score</TableHead>
+                    <TableHead className="text-right">Coins</TableHead>
                     <TableHead className="text-center">Highest Level</TableHead>
                     <TableHead className="text-center">Wins</TableHead>
                     <TableHead className="text-center">Losses</TableHead>
@@ -50,6 +51,10 @@ export default async function LeaderboardPage() {
                       <TableCell className="font-medium text-center">{index + 1}</TableCell>
                       <TableCell>{player.name}</TableCell>
                       <TableCell className="text-right">{player.totalScore.toLocaleString()}</TableCell>
+                      <TableCell className="text-right flex items-center justify-end gap-1">
+                        {player.coins.toLocaleString()}
+                        <Coins className="w-4 h-4 text-yellow-500" />
+                      </TableCell>
                       <TableCell className="text-center">{player.highestLevel}</TableCell>
                       <TableCell className="text-center text-green-500">{player.wins}</TableCell>
                       <TableCell className="text-center text-red-500">{player.losses}</TableCell>
