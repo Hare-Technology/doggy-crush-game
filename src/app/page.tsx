@@ -21,6 +21,8 @@ import {
   checkBoardForMoves,
   activatePowerUp,
   resetTileIdCounter,
+  setTileIdCounter,
+  tileIdCounter,
 } from '@/lib/game-logic';
 import { useToast } from '@/hooks/use-toast';
 import { suggestNextLevelParams } from '@/ai/flows/suggest-next-level-params';
@@ -56,66 +58,6 @@ export default function Home() {
     [targetScore, score]
   );
 
-  useEffect(() => {
-    const savedHighScore = localStorage.getItem('doggyCrushHighScore');
-    if (savedHighScore) {
-      setHighScore(parseInt(savedHighScore, 10));
-    }
-  }, []);
-
-  const loadGame = useCallback(async () => {
-    const savedGame = localStorage.getItem('doggyCrushGameState');
-    let userCoins = 0;
-    if (user) {
-      userCoins = await getUserCoins(user.uid);
-    } else {
-      const localCoins = localStorage.getItem('doggyCrushCoins');
-      userCoins = localCoins ? parseInt(localCoins, 10) : 0;
-    }
-    setCoins(userCoins);
-
-    if (savedGame) {
-      try {
-        const { board, level, score, movesLeft, targetScore } =
-          JSON.parse(savedGame);
-        setBoard(board);
-        setLevel(level);
-        setScore(score);
-        setMovesLeft(movesLeft);
-        setTargetScore(targetScore);
-        setGameState('playing');
-        setIsProcessing(false);
-      } catch (e) {
-        startNewLevel(1, INITIAL_MOVES, INITIAL_TARGET_SCORE);
-      }
-    } else {
-      startNewLevel(1, INITIAL_MOVES, INITIAL_TARGET_SCORE);
-    }
-  }, [user]);
-
-  useEffect(() => {
-    loadGame();
-  }, [loadGame]);
-
-  useEffect(() => {
-    if (gameState === 'playing' && board.length > 0) {
-      const stateToSave = {
-        board,
-        level,
-        score,
-        movesLeft,
-        targetScore,
-      };
-      localStorage.setItem('doggyCrushGameState', JSON.stringify(stateToSave));
-    }
-  }, [board, level, score, movesLeft, targetScore, gameState]);
-
-  useEffect(() => {
-    if (!user) {
-      localStorage.setItem('doggyCrushCoins', coins.toString());
-    }
-  }, [coins, user]);
-
   const startNewLevel = useCallback(
     async (newLevel: number, newMoves: number, newTarget: number) => {
       resetTileIdCounter();
@@ -149,6 +91,84 @@ export default function Home() {
     },
     []
   );
+
+  const loadGame = useCallback(async () => {
+    const savedGame = localStorage.getItem('doggyCrushGameState');
+    let userCoins = 0;
+    if (user) {
+      userCoins = await getUserCoins(user.uid);
+    } else {
+      const localCoins = localStorage.getItem('doggyCrushCoins');
+      userCoins = localCoins ? parseInt(localCoins, 10) : 0;
+    }
+    setCoins(userCoins);
+
+    if (savedGame) {
+      try {
+        const {
+          board,
+          level,
+          score,
+          movesLeft,
+          targetScore,
+          idCounter,
+          coins: savedCoins,
+        } = JSON.parse(savedGame);
+
+        setBoard(board);
+        setLevel(level);
+        setScore(score);
+        setMovesLeft(movesLeft);
+        setTargetScore(targetScore);
+        if (typeof idCounter === 'number') {
+          setTileIdCounter(idCounter);
+        }
+        // If user logs out, keep their local coins.
+        // If they log in, we defer to server coins.
+        if (!user) {
+          setCoins(savedCoins || 0);
+        }
+        setGameState('playing');
+        setIsProcessing(false);
+      } catch (e) {
+        startNewLevel(1, INITIAL_MOVES, INITIAL_TARGET_SCORE);
+      }
+    } else {
+      startNewLevel(1, INITIAL_MOVES, INITIAL_TARGET_SCORE);
+    }
+  }, [user, startNewLevel]);
+
+  useEffect(() => {
+    loadGame();
+  }, [loadGame]);
+
+  useEffect(() => {
+    if (gameState === 'playing' && board.length > 0) {
+      const stateToSave = {
+        board,
+        level,
+        score,
+        movesLeft,
+        targetScore,
+        idCounter: tileIdCounter,
+        coins,
+      };
+      localStorage.setItem('doggyCrushGameState', JSON.stringify(stateToSave));
+    }
+  }, [board, level, score, movesLeft, targetScore, gameState, coins]);
+
+  useEffect(() => {
+    if (!user) {
+      localStorage.setItem('doggyCrushCoins', coins.toString());
+    }
+  }, [coins, user]);
+
+  useEffect(() => {
+    const savedHighScore = localStorage.getItem('doggyCrushHighScore');
+    if (savedHighScore) {
+      setHighScore(parseInt(savedHighScore, 10));
+    }
+  }, []);
 
   const processMatchesAndCascades = useCallback(
     async (currentBoard: Board) => {
@@ -377,6 +397,7 @@ export default function Home() {
           tile.powerUp === 'column_clear' ||
           tile.powerUp === 'row_clear'
         ) {
+          setMovesLeft(prev => prev - 1);
           const { clearedTiles } = activatePowerUp(board, tile);
           setScore(prev => prev + clearedTiles.length * 10);
           finalBoard = await processBoardChanges(board, clearedTiles);
@@ -394,6 +415,7 @@ export default function Home() {
           checkBoard = await processMatchesAndCascades(reshuffledBoard);
         }
         setBoard(checkBoard);
+        setMovesLeft(prev => prev + 1);
         setIsProcessing(false);
         return;
       }

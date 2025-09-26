@@ -7,6 +7,10 @@ export const resetTileIdCounter = () => {
   tileIdCounter = 0;
 };
 
+export const setTileIdCounter = (value: number) => {
+  tileIdCounter = value;
+};
+
 const getRandomTileType = (): (typeof TILE_TYPES)[number] => {
   return TILE_TYPES[Math.floor(Math.random() * TILE_TYPES.length)];
 };
