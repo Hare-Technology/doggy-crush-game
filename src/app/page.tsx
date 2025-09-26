@@ -281,6 +281,7 @@ export default function Home() {
       if (tile.powerUp) {
         setSelectedTile(null);
         setIsProcessing(true);
+        setMovesLeft(prev => prev - 1);
         let finalBoard: Board;
 
         if (tile.powerUp === 'bomb') {
@@ -381,6 +382,7 @@ export default function Home() {
         setCoins(prev => prev + coinsEarned);
       } else {
         playSound('lose');
+        setLevel(1);
       }
 
       if (user && score > 0) {
@@ -445,7 +447,31 @@ export default function Home() {
     isProcessing,
   ]);
 
-  const handleRestart = useCallback(() => {
+  const handleRestart = useCallback(async () => {
+    try {
+      setIsProcessing(true);
+      const result = await suggestNextLevelParams({
+        currentLevel: level,
+        currentScore: 0,
+        movesRemaining: 0,
+      });
+
+      startNewLevel(
+        level,
+        result.suggestedMoves,
+        result.suggestedTargetScore
+      );
+    } catch (error) {
+      console.error('AI level suggestion failed:', error);
+      startNewLevel(
+        level,
+        Math.max(10, INITIAL_MOVES - level),
+        INITIAL_TARGET_SCORE + level * 500
+      );
+    }
+  }, [startNewLevel, level]);
+  
+  const handleNewGame = useCallback(() => {
     startNewLevel(1, INITIAL_MOVES, INITIAL_TARGET_SCORE);
   }, [startNewLevel]);
 
@@ -529,6 +555,7 @@ export default function Home() {
         score={score}
         onNextLevel={handleNextLevel}
         onRestart={handleRestart}
+        onNewGame={handleNewGame}
         isProcessing={isProcessing}
         coinBonuses={coinBonuses}
       />

@@ -9,7 +9,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
-import { Loader2, PartyPopper, Frown, RefreshCw, Coins, Star, Zap, GaugeCircle } from 'lucide-react';
+import { Loader2, PartyPopper, Frown, RefreshCw, Coins, Star, Zap, GaugeCircle, Repeat } from 'lucide-react';
 import type { GameState } from '@/lib/types';
 import { useSound } from '@/hooks/use-sound';
 
@@ -18,6 +18,7 @@ interface GameOverDialogProps {
   score: number;
   onNextLevel: () => void;
   onRestart: () => void;
+  onNewGame: () => void;
   isProcessing: boolean;
   coinBonuses: {
     movesLeft: number;
@@ -32,6 +33,7 @@ export default function GameOverDialog({
   score,
   onNextLevel,
   onRestart,
+  onNewGame,
   isProcessing,
   coinBonuses,
 }: GameOverDialogProps) {
@@ -46,6 +48,10 @@ export default function GameOverDialog({
     playSound('click');
     onRestart();
   };
+  const handleNewGameClick = () => {
+    playSound('click');
+    onNewGame();
+  }
     
   const totalCoins = coinBonuses ? Object.values(coinBonuses).reduce((a, b) => a + b, 0) : 0;
 
@@ -62,11 +68,12 @@ export default function GameOverDialog({
             ) : (
               <>
                 <Frown className="w-10 h-10 text-blue-400" />
-                Out of Moves
+                Game Over
               </>
             )}
           </AlertDialogTitle>
           <AlertDialogDescription className="text-center text-lg">
+            {gameState === 'lose' && "You've been reset to level 1. "}
             Your final score was:{' '}
             <span className="font-bold text-foreground">
               {score.toLocaleString()}
@@ -128,17 +135,28 @@ export default function GameOverDialog({
             </>
           )}
           {gameState === 'lose' && (
-            <Button
-              onClick={handleRestartClick}
-              disabled={isProcessing}
-              size="lg"
-            >
-              {isProcessing ? (
-                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-              ) : (
-                'Try Again'
-              )}
-            </Button>
+            <>
+              <Button
+                onClick={handleRestartClick}
+                disabled={isProcessing}
+                size="lg"
+                variant="outline"
+              >
+                <Repeat className="mr-2 h-5 w-5" />
+                Try Again
+              </Button>
+               <Button
+                onClick={handleNewGameClick}
+                disabled={isProcessing}
+                size="lg"
+              >
+                {isProcessing ? (
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                ) : (
+                   'New Game'
+                )}
+              </Button>
+            </>
           )}
         </AlertDialogFooter>
       </AlertDialogContent>
