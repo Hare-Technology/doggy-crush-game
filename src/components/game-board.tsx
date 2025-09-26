@@ -82,11 +82,11 @@ const GameBoard: FC<GameBoardProps> = ({ board, onSwap, isProcessing }) => {
     >
       <style jsx global>{`
         :root {
-          --tile-color-paw: 25 80% 80%;
-          --tile-color-bone: 45 85% 80%;
-          --tile-color-house: 190 75% 80%;
-          --tile-color-ball: 300 70% 80%;
-          --tile-color-bowl: 120 75% 80%;
+          --tile-color-paw: 25 90% 85%;
+          --tile-color-bone: 45 95% 85%;
+          --tile-color-house: 190 85% 85%;
+          --tile-color-ball: 300 80% 85%;
+          --tile-color-bowl: 120 85% 85%;
         }
       `}</style>
       {board.map((row, rowIndex) =>
