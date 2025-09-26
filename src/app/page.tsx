@@ -29,6 +29,7 @@ export default function Home() {
   const [board, setBoard] = useState<Board>([]);
   const [level, setLevel] = useState(1);
   const [score, setScore] = useState(0);
+  const [highScore, setHighScore] = useState(0);
   const [targetScore, setTargetScore] = useState(INITIAL_TARGET_SCORE);
   const [movesLeft, setMovesLeft] = useState(INITIAL_MOVES);
   const [gameState, setGameState] = useState<GameState>('playing');
@@ -41,6 +42,14 @@ export default function Home() {
     () => Math.max(0, targetScore - score),
     [targetScore, score]
   );
+
+  useEffect(() => {
+    // Load high score from localStorage on component mount
+    const savedHighScore = localStorage.getItem('doggyCrushHighScore');
+    if (savedHighScore) {
+      setHighScore(parseInt(savedHighScore, 10));
+    }
+  }, []);
 
   const startNewLevel = useCallback(
     async (newLevel: number, newMoves: number, newTarget: number) => {
@@ -166,12 +175,17 @@ export default function Home() {
   useEffect(() => {
     if (isProcessing || board.length === 0) return;
 
+    if (score > highScore) {
+      setHighScore(score);
+      localStorage.setItem('doggyCrushHighScore', score.toString());
+    }
+
     if (score >= targetScore) {
       setGameState('win');
     } else if (movesLeft <= 0) {
       setGameState('lose');
     }
-  }, [score, movesLeft, targetScore, isProcessing, board.length]);
+  }, [score, movesLeft, targetScore, isProcessing, board.length, highScore]);
 
   const handleRestart = useCallback(() => {
     startNewLevel(level, INITIAL_MOVES, targetScore);
@@ -218,7 +232,7 @@ export default function Home() {
       <GameStats
         level={level}
         score={score}
-        scoreNeeded={scoreNeeded}
+        highScore={highScore}
         movesLeft={movesLeft}
         targetScore={targetScore}
       />

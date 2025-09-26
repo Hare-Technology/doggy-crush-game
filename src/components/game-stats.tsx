@@ -3,7 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 interface GameStatsProps {
   level: number;
   score: number;
-  scoreNeeded: number;
+  highScore: number;
   movesLeft: number;
   targetScore: number;
 }
@@ -31,7 +31,7 @@ const StatDisplay = ({
 export default function GameStats({
   level,
   score,
-  scoreNeeded,
+  highScore,
   movesLeft,
   targetScore,
 }: GameStatsProps) {
@@ -46,6 +46,7 @@ export default function GameStats({
             value={score.toLocaleString()}
             secondaryValue={`/ ${targetScore.toLocaleString()}`}
           />
+          <StatDisplay label="High Score" value={highScore.toLocaleString()} />
         </CardContent>
       </Card>
     </div>
