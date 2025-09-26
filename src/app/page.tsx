@@ -390,6 +390,7 @@ if (typeof idCounter === 'number') {
 
       if (rainbowTile && otherTile && !otherTile.powerUp) {
         setIsProcessing(true);
+        setMovesLeft(prev => prev - 1);
         
         // Activate rainbow power-up by swapping
         const { clearedTiles } = activatePowerUp(board, rainbowTile, otherTile.type);
@@ -420,7 +421,6 @@ if (typeof idCounter === 'number') {
       if (tile.powerUp && tile.powerUp !== 'rainbow') {
         // Power-ups that activate on click
         setIsProcessing(true);
-        setMovesLeft(prev => prev - 1);
 
         const { clearedTiles, secondaryExplosions } = activatePowerUp(board, tile);
         setScore(prev => prev + clearedTiles.length * 10);
