@@ -23,7 +23,7 @@ export default async function LeaderboardPage() {
     <div className="flex flex-col min-h-screen bg-background">
       <Header />
       <main className="flex-grow container mx-auto p-4">
-        <Card className="w-full max-w-2xl mx-auto">
+        <Card className="w-full max-w-4xl mx-auto">
           <CardHeader>
             <CardTitle className="flex items-center justify-center gap-2">
               <Trophy className="w-8 h-8 text-yellow-400" />
@@ -35,9 +35,12 @@ export default async function LeaderboardPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[100px] text-center">Rank</TableHead>
+                    <TableHead className="w-[80px] text-center">Rank</TableHead>
                     <TableHead>Player</TableHead>
-                    <TableHead className="text-right">Score</TableHead>
+                    <TableHead className="text-right">Total Score</TableHead>
+                    <TableHead className="text-center">Highest Level</TableHead>
+                    <TableHead className="text-center">Wins</TableHead>
+                    <TableHead className="text-center">Losses</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -45,7 +48,10 @@ export default async function LeaderboardPage() {
                     <TableRow key={player.id}>
                       <TableCell className="font-medium text-center">{index + 1}</TableCell>
                       <TableCell>{player.name}</TableCell>
-                      <TableCell className="text-right">{player.score.toLocaleString()}</TableCell>
+                      <TableCell className="text-right">{player.totalScore.toLocaleString()}</TableCell>
+                      <TableCell className="text-center">{player.highestLevel}</TableCell>
+                      <TableCell className="text-center text-green-500">{player.wins}</TableCell>
+                      <TableCell className="text-center text-red-500">{player.losses}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
