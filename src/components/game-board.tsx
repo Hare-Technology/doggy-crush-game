@@ -4,7 +4,6 @@ import type { FC } from 'react';
 import { memo, useState } from 'react';
 import type { Board, Tile as TileType } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { TILE_TYPES } from '@/lib/constants';
 import { PawIcon, BoneIcon, DogHouseIcon, BallIcon, FoodBowlIcon } from '@/components/dog-icons';
 
 interface GameBoardProps {
