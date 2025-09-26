@@ -76,11 +76,11 @@ export const findMatches = (
             tile: powerUpTile,
             powerUp: 'bomb',
           };
-        } else if (match.length === 4 && isVertical && !powerUp) {
+        } else if (match.length === 4 && !powerUp) {
           const powerUpTile = match[Math.floor(match.length / 2)];
           powerUp = {
             tile: powerUpTile,
-            powerUp: 'column_clear',
+            powerUp: isVertical ? 'column_clear' : 'row_clear',
           };
         }
 
@@ -207,23 +207,14 @@ export const activatePowerUp = (
   let randomBombTile: Tile | null = null;
 
   if (tile.powerUp === 'bomb') {
-    for (let r = tile.row - 1; r <= tile.row + 1; r++) {
-      for (let c = tile.col - 1; c <= tile.col + 1; c++) {
-        if (r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE) {
-          const targetTile = board[r][c];
-          if (targetTile) {
-            if (targetTile.powerUp && targetTile.id !== tile.id) continue;
-            clearedTiles.add(targetTile);
-          }
-        }
-      }
-    }
-
+    // Add the clicked bomb itself to the cleared list
+    clearedTiles.add(tile);
+    // Find a random tile to also turn into a bomb
     const allOtherTiles = board
       .flat()
       .filter(
         (t): t is Tile =>
-          t !== null && !clearedTiles.has(t) && !t.powerUp
+          t !== null && t.id !== tile.id && !t.powerUp
       );
 
     if (allOtherTiles.length > 0) {
@@ -233,6 +224,14 @@ export const activatePowerUp = (
   } else if (tile.powerUp === 'column_clear') {
     for (let r = 0; r < BOARD_SIZE; r++) {
       const targetTile = board[r][tile.col];
+      if (targetTile) {
+        if (targetTile.powerUp && targetTile.id !== tile.id) continue;
+        clearedTiles.add(targetTile);
+      }
+    }
+  } else if (tile.powerUp === 'row_clear') {
+    for (let c = 0; c < BOARD_SIZE; c++) {
+      const targetTile = board[tile.row][c];
       if (targetTile) {
         if (targetTile.powerUp && targetTile.id !== tile.id) continue;
         clearedTiles.add(targetTile);

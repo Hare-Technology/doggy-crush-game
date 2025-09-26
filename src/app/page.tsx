@@ -115,7 +115,7 @@ export default function Home() {
             return tile;
           })
         );
-        
+
         if (powerUp) {
           const { tile: powerUpTile, powerUp: powerUpType } = powerUp;
           // Find the tile on the board to update.
@@ -129,7 +129,6 @@ export default function Home() {
             };
           }
         }
-
 
         setBoard(newBoardWithNulls);
         setIsAnimating(new Set());
@@ -301,6 +300,9 @@ export default function Home() {
                   tempBoardWithNewBomb,
                   currentSecondBombTile
                 );
+                // Add the new bomb tile itself to the cleared list for the second explosion
+                secondClearedTiles.push(currentSecondBombTile);
+
                 setScore(prev => prev + secondClearedTiles.length * 10);
                 boardAfterFirstExplosion = await processBoardChanges(
                   tempBoardWithNewBomb,
@@ -320,7 +322,7 @@ export default function Home() {
             }
 
             setBoard(finalBoard);
-        } else if (tile.powerUp === 'column_clear') {
+        } else if (tile.powerUp === 'column_clear' || tile.powerUp === 'row_clear') {
             const { clearedTiles } = activatePowerUp(board, tile);
             setScore(prev => prev + clearedTiles.length * 10);
             let boardAfterExplosion = await processBoardChanges(board, clearedTiles);
@@ -396,11 +398,11 @@ export default function Home() {
     }
 
     if (score >= targetScore) {
-      setGameState('win');
       handleGameOver(true);
+      setGameState('win');
     } else if (movesLeft <= 0) {
-      setGameState('lose');
       handleGameOver(false);
+      setGameState('lose');
     }
   }, [
     score,

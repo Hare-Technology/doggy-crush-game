@@ -40,3 +40,7 @@ export const BombIcon = (props: HTMLAttributes<HTMLSpanElement>) => (
 export const ColumnClearIcon = (props: HTMLAttributes<HTMLSpanElement>) => (
   <Emoji emoji="⚡" {...props} />
 );
+
+export const RowClearIcon = (props: HTMLAttributes<HTMLSpanElement>) => (
+  <Emoji emoji="🔥" {...props} />
+);
