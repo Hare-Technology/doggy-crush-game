@@ -241,7 +241,7 @@ export default function Home() {
         const matchedTileIds = new Set(matches.map(t => t.id).filter(id => !powerUpTileIds.has(id)));
 
         setIsAnimating(prev => new Set([...prev, ...matchedTileIds]));
-        await delay(500);
+        await delay(700);
 
         let newBoardWithNulls = boardWithPowerups.map(row =>
           row.map(tile => {
@@ -281,7 +281,7 @@ export default function Home() {
       const clearedTileIds = new Set(clearedTiles.map(t => t.id));
       setIsAnimating(prev => new Set([...prev, ...clearedTileIds]));
       playSound('bomb');
-      await delay(500);
+      await delay(700);
 
       let boardWithNulls = initialBoard.map(row =>
         row.map(tile => {
