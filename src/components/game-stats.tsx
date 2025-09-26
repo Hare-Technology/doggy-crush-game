@@ -1,5 +1,4 @@
 import { Card, CardContent } from '@/components/ui/card';
-import { Target, Star, Footprints } from 'lucide-react';
 
 interface GameStatsProps {
   level: number;
@@ -10,25 +9,22 @@ interface GameStatsProps {
 }
 
 const StatDisplay = ({
-  icon: Icon,
   label,
   value,
   secondaryValue,
 }: {
-  icon: React.ElementType;
   label: string;
   value: string | number;
   secondaryValue?: string;
 }) => (
-  <div className="flex items-center gap-2 text-lg font-semibold">
-    <Icon className="h-6 w-6 text-primary" />
-    <div className="flex flex-col items-start">
-      <span className="text-foreground leading-none">{value}</span>
+  <div className="flex flex-col items-center text-center">
+    <span className="text-sm text-muted-foreground">{label}</span>
+    <div className="flex items-baseline gap-1">
+      <span className="text-xl font-bold text-foreground">{value}</span>
       {secondaryValue && (
-        <span className="text-xs text-muted-foreground leading-none">{secondaryValue}</span>
+        <span className="text-sm text-muted-foreground">{secondaryValue}</span>
       )}
     </div>
-    <span className="sr-only">{label}</span>
   </div>
 );
 
@@ -41,12 +37,11 @@ export default function GameStats({
 }: GameStatsProps) {
   return (
     <div className="container mx-auto px-4 py-2">
-      <Card className="p-2">
-        <CardContent className="flex items-center justify-around gap-4 p-0">
-          <StatDisplay icon={Star} label="Level" value={level} />
-          <StatDisplay icon={Footprints} label="Moves Left" value={movesLeft} />
+      <Card>
+        <CardContent className="flex items-center justify-around gap-4 p-3">
+          <StatDisplay label="Level" value={level} />
+          <StatDisplay label="Moves" value={movesLeft} />
           <StatDisplay
-            icon={Target}
             label="Score"
             value={score.toLocaleString()}
             secondaryValue={`/ ${targetScore.toLocaleString()}`}
