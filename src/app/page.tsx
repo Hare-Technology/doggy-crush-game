@@ -261,6 +261,7 @@ export default function Home() {
       let boardWithNulls = initialBoard.map(row =>
         row.map(tile => {
           if (!tile) return null;
+          // This check is important: don't nullify a tile that became a power-up
           if (tile.powerUp && !clearedTileIds.has(tile.id)) {
             return tile;
           }
@@ -290,153 +291,131 @@ export default function Home() {
     [playSound, processMatchesAndCascades]
   );
 
-  const handleSwap = useCallback(
-    async (tile1: Tile, tile2: Tile) => {
-      if (isProcessing || gameState !== 'playing') return;
-      if (!areTilesAdjacent(tile1, tile2)) return;
+  const handleRegularSwap = useCallback(async (tile1: Tile, tile2: Tile) => {
+    setIsProcessing(true);
+    setMovesLeft(prev => prev - 1);
 
-      if (tile1.powerUp || tile2.powerUp) {
-        setSelectedTile(null);
-        return;
-      }
+    let tempBoard = board.map(r => r.map(tile => (tile ? { ...tile } : null)));
+    const { row: r1, col: c1 } = tile1;
+    const { row: r2, col: c2 } = tile2;
 
-      setIsProcessing(true);
-      setMovesLeft(prev => prev - 1);
+    const landingTileForT1 = { ...tile2, row: r1, col: c1 };
+    const landingTileForT2 = { ...tile1, row: r2, col: c2 };
 
-      let tempBoard = board.map(r => r.map(tile => (tile ? { ...tile } : null)));
-      const { row: r1, col: c1 } = tile1;
-      const { row: r2, col: c2 } = tile2;
+    tempBoard[r1][c1] = landingTileForT1;
+    tempBoard[r2][c2] = landingTileForT2;
 
-      const landingTileForT1 = { ...tile2, row: r1, col: c1 };
-      const landingTileForT2 = { ...tile1, row: r2, col: c2 };
+    setBoard(tempBoard);
+    await delay(300);
 
-      tempBoard[r1][c1] = landingTileForT1;
-      tempBoard[r2][c2] = landingTileForT2;
-
-      setBoard(tempBoard);
+    const { matches } = findMatches(tempBoard);
+    if (matches.length === 0) {
+      setBoard(board); // Swap back
       await delay(300);
-
-      const { matches } = findMatches(tempBoard);
-      if (matches.length === 0) {
-        setBoard(board);
-        await delay(300);
-        setIsProcessing(false);
-        setMovesLeft(prev => prev + 1); // Revert move count
-        return;
-      }
-
-      const boardAfterMatches = await processMatchesAndCascades(tempBoard);
-
-      let finalBoard = boardAfterMatches;
-      while (!checkBoardForMoves(finalBoard)) {
-        toast({ title: 'No moves left, reshuffling!' });
-        await delay(500);
-        let reshuffledBoard = createInitialBoard();
-        setBoard(reshuffledBoard);
-        await delay(300);
-        finalBoard = await processMatchesAndCascades(reshuffledBoard);
-      }
-
-      setBoard(finalBoard);
       setIsProcessing(false);
-    },
-    [board, isProcessing, gameState, processMatchesAndCascades, toast]
-  );
+      setMovesLeft(prev => prev + 1); // Revert move count
+      return;
+    }
 
-  const handleTileClick = useCallback(
-    async (tile: Tile): Promise<void> => {
-      if (
-        isProcessing ||
-        (gameState !== 'playing' && gameState !== 'level_end')
-      )
+    const boardAfterMatches = await processMatchesAndCascades(tempBoard);
+
+    let finalBoard = boardAfterMatches;
+    while (!checkBoardForMoves(finalBoard)) {
+      toast({ title: 'No moves left, reshuffling!' });
+      await delay(500);
+      let reshuffledBoard = createInitialBoard();
+      setBoard(reshuffledBoard);
+      await delay(300);
+      finalBoard = await processMatchesAndCascades(reshuffledBoard);
+    }
+    setBoard(finalBoard);
+    setIsProcessing(false);
+
+  }, [board, processMatchesAndCascades, toast]);
+
+  const handleTileInteraction = useCallback(async (tile: Tile) => {
+    if (isProcessing || gameState !== 'playing') return;
+
+    if (selectedTile) {
+      // This is the second tile selection
+      const tile1 = selectedTile;
+      const tile2 = tile;
+      setSelectedTile(null);
+
+      if (tile1.id === tile2.id) {
+        return; // Clicked the same tile twice
+      }
+
+      if (!areTilesAdjacent(tile1, tile2)) {
+        setSelectedTile(tile); // Select the new tile instead
         return;
+      }
+      
+      // Check for rainbow swap
+      const rainbowTile = tile1.powerUp === 'rainbow' ? tile1 : (tile2.powerUp === 'rainbow' ? tile2 : null);
+      const otherTile = rainbowTile ? (rainbowTile.id === tile1.id ? tile2 : tile1) : null;
 
-      if (tile.powerUp) {
-        setSelectedTile(null);
+      if (rainbowTile && otherTile && !otherTile.powerUp) {
         setIsProcessing(true);
-
-        if (gameState === 'playing') {
-          setMovesLeft(prev => prev - 1);
-        }
-
-        let currentBoard = board;
-        if (
-          tile.powerUp === 'bomb' ||
-          tile.powerUp === 'column_clear' ||
-          tile.powerUp === 'row_clear' ||
-          tile.powerUp === 'rainbow'
-        ) {
-          const { clearedTiles } = activatePowerUp(currentBoard, tile);
-          setScore(prev => prev + clearedTiles.length * 10);
-          currentBoard = await processBoardChanges(currentBoard, clearedTiles);
-
-          // Handle bomb's second explosion
-          const originalTileData = board.flat().find(t => t?.id === tile.id);
-          if (
-            originalTileData?.powerUp === 'bomb' &&
-            clearedTiles.length > 0
-          ) {
-            const allOtherTiles = currentBoard
-              .flat()
-              .filter(
-                (t): t is Tile =>
-                  t !== null && !clearedTiles.find(ct => ct.id === t.id)
-              );
-            if (allOtherTiles.length > 0) {
-              const randomBombTile =
-                allOtherTiles[
-                  Math.floor(Math.random() * allOtherTiles.length)
-                ];
-              const { clearedTiles: secondClearedTiles } = activatePowerUp(
-                currentBoard,
-                { ...randomBombTile, powerUp: 'bomb' }
-              );
-              setScore(prev => prev + secondClearedTiles.length * 10);
-              currentBoard = await processBoardChanges(
-                currentBoard,
-                secondClearedTiles
-              );
-            }
-          }
-        }
-
-        let finalBoard = currentBoard;
-        if (gameState === 'playing') {
-          while (!checkBoardForMoves(finalBoard)) {
+        setMovesLeft(prev => prev - 1);
+        
+        // Activate rainbow power-up by swapping
+        const { clearedTiles } = activatePowerUp(board, rainbowTile, otherTile.type);
+        setScore(prev => prev + clearedTiles.length * 10);
+        let currentBoard = await processBoardChanges(board, clearedTiles);
+        
+        while (!checkBoardForMoves(currentBoard)) {
             toast({ title: 'No moves left, reshuffling!' });
             await delay(500);
             let reshuffledBoard = createInitialBoard();
             setBoard(reshuffledBoard);
             await delay(300);
-            finalBoard = await processMatchesAndCascades(reshuffledBoard);
-          }
+            currentBoard = await processMatchesAndCascades(reshuffledBoard);
         }
-
-        setBoard(finalBoard);
+        
+        setBoard(currentBoard);
         setIsProcessing(false);
-        return;
-      }
 
-      if (selectedTile) {
-        if (selectedTile.id !== tile.id) {
-          await handleSwap(selectedTile, tile);
+      } else if (!tile1.powerUp && !tile2.powerUp) {
+        // Regular swap
+        await handleRegularSwap(tile1, tile2);
+      }
+      // Note: Swapping two powerups is not handled here, can be added later
+
+    } else {
+      // This is the first tile selection
+      if (tile.powerUp && tile.powerUp !== 'rainbow') {
+        // Power-ups that activate on click
+        setIsProcessing(true);
+        setMovesLeft(prev => prev - 1);
+
+        const { clearedTiles, secondaryExplosionTile } = activatePowerUp(board, tile);
+        setScore(prev => prev + clearedTiles.length * 10);
+        let currentBoard = await processBoardChanges(board, clearedTiles);
+
+        if (secondaryExplosionTile) {
+            const { clearedTiles: secondClearedTiles } = activatePowerUp(currentBoard, secondaryExplosionTile);
+            setScore(prev => prev + secondClearedTiles.length * 10);
+            currentBoard = await processBoardChanges(currentBoard, secondClearedTiles);
         }
-        setSelectedTile(null);
+
+        while (!checkBoardForMoves(currentBoard)) {
+            toast({ title: 'No moves left, reshuffling!' });
+            await delay(500);
+            let reshuffledBoard = createInitialBoard();
+            setBoard(reshuffledBoard);
+            await delay(300);
+            currentBoard = await processMatchesAndCascades(reshuffledBoard);
+        }
+        
+        setBoard(currentBoard);
+        setIsProcessing(false);
       } else {
+        // It's a regular tile or a rainbow tile, set it as selected
         setSelectedTile(tile);
       }
-    },
-    [
-      isProcessing,
-      gameState,
-      selectedTile,
-      handleSwap,
-      board,
-      processBoardChanges,
-      processMatchesAndCascades,
-      toast,
-    ]
-  );
+    }
+  }, [isProcessing, gameState, selectedTile, board, handleRegularSwap, processBoardChanges, toast, processMatchesAndCascades]);
 
   const handleGameOver = useCallback(
     async (didWin: boolean) => {
@@ -532,6 +511,25 @@ export default function Home() {
     isProcessing,
   ]);
 
+  const handleLevelEndClick = useCallback(async (tile: Tile) => {
+    if (isProcessing || gameState !== 'level_end') return;
+    
+    setIsProcessing(true);
+
+    const { clearedTiles, secondaryExplosionTile } = activatePowerUp(board, tile);
+    setScore(prev => prev + clearedTiles.length * 10);
+    let currentBoard = await processBoardChanges(board, clearedTiles);
+    
+    if (secondaryExplosionTile) {
+        const { clearedTiles: secondClearedTiles } = activatePowerUp(currentBoard, secondaryExplosionTile);
+        setScore(prev => prev + secondClearedTiles.length * 10);
+        currentBoard = await processBoardChanges(currentBoard, secondClearedTiles);
+    }
+    
+    setBoard(currentBoard);
+    setIsProcessing(false);
+  }, [board, gameState, isProcessing, processBoardChanges]);
+  
   useEffect(() => {
     const runLevelEndCascade = async () => {
       if (gameState !== 'level_end' || isProcessing) {
@@ -545,7 +543,7 @@ export default function Home() {
         // The handleTileClick function is now async but we don't need to await it
         // here because the useEffect will re-run when the board state changes.
         // Wrapping in a timeout prevents a React state update warning.
-        setTimeout(() => handleTileClick(tileToClick), 0);
+        setTimeout(() => handleLevelEndClick(tileToClick), 0);
       } else {
         // No power-ups left, finish the level
         setIsProcessing(true);
@@ -559,7 +557,7 @@ export default function Home() {
     };
   
     runLevelEndCascade();
-  }, [gameState, board, isProcessing, handleTileClick, processMatchesAndCascades, handleGameOver]);
+  }, [gameState, board, isProcessing, handleLevelEndClick, processMatchesAndCascades, handleGameOver]);
   
   
   const handleRestart = useCallback(async () => {
@@ -657,7 +655,7 @@ export default function Home() {
         <div className="w-full max-w-lg flex items-center justify-center relative">
           <GameBoard
             board={board}
-            onTileClick={handleTileClick}
+            onTileClick={handleTileInteraction}
             selectedTile={selectedTile}
             isProcessing={isProcessing}
             isAnimating={isAnimating}

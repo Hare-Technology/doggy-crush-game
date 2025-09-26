@@ -1,6 +1,6 @@
 
 import { BOARD_SIZE, TILE_TYPES } from './constants';
-import type { Board, Tile, PowerUpType } from './types';
+import type { Board, Tile, PowerUpType, TileType as TileTypeEnum } from './types';
 
 export let tileIdCounter = 0;
 
@@ -244,9 +244,11 @@ const swapTiles = (
 
 export const activatePowerUp = (
   board: Board,
-  tile: Tile
-): { clearedTiles: Tile[] } => {
+  tile: Tile,
+  targetType?: TileTypeEnum,
+): { clearedTiles: Tile[]; secondaryExplosionTile?: Tile } => {
   const clearedTiles = new Set<Tile>();
+  let secondaryExplosionTile: Tile | undefined;
 
   if (tile.powerUp === 'bomb') {
     // Clear 3x3 area around the bomb
@@ -255,20 +257,27 @@ export const activatePowerUp = (
         if (r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE) {
           const targetTile = board[r][c];
           if (targetTile) {
-            if (targetTile.powerUp && targetTile.id !== tile.id) {
-              continue;
-            }
+            // Don't trigger other power-ups in the blast, just clear them
             clearedTiles.add(targetTile);
           }
         }
       }
+    }
+    // For level end cascade, create a secondary explosion
+    if (!targetType) {
+        const allOtherTiles = board.flat().filter((t): t is Tile =>
+            t !== null && !Array.from(clearedTiles).some(ct => ct.id === t.id)
+        );
+        if (allOtherTiles.length > 0) {
+            const randomBombTile = allOtherTiles[Math.floor(Math.random() * allOtherTiles.length)];
+            secondaryExplosionTile = { ...randomBombTile, powerUp: 'bomb' };
+        }
     }
 
   } else if (tile.powerUp === 'column_clear') {
     for (let r = 0; r < BOARD_SIZE; r++) {
       const targetTile = board[r][tile.col];
       if (targetTile) {
-        if (targetTile.powerUp && targetTile.id !== tile.id) continue;
         clearedTiles.add(targetTile);
       }
     }
@@ -276,22 +285,27 @@ export const activatePowerUp = (
     for (let c = 0; c < BOARD_SIZE; c++) {
       const targetTile = board[tile.row][c];
       if (targetTile) {
-        if (targetTile.powerUp && targetTile.id !== tile.id) continue;
         clearedTiles.add(targetTile);
       }
     }
   } else if (tile.powerUp === 'rainbow') {
     clearedTiles.add(tile);
-    const availableTiles = board.flat().filter((t): t is Tile => t !== null && t.id !== tile.id && !t.powerUp);
-    if(availableTiles.length > 0) {
-      const randomTileType = availableTiles[Math.floor(Math.random() * availableTiles.length)].type;
-      board.flat().forEach(t => {
-        if (t?.type === randomTileType) {
-          clearedTiles.add(t);
+    let typeToClear = targetType;
+    if (!typeToClear) {
+        // If no target (e.g. from just clicking), pick a random one
+        const availableTiles = board.flat().filter((t): t is Tile => t !== null && t.id !== tile.id && !t.powerUp);
+        if(availableTiles.length > 0) {
+            typeToClear = availableTiles[Math.floor(Math.random() * availableTiles.length)].type;
         }
-      });
+    }
+    if (typeToClear) {
+        board.flat().forEach(t => {
+            if (t?.type === typeToClear) {
+              clearedTiles.add(t);
+            }
+        });
     }
   }
 
-  return { clearedTiles: Array.from(clearedTiles) };
+  return { clearedTiles: Array.from(clearedTiles), secondaryExplosionTile };
 };
