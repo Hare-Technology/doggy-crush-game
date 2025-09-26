@@ -152,28 +152,9 @@ export const findMatches = (
   }
   
   combinedMatches.flat().forEach(tile => {
-      if(!tilesInPowerups.has(tile.id)) {
-          allMatches.add(tile);
-      }
+      // Add all tiles from any valid match (including those that form powerups)
+      allMatches.add(tile);
   })
-
-  // If a powerup was created, it implies a valid match. We need to ensure `matches` is not empty.
-  if (powerUps.length > 0 && allMatches.size === 0) {
-    const powerUpOriginalTileIds = new Set(powerUps.map(p => {
-        const originalMatch = combinedMatches.find(m => m.some(t => t.row === p.tile.row && t.col === p.tile.col && t.type === p.tile.type));
-        return originalMatch ? originalMatch.map(t => t.id) : [];
-    }).flat());
-    
-    for (const match of combinedMatches) {
-        if (match.some(t => powerUpOriginalTileIds.has(t.id))) {
-            match.forEach(t => {
-                if(!tilesInPowerups.has(t.id)) {
-                    allMatches.add(t);
-                }
-            });
-        }
-    }
-  }
 
   return { matches: Array.from(allMatches), powerUps };
 };
