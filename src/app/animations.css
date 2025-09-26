@@ -1,12 +1,18 @@
 
 @keyframes dropIn {
   0% {
-    transform: translateY(-100%);
+    transform: translateY(-150%);
     opacity: 0;
   }
-  70% {
-    transform: translateY(10%);
+  60% {
+    transform: translateY(25px);
     opacity: 1;
+  }
+  75% {
+    transform: translateY(-10px);
+  }
+  90% {
+    transform: translateY(5px);
   }
   100% {
     transform: translateY(0);
@@ -15,5 +21,5 @@
 }
 
 .animate-drop-in {
-  animation: dropIn 1.2s ease-out forwards;
+  animation: dropIn 1s ease-out forwards;
 }
