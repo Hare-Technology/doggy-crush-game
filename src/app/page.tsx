@@ -152,6 +152,8 @@ export default function Home() {
         await delay(500);
         let reshuffledBoard = createInitialBoard();
         setBoard(reshuffledBoard);
+        await delay(300);
+        // We need to process any matches that might have been created by the shuffle
         finalBoard = await processMatchesAndCascades(reshuffledBoard);
       }
       

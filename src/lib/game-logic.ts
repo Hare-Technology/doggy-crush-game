@@ -9,6 +9,9 @@ const getRandomTileType = (): (typeof TILE_TYPES)[number] => {
 
 export const createInitialBoard = (): Board => {
   let board: Board = [];
+  // Resetting counter is important if we reshuffle boards.
+  // Although for this game, we create a new board from scratch,
+  // so it's not strictly necessary, it's good practice.
   tileIdCounter = 0;
   for (let row = 0; row < BOARD_SIZE; row++) {
     board[row] = [];
@@ -36,11 +39,6 @@ export const createInitialBoard = (): Board => {
         }
     });
   }
-  
-  // Ensure there are possible moves
-  while (!checkBoardForMoves(board)) {
-      board = createInitialBoard(); // Just recreate the whole board
-  }
 
   return board;
 };
@@ -65,7 +63,7 @@ export const findMatches = (board: Board): Tile[] => {
         if (match.length >= 3) {
           match.forEach(t => matches.add(String(t.id)));
         }
-        col += match.length;
+        col += match.length > 1 ? match.length : 1;
       } else {
         col++;
       }
@@ -89,7 +87,7 @@ export const findMatches = (board: Board): Tile[] => {
         if (match.length >= 3) {
           match.forEach(t => matches.add(String(t.id)));
         }
-        row += match.length;
+        row += match.length > 1 ? match.length : 1;
       } else {
         row++;
       }
