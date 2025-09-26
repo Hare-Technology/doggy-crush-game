@@ -334,22 +334,21 @@ export default function Home() {
       );
 
       if (spawnBomb) {
-        const emptyCells: { row: number; col: number }[] = [];
+        // Mark a spot for a new bomb, but let fillEmptyTiles create it.
+        // Using a temporary marker.
+        let emptyCells: { row: number; col: number }[] = [];
         boardWithNulls.forEach((row, r) => {
-          row.forEach((cell, c) => {
-            if (cell === null) {
-              emptyCells.push({ row: r, col: c });
-            }
-          });
+            row.forEach((cell, c) => {
+                if (cell === null) {
+                    emptyCells.push({ row: r, col: c });
+                }
+            });
         });
-
+    
         if (emptyCells.length > 0) {
-          const spawnIndex = Math.floor(Math.random() * emptyCells.length);
-          const { row, col } = emptyCells[spawnIndex];
-
-          // Mark a spot for a new bomb, but let fillEmptyTiles create it.
-          // Using a temporary marker.
-          (boardWithNulls[row] as any)[col] = { needsBomb: true };
+            const spawnIndex = Math.floor(Math.random() * emptyCells.length);
+            const { row, col } = emptyCells[spawnIndex];
+            (boardWithNulls[row] as any)[col] = { needsBomb: true };
         }
       }
 
@@ -446,7 +445,9 @@ export default function Home() {
           for (const secondaryTile of secondaryExplosions) {
             const { clearedTiles: secondClearedTiles } = activatePowerUp(
               chainBoard,
-              secondaryTile
+              secondaryTile,
+              undefined,
+              false // Secondary explosions are not primary
             );
             setScore(prev => prev + secondClearedTiles.length * 10);
             chainBoard = await processBoardChanges(
@@ -457,20 +458,11 @@ export default function Home() {
           }
           currentBoard = chainBoard;
         }
-
-        // If a bomb was spawned, trigger its explosion after a short fuse
-        if (spawnBomb) {
-          // The new bomb will be on the board after processBoardChanges.
-          // We need to find it. It will be the only bomb not in the original cleared tiles.
-          const newBomb = currentBoard
-            .flat()
-            .find(
-              t => t?.powerUp === 'bomb' && !clearedTiles.some(ct => ct.id === t.id)
-            );
-
-          if (newBomb) {
-            setTimeout(() => handleTileClick(newBomb), 250);
-          }
+        
+        let newBomb: Tile | undefined;
+        if(spawnBomb) {
+          const clearedTileIds = new Set(clearedTiles.map(t => t.id));
+          newBomb = currentBoard.flat().find(t => t?.powerUp === 'bomb' && !clearedTileIds.has(t.id));
         }
 
         while (!checkBoardForMoves(currentBoard)) {
@@ -483,9 +475,14 @@ export default function Home() {
           setIsShuffling(false);
           currentBoard = await processMatchesAndCascades(reshuffledBoard);
         }
-
+        
         setBoard(currentBoard);
         setIsProcessing(false);
+
+        if (newBomb) {
+            await delay(250);
+            handleTileClick(newBomb);
+        }
         return;
       }
 
@@ -840,7 +837,7 @@ export default function Home() {
 
   const handleNextLevel = useCallback(() => {
     const { nextLevel, newTarget, newMoves } = getNextLevelParams();
-    startNewLevel(nextLevel, newTarget, newMoves);
+    startNewLevel(nextLevel, newMoves, newTarget);
   }, [startNewLevel, getNextLevelParams]);
 
   const coinBonuses = useMemo(() => {
