@@ -15,8 +15,4 @@ export const ai = genkit({
       // In production, the googleCloud plugin provides authentication.
     }),
   ],
-  // Log events to the console for debugging.
-  logLevel: 'debug',
-  // Use a more capable model for the main flow.
-  model: 'googleai/gemini-pro',
 });
