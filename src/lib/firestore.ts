@@ -21,7 +21,7 @@ export interface LeaderboardEntry {
   highestLevel: number;
   wins: number;
   losses: number;
-  coins: number;
+  totalCoinsEarned: number;
 }
 
 export async function isDisplayNameTaken(displayName: string): Promise<boolean> {
@@ -48,7 +48,7 @@ export async function getLeaderboard(): Promise<LeaderboardEntry[]> {
       highestLevel: doc.data().highestLevel || 1,
       wins: doc.data().wins || 0,
       losses: doc.data().losses || 0,
-      coins: doc.data().coins || 0,
+      totalCoinsEarned: doc.data().totalCoinsEarned || 0,
     }));
     return leaderboardList;
   } catch (error) {
@@ -84,6 +84,7 @@ export async function updateUserStats(stats: UserStats): Promise<void> {
           wins: stats.didWin ? 1 : 0,
           losses: stats.didWin ? 0 : 1,
           coins: stats.didWin ? stats.coins : 0,
+          totalCoinsEarned: stats.didWin ? stats.coins : 0,
           // Note: displayName is not available here, it's set on signup
         });
       } else {
@@ -96,13 +97,19 @@ export async function updateUserStats(stats: UserStats): Promise<void> {
             newCoinTotal = 0; // Reset coins on loss
         }
 
-        transaction.update(userRef, {
+        const updateData: any = {
           totalScore: increment(stats.score),
           highestLevel: Math.max(currentData.highestLevel || 1, stats.level),
           wins: increment(stats.didWin ? 1 : 0),
           losses: increment(stats.didWin ? 0 : 1),
           coins: newCoinTotal,
-        });
+        };
+
+        if (stats.didWin && stats.coins > 0) {
+          updateData.totalCoinsEarned = increment(stats.coins);
+        }
+
+        transaction.update(userRef, updateData);
       }
     });
   } catch (error) {
