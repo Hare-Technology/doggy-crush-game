@@ -13,22 +13,12 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { getLeaderboard } from '@/lib/firestore';
 import { Trophy } from 'lucide-react';
 
-const leaderboardData = [
-  { rank: 1, name: 'PawsomePlayer', score: 125000 },
-  { rank: 2, name: 'GoodBoyGamer', score: 110250 },
-  { rank: 3, name: 'TheCorgiConqueror', score: 98500 },
-  { rank: 4, name: 'SaltySamoyed', score: 85200 },
-  { rank: 5, name: 'BeagleBoss', score: 76400 },
-  { rank: 6, name: 'RetrieverPro', score: 68900 },
-  { rank: 7, name: 'PoodlePower', score: 61200 },
-  { rank: 8, name: 'DachshundDash', score: 55000 },
-  { rank: 9, name: 'ShibaInuSan', score: 49800 },
-  { rank: 10, name: 'LabraLegend', score: 45100 },
-];
+export default async function LeaderboardPage() {
+  const leaderboardData = await getLeaderboard();
 
-export default function LeaderboardPage() {
   return (
     <div className="flex flex-col min-h-screen bg-background">
       <Header />
@@ -41,24 +31,30 @@ export default function LeaderboardPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[100px] text-center">Rank</TableHead>
-                  <TableHead>Player</TableHead>
-                  <TableHead className="text-right">Score</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {leaderboardData.map((player) => (
-                  <TableRow key={player.rank}>
-                    <TableCell className="font-medium text-center">{player.rank}</TableCell>
-                    <TableCell>{player.name}</TableCell>
-                    <TableCell className="text-right">{player.score.toLocaleString()}</TableCell>
+            {leaderboardData.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[100px] text-center">Rank</TableHead>
+                    <TableHead>Player</TableHead>
+                    <TableHead className="text-right">Score</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {leaderboardData.map((player, index) => (
+                    <TableRow key={player.id}>
+                      <TableCell className="font-medium text-center">{index + 1}</TableCell>
+                      <TableCell>{player.name}</TableCell>
+                      <TableCell className="text-right">{player.score.toLocaleString()}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <p className="text-center text-muted-foreground">
+                No scores yet. Be the first to get on the leaderboard!
+              </p>
+            )}
           </CardContent>
         </Card>
       </main>
