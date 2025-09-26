@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter } from 'next/navigation';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Gamepad2, Trophy, User } from 'lucide-react';
+import { Gamepad2, Trophy, User, PawPrint } from 'lucide-react';
 
 export default function Header() {
   const router = useRouter();
@@ -30,7 +30,12 @@ export default function Header() {
   };
 
   return (
-    <header className="flex justify-center p-4 bg-background/80 backdrop-blur-sm sticky top-0 z-50 border-b">
+    <header className="flex flex-col items-center p-4 bg-background/80 backdrop-blur-sm sticky top-0 z-50 border-b">
+      <h1 className="text-3xl font-bold flex items-center justify-center gap-2 mb-4">
+        <PawPrint className="w-8 h-8 text-primary scale-x-[-1]" />
+        DoggyCrush
+        <PawPrint className="w-8 h-8 text-primary" />
+      </h1>
       <Tabs value={activeTab} onValueChange={onTabChange}>
         <TabsList>
           <TabsTrigger value="game">

@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { PawPrint, Target, Star, Footprints } from 'lucide-react';
+import { Target, Star, Footprints } from 'lucide-react';
 
 interface GameSidebarProps {
   level: number;
@@ -45,10 +45,6 @@ export default function GameSidebar({
   return (
     <aside className="w-full lg:w-72 flex-shrink-0">
       <div className="space-y-4">
-        <h2 className="text-2xl font-bold text-center flex items-center justify-center gap-2">
-          <PawPrint className="w-7 h-7 text-primary scale-x-[-1]" /> DoggyCrush <PawPrint className="w-7 h-7 text-primary" />
-        </h2>
-
         <div className="grid grid-cols-2 gap-4">
             <StatCard icon={Star} title="Level" value={level} />
             <StatCard icon={Footprints} title="Moves Left" value={movesLeft} />
