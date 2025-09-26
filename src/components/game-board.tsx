@@ -1,7 +1,7 @@
 'use client';
 
 import type { FC } from 'react';
-import { memo, useState, useCallback, useEffect, useRef } from 'react';
+import { memo, useState, useCallback } from 'react';
 import type { Board, Tile as TileType } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { PawIcon, BoneIcon, DogHouseIcon, BallIcon, FoodBowlIcon } from '@/components/dog-icons';
@@ -25,30 +25,13 @@ const MemoizedTile: FC<{
   tile: TileType;
   onClick: (tile: TileType) => void;
   isSelected: boolean;
-  tileSize: number;
-  tileGap: number;
-}> = memo(({ tile, onClick, isSelected, tileSize, tileGap }) => {
+}> = memo(({ tile, onClick, isSelected }) => {
   const Icon = tileComponentMap[tile.type] || PawIcon;
-  const size = tileSize - tileGap;
-  const offset = tileGap / 2;
-
-  const tileRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (tile.isNew && tileRef.current) {
-      tileRef.current.classList.remove('animate-drop-in');
-      void tileRef.current.offsetWidth; // Trigger reflow
-      tileRef.current.classList.add('animate-drop-in');
-    }
-  }, [tile.isNew, tile.id]);
-
   return (
     <div
-      ref={tileRef}
       onClick={() => onClick(tile)}
       className={cn(
-        'absolute aspect-square rounded-lg flex items-center justify-center cursor-pointer transition-all duration-500 ease-out',
-        'transform-gpu',
+        'aspect-square rounded-lg flex items-center justify-center cursor-pointer',
         isSelected && 'ring-4 ring-offset-2 ring-white z-10 scale-110',
         'shadow-md',
         'bg-[hsl(var(--tile-color))]'
@@ -56,10 +39,6 @@ const MemoizedTile: FC<{
       style={
         {
           '--tile-color': `var(--tile-color-${tile.type})`,
-          width: `${size}px`,
-          height: `${size}px`,
-          top: `${tile.row * tileSize + offset}px`,
-          left: `${tile.col * tileSize + offset}px`,
         } as React.CSSProperties
       }
     >
@@ -71,24 +50,6 @@ MemoizedTile.displayName = 'MemoizedTile';
 
 const GameBoard: FC<GameBoardProps> = ({ board, onSwap, isProcessing }) => {
   const [selectedTile, setSelectedTile] = useState<TileType | null>(null);
-  const [containerSize, setContainerSize] = useState(500);
-  
-  const tileGap = 4; // The gap in pixels
-  const tileSize = containerSize / BOARD_SIZE;
-  const gridCellSize = tileSize - tileGap;
-
-
-  const boardRef = useCallback((node: HTMLDivElement | null) => {
-    if (node) {
-      const resizeObserver = new ResizeObserver(() => {
-        // We subtract the padding from the offsetWidth to get the inner size
-        const padding = 16; // p-4 = 1rem = 16px
-        setContainerSize(node.offsetWidth - padding);
-      });
-      resizeObserver.observe(node);
-      return () => resizeObserver.disconnect();
-    }
-  }, []);
 
   const handleTileClick = (tile: TileType) => {
     if (isProcessing) return;
@@ -103,13 +64,11 @@ const GameBoard: FC<GameBoardProps> = ({ board, onSwap, isProcessing }) => {
     }
   };
 
-  const flattenedBoard = board.flat().filter((tile): tile is TileType => tile !== null);
-
   return (
     <div
-      ref={boardRef}
       className={cn(
-        'relative p-2 bg-primary/20 rounded-xl shadow-inner max-w-lg w-full aspect-square'
+        'grid gap-1 p-2 bg-primary/20 rounded-xl shadow-inner max-w-lg w-full aspect-square',
+        `grid-cols-${BOARD_SIZE}`
       )}
     >
       <style jsx global>{`
@@ -122,34 +81,19 @@ const GameBoard: FC<GameBoardProps> = ({ board, onSwap, isProcessing }) => {
         }
       `}</style>
       
-      {/* Background grid */}
-      <div className="grid grid-cols-8 grid-rows-8 w-full h-full">
-        {Array.from({ length: BOARD_SIZE * BOARD_SIZE }).map((_, i) => (
-          <div key={i} className="w-full h-full flex items-center justify-center">
-            <div 
-              className="bg-primary/10 rounded-lg"
-              style={{
-                width: `${gridCellSize}px`,
-                height: `${gridCellSize}px`,
-              }}
-            />
+      {board.map((row, rowIndex) =>
+        row.map((tile, colIndex) => (
+          <div key={`${rowIndex}-${colIndex}`} className="w-full h-full flex items-center justify-center bg-primary/10 rounded-lg">
+            {tile && (
+              <MemoizedTile
+                tile={tile}
+                onClick={handleTileClick}
+                isSelected={!!(selectedTile && selectedTile.id === tile.id)}
+              />
+            )}
           </div>
-        ))}
-      </div>
-
-      {/* Tiles */}
-      <div className="absolute top-2 left-2 right-2 bottom-2">
-        {flattenedBoard.map((tile) => (
-            <MemoizedTile
-              key={tile.id}
-              tile={tile}
-              onClick={handleTileClick}
-              isSelected={!!(selectedTile && tile && selectedTile.id === tile.id)}
-              tileSize={tileSize}
-              tileGap={tileGap}
-            />
-        ))}
-      </div>
+        ))
+      )}
     </div>
   );
 };

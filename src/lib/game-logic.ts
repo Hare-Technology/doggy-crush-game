@@ -18,7 +18,6 @@ export const createInitialBoard = (): Board => {
         type: getRandomTileType(),
         row,
         col,
-        isNew: true,
       };
     }
   }
@@ -33,7 +32,6 @@ export const createInitialBoard = (): Board => {
                 type: getRandomTileType(),
                 row: tile.row,
                 col: tile.col,
-                isNew: true
             };
         }
     });
@@ -41,52 +39,10 @@ export const createInitialBoard = (): Board => {
   
   // Ensure there are possible moves
   while (!checkBoardForMoves(board)) {
-      for (let row = 0; row < BOARD_SIZE; row++) {
-          for (let col = 0; col < BOARD_SIZE; col++) {
-              board[row][col] = {
-                  id: tileIdCounter++,
-                  type: getRandomTileType(),
-                  row,
-                  col,
-                  isNew: true
-              }
-          }
-      }
-      // re-check for matches after reshuffle
-      while (findMatches(board).length > 0) {
-          const matches = findMatches(board);
-          matches.forEach(tile => {
-              if(board[tile.row]) {
-                  board[tile.row][tile.col] = {
-                      id: tileIdCounter++,
-                      type: getRandomTileType(),
-                      row: tile.row,
-                      col: tile.col,
-                      isNew: true
-                  };
-              }
-          });
-      }
+      board = createInitialBoard(); // Just recreate the whole board
   }
 
-  // Set isNew to false for the final board state before starting the game
-  const finalBoard = board.map(row => row.map(tile => {
-    if (tile) {
-      return {...tile, isNew: true}; // Start with animation
-    }
-    return null;
-  }));
-
-  // A brief delay to allow the initial animation to be seen
-  setTimeout(() => {
-    finalBoard.forEach(row => row.forEach(tile => {
-      if (tile) {
-        tile.isNew = false;
-      }
-    }));
-  }, 500);
-
-  return finalBoard;
+  return board;
 };
 
 export const findMatches = (board: Board): Tile[] => {
@@ -173,7 +129,7 @@ export const applyGravity = (board: Board): { newBoard: Board; movedTiles: Set<n
     return { newBoard, movedTiles };
 };
 
-export const fillEmptyTiles = (board: Board, isNew = false): Board => {
+export const fillEmptyTiles = (board: Board): Board => {
     const newBoard = board.map(row => [...row]);
     for (let row = 0; row < BOARD_SIZE; row++) {
         for (let col = 0; col < BOARD_SIZE; col++) {
@@ -183,13 +139,7 @@ export const fillEmptyTiles = (board: Board, isNew = false): Board => {
                     type: getRandomTileType(),
                     row,
                     col,
-                    isNew,
                 };
-            } else {
-                // Ensure existing tiles don't have isNew flag unless they just moved
-                if (newBoard[row][col]!.isNew && !isNew) {
-                    newBoard[row][col] = { ...newBoard[row][col]!, isNew: false };
-                }
             }
         }
     }

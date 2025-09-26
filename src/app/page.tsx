@@ -36,15 +36,15 @@ export default function Home() {
   const [movesLeft, setMovesLeft] = useState(INITIAL_MOVES);
   const [gameState, setGameState] = useState<GameState>('playing');
   const [isProcessing, setIsProcessing] = useState(false);
-  const [isAnimating, setIsAnimating] = useState(false);
   const { toast } = useToast();
 
   const scoreNeeded = useMemo(() => Math.max(0, targetScore - score), [targetScore, score]);
 
   const processMatchesAndCascades = useCallback(
-    async (currentBoard: Board): Promise<Board> => {
+    (currentBoard: Board): Board => {
       let boardAfterMatches = currentBoard.map(row => row.map(tile => tile ? {...tile} : null));
       let cascadeCount = 1;
+      let totalPoints = 0;
       
       while (true) {
         const matches = findMatches(boardAfterMatches);
@@ -52,9 +52,8 @@ export default function Home() {
           break;
         }
 
-        setIsAnimating(true);
         const points = matches.length * 10 * cascadeCount;
-        setScore(prev => prev + points);
+        totalPoints += points;
         cascadeCount++;
         
         const newBoardWithNulls = boardAfterMatches.map(row => [...row]);
@@ -62,32 +61,15 @@ export default function Home() {
             newBoardWithNulls[row][col] = null;
         });
 
-        setBoard(newBoardWithNulls);
-        await delay(500); // Animation for tiles disappearing
+        const { newBoard: boardAfterGravity } = applyGravity(newBoardWithNulls);
+        const newFilledBoard = fillEmptyTiles(boardAfterGravity);
+        boardAfterMatches = newFilledBoard;
+      }
 
-        const { newBoard: boardAfterGravity, movedTiles } = applyGravity(newBoardWithNulls);
-        const boardWithMovedFlags = boardAfterGravity.map((row) =>
-          row.map((tile) => {
-            if (tile && movedTiles.has(tile.id)) {
-              return { ...tile, isNew: true }; // Use isNew to trigger animation
-            }
-            return tile;
-          })
-        );
-        
-        setBoard(boardWithMovedFlags);
-        await delay(500); // Animation for gravity
-
-        const newFilledBoard = fillEmptyTiles(boardAfterGravity, true);
-        
-        setBoard(newFilledBoard);
-        await delay(500); // Animation for new tiles appearing
-        
-        const finalFilledBoard = fillEmptyTiles(boardAfterGravity, false);
-        boardAfterMatches = finalFilledBoard;
+      if (totalPoints > 0) {
+        setScore(prev => prev + totalPoints);
       }
       
-      setIsAnimating(false);
       return boardAfterMatches;
     },
     []
@@ -104,15 +86,12 @@ export default function Home() {
       
       let newBoard = createInitialBoard();
       
-      setBoard(newBoard);
-      
       // Check for available moves and reshuffle if none
-      if (!checkBoardForMoves(newBoard)) {
+      while (!checkBoardForMoves(newBoard)) {
         toast({ title: "No moves available, reshuffling!"});
-        await delay(1000);
-        startNewLevel(newLevel, newMoves, newTarget);
-        return;
+        newBoard = createInitialBoard();
       }
+      setBoard(newBoard);
       setIsProcessing(false);
     },
     [toast]
@@ -125,7 +104,7 @@ export default function Home() {
 
   const handleSwap = useCallback(
     async (tile1: Tile, tile2: Tile) => {
-      if (isProcessing || gameState !== 'playing' || !areTilesAdjacent(tile1, tile2) || isAnimating) {
+      if (isProcessing || gameState !== 'playing' || !areTilesAdjacent(tile1, tile2)) {
         return;
       }
 
@@ -141,47 +120,43 @@ export default function Home() {
       tempBoard[r1][c1] = swappedTile1;
       tempBoard[r2][c2] = swappedTile2;
       
-      setBoard(tempBoard);
-      await delay(500);
-
       const matches = findMatches(tempBoard);
 
       if (matches.length === 0) {
-        // Create the original board state to swap back
-        const originalBoard = board.map(r => r.map(tile => tile ? {...tile} : null));
-        setBoard(originalBoard);
-        await delay(500);
+        // No match, don't swap, just end processing
         setIsProcessing(false);
         return;
       }
       
       setMovesLeft((prev) => prev - 1);
 
-      const finalBoard = await processMatchesAndCascades(tempBoard);
+      const finalBoard = processMatchesAndCascades(tempBoard);
       
-      setBoard(finalBoard);
-
       if (!checkBoardForMoves(finalBoard)) {
         toast({ title: "No moves left, reshuffling!"});
-        await delay(1000);
-        const currentMoves = movesLeft - 1;
-        startNewLevel(level, currentMoves > 0 ? currentMoves : 0, targetScore);
+        let reshuffledBoard = createInitialBoard();
+        while (!checkBoardForMoves(reshuffledBoard)) {
+          reshuffledBoard = createInitialBoard();
+        }
+        setBoard(reshuffledBoard);
       } else {
-        setIsProcessing(false);
+        setBoard(finalBoard);
       }
+      
+      setIsProcessing(false);
     },
-    [board, isProcessing, gameState, processMatchesAndCascades, level, movesLeft, targetScore, startNewLevel, toast, isAnimating]
+    [board, isProcessing, gameState, processMatchesAndCascades, startNewLevel, toast]
   );
   
   useEffect(() => {
-    if (isProcessing || isAnimating) return;
+    if (isProcessing) return;
 
     if (score >= targetScore) {
       setGameState('win');
     } else if (movesLeft <= 0) {
       setGameState('lose');
     }
-  }, [score, movesLeft, targetScore, isProcessing, isAnimating]);
+  }, [score, movesLeft, targetScore, isProcessing]);
 
   const handleRestart = useCallback(() => {
     startNewLevel(level, INITIAL_MOVES, targetScore);
@@ -236,7 +211,7 @@ export default function Home() {
           targetScore={targetScore}
         />
         <div className="w-full lg:w-auto flex-grow flex items-center justify-center">
-           <GameBoard board={board} onSwap={handleSwap} isProcessing={isProcessing || isAnimating} />
+           <GameBoard board={board} onSwap={handleSwap} isProcessing={isProcessing} />
         </div>
       </main>
       <GameOverDialog

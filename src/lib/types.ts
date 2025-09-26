@@ -7,7 +7,6 @@ export type Tile = {
   type: TileType;
   row: number;
   col: number;
-  isNew?: boolean;
 };
 
 export type Board = (Tile | null)[][];
