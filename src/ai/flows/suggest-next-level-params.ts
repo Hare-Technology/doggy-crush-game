@@ -42,7 +42,7 @@ const prompt = ai.definePrompt({
   output: {schema: SuggestNextLevelParamsOutputSchema},
   prompt: `You are an expert game designer, specializing in level design and difficulty curve.
 
-You are designing the next level for a match 3 game. The game is called DoggyCrush Saga and it has dog-themed tiles.
+You are designing the next level for a match 3 game. The game is called DoggyCrush and it has dog-themed tiles.
 
 Based on the player's performance on the current level, suggest the number of moves and the target score for the next level to make it appropriately challenging.
 

@@ -4,7 +4,7 @@ import './animations.css';
 import { Toaster } from '@/components/ui/toaster';
 
 export const metadata: Metadata = {
-  title: 'DoggyCrush Saga',
+  title: 'DoggyCrush',
   description: 'A match-3 game with a doggy twist!',
 };
 
