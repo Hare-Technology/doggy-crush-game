@@ -10,6 +10,7 @@ import {
   DogHouseIcon,
   BallIcon,
   FoodBowlIcon,
+  BombIcon,
 } from '@/components/dog-icons';
 import { BOARD_SIZE } from '@/lib/constants';
 
@@ -34,7 +35,7 @@ const Tile: FC<{
   isSelected: boolean;
   isAnimating: boolean;
 }> = ({ tile, onClick, isSelected, isAnimating }) => {
-  const Icon = tileComponentMap[tile.type] || PawIcon;
+  const Icon = tile.powerUp === 'bomb' ? BombIcon : tileComponentMap[tile.type] || PawIcon;
   const top = (tile.row / BOARD_SIZE) * 100;
   const left = (tile.col / BOARD_SIZE) * 100;
 
@@ -46,7 +47,8 @@ const Tile: FC<{
         'shadow-md',
         'bg-[hsl(var(--tile-color))]',
         isSelected && 'ring-4 ring-offset-2 ring-white z-10 scale-110',
-        isAnimating && 'animate-pop'
+        isAnimating && 'animate-pop',
+        tile.powerUp && 'animate-pulse'
       )}
       style={
         {
@@ -95,6 +97,19 @@ const GameBoard: FC<GameBoardProps> = ({ board, onSwap, isProcessing, isAnimatin
           --tile-color-house: 190 85% 80%;
           --tile-color-ball: 300 80% 80%;
           --tile-color-bowl: 120 85% 80%;
+        }
+        @keyframes pulse {
+          0%, 100% {
+            transform: scale(1);
+            filter: brightness(1);
+          }
+          50% {
+            transform: scale(1.05);
+            filter: brightness(1.2);
+          }
+        }
+        .animate-pulse {
+          animation: pulse 2s infinite ease-in-out;
         }
       `}</style>
 

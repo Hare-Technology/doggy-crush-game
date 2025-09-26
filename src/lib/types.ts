@@ -1,12 +1,14 @@
 import { TILE_TYPES } from './constants';
 
 export type TileType = (typeof TILE_TYPES)[number];
+export type PowerUpType = 'bomb';
 
 export type Tile = {
   id: number;
   type: TileType;
   row: number;
   col: number;
+  powerUp?: PowerUpType;
 };
 
 export type Board = (Tile | null)[][];

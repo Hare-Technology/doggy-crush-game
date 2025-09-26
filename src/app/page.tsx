@@ -19,6 +19,7 @@ import {
   fillEmptyTiles,
   areTilesAdjacent,
   checkBoardForMoves,
+  activatePowerUp,
 } from '@/lib/game-logic';
 import { useToast } from '@/hooks/use-toast';
 import { suggestNextLevelParams } from '@/ai/flows/suggest-next-level-params';
@@ -75,14 +76,16 @@ export default function Home() {
   );
 
   const processMatchesAndCascades = useCallback(
-    async (currentBoard: Board) => {
+    async (currentBoard: Board, isSwap: boolean = false) => {
       let tempBoard = currentBoard;
-      let cascadeCount = 1;
+      let cascadeCount = 0;
+      let totalPoints = 0;
 
       while (true) {
-        const matches = findMatches(tempBoard);
+        const { matches, powerUp } = findMatches(tempBoard);
         if (matches.length === 0) break;
 
+        cascadeCount++;
         if (cascadeCount > 1) {
           const comboText = `Combo x${cascadeCount}!`;
           setComboMessage(comboText);
@@ -90,17 +93,29 @@ export default function Home() {
         }
 
         const points = matches.length * 10 * cascadeCount;
-        setScore(prev => prev + points);
-
+        totalPoints += points;
+        
         const matchedTileIds = new Set(matches.map(t => t.id));
         setIsAnimating(prev => new Set([...prev, ...matchedTileIds]));
         await delay(300);
-
+        
         let newBoardWithNulls = tempBoard.map(row =>
           row.map(tile =>
             tile && matchedTileIds.has(tile.id) ? null : tile
           )
         );
+
+        if (isSwap && powerUp) {
+            const { tile, powerUp: powerUpType } = powerUp;
+            if(newBoardWithNulls[tile.row]) {
+              newBoardWithNulls[tile.row][tile.col] = {
+                ...tile,
+                id: Date.now() + Math.random(), // Ensure new ID
+                powerUp: powerUpType
+              };
+            }
+        }
+        
         setBoard(newBoardWithNulls);
         setIsAnimating(new Set());
         await delay(100);
@@ -114,8 +129,12 @@ export default function Home() {
         await delay(300);
 
         tempBoard = newFilledBoard;
-        cascadeCount++;
       }
+      
+      if(totalPoints > 0) {
+        setScore(prev => prev + totalPoints);
+      }
+
       return tempBoard;
     },
     [setIsAnimating]
@@ -133,18 +152,52 @@ export default function Home() {
       if (!areTilesAdjacent(tile1, tile2)) return;
 
       setIsProcessing(true);
-
+      
       let tempBoard = board.map(r => r.map(tile => (tile ? { ...tile } : null)));
       const { row: r1, col: c1 } = tile1;
       const { row: r2, col: c2 } = tile2;
 
+      // Handle power-up activation
+      const swappedTileWithPowerup = tile1.powerUp ? tile1 : tile2.powerUp ? tile2 : null;
+      if(swappedTileWithPowerup) {
+          const {newBoard, clearedTiles} = activatePowerUp(tempBoard, swappedTileWithPowerup);
+          
+          setMovesLeft(prev => prev - 1);
+          
+          const points = clearedTiles.length * 10;
+          setScore(prev => prev + points);
+
+          const clearedTileIds = new Set(clearedTiles.map(t => t.id));
+          setIsAnimating(prev => new Set([...prev, ...clearedTileIds]));
+          await delay(300);
+
+          setBoard(newBoard);
+          setIsAnimating(new Set());
+          await delay(100);
+          
+          const { newBoard: boardAfterGravity } = applyGravity(newBoard);
+          setBoard(boardAfterGravity);
+          await delay(300);
+
+          const newFilledBoard = fillEmptyTiles(boardAfterGravity);
+          setBoard(newFilledBoard);
+          await delay(300);
+          
+          const boardAfterCascade = await processMatchesAndCascades(newFilledBoard);
+          setBoard(boardAfterCascade);
+
+          setIsProcessing(false);
+          return;
+      }
+
+
       tempBoard[r1][c1] = { ...tile2, row: r1, col: c1 };
       tempBoard[r2][c2] = { ...tile1, row: r2, col: c2 };
-
+      
       setBoard(tempBoard);
       await delay(300);
 
-      const matches = findMatches(tempBoard);
+      const { matches } = findMatches(tempBoard);
       if (matches.length === 0) {
         setBoard(board);
         await delay(300);
@@ -153,7 +206,7 @@ export default function Home() {
       }
 
       setMovesLeft(prev => prev - 1);
-      const boardAfterMatches = await processMatchesAndCascades(tempBoard);
+      const boardAfterMatches = await processMatchesAndCascades(tempBoard, true);
 
       let finalBoard = boardAfterMatches;
       while (!checkBoardForMoves(finalBoard)) {
