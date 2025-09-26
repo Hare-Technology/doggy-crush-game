@@ -266,7 +266,7 @@ export default function Home() {
   );
 
   useEffect(() => {
-    if (isProcessing || board.length === 0 || gameState !== 'playing') return;
+    if (gameState !== 'playing' || board.length === 0) return;
 
     if (score > highScore) {
       setHighScore(score);
@@ -274,11 +274,11 @@ export default function Home() {
     }
 
     if (score >= targetScore) {
-      setIsProcessing(true);
+      setIsProcessing(true); // Lock the board
       setGameState('win');
       handleGameOver(true);
     } else if (movesLeft <= 0) {
-      setIsProcessing(true);
+      setIsProcessing(true); // Lock the board
       setGameState('lose');
       handleGameOver(false);
     }
@@ -286,7 +286,6 @@ export default function Home() {
     score,
     movesLeft,
     targetScore,
-    isProcessing,
     board.length,
     highScore,
     handleGameOver,
@@ -298,13 +297,12 @@ export default function Home() {
   }, [level, movesLeft, targetScore, startNewLevel]);
 
   const handleNextLevel = useCallback(async () => {
-    setIsProcessing(true);
     try {
       toast({
         title: 'Designing Next Level...',
         description: 'Our AI is crafting a new challenge for you!',
       });
-
+      
       const result = await suggestNextLevelParams({
         currentLevel: level,
         currentScore: score,
