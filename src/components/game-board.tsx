@@ -14,6 +14,7 @@ import {
   BombIcon,
   ColumnClearIcon,
   RowClearIcon,
+  RainbowIcon,
 } from '@/components/dog-icons';
 import { BOARD_SIZE } from '@/lib/constants';
 
@@ -39,6 +40,7 @@ const powerUpComponentMap: Record<string, React.ElementType> = {
   bomb: BombIcon,
   column_clear: ColumnClearIcon,
   row_clear: RowClearIcon,
+  rainbow: RainbowIcon,
 };
 
 const Tile: FC<{

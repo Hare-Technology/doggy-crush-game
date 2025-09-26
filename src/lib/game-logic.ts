@@ -110,28 +110,26 @@ export const findMatches = (
   
   const combinedMatches = [...horizontalMatches, ...verticalMatches];
 
-  // Detect intersections for bombs first
+  // Detect intersections for rainbow power-ups
   for (const hMatch of horizontalMatches) {
     for (const vMatch of verticalMatches) {
       const intersection = hMatch.find(ht =>
         vMatch.some(vt => vt.id === ht.id)
       );
       if (intersection && hMatch.length >= 3 && vMatch.length >= 3) {
-        // Mark all tiles in both intersecting matches as part of a powerup
         hMatch.forEach(t => tilesInPowerups.add(t.id));
         vMatch.forEach(t => tilesInPowerups.add(t.id));
-        powerUps.push({ tile: intersection, powerUp: 'bomb' });
+        powerUps.push({ tile: intersection, powerUp: 'rainbow' });
       }
     }
   }
 
-  // Detect 4-matches for row/column clears and 5+ for bombs
+  // Detect straight-line matches for other power-ups
   for (const match of combinedMatches) {
-    // Only consider matches not already part of a bomb
     if (match.some(t => tilesInPowerups.has(t.id))) continue;
     
     if (match.length >= 5) {
-       const powerUpTile = match[2] || match[0];
+       const powerUpTile = match[Math.floor(match.length / 2)] || match[0];
        powerUps.push({
         tile: powerUpTile,
         powerUp: 'bomb',
@@ -144,13 +142,11 @@ export const findMatches = (
         tile: powerUpTile,
         powerUp: isVertical ? 'column_clear' : 'row_clear',
       });
-      // Mark the chosen powerup tile so it's not cleared
       tilesInPowerups.add(powerUpTile.id);
     }
   }
   
   combinedMatches.flat().forEach(tile => {
-      // Only add to matches if it's not designated as a power-up tile
       if(!tilesInPowerups.has(tile.id)) {
           allMatches.add(tile);
       }
@@ -249,9 +245,8 @@ const swapTiles = (
 export const activatePowerUp = (
   board: Board,
   tile: Tile
-): { clearedTiles: Tile[]; randomBombTile: Tile | null } => {
+): { clearedTiles: Tile[] } => {
   const clearedTiles = new Set<Tile>();
-  let randomBombTile: Tile | null = null;
 
   if (tile.powerUp === 'bomb') {
     // Clear 3x3 area around the bomb
@@ -260,7 +255,6 @@ export const activatePowerUp = (
         if (r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE) {
           const targetTile = board[r][c];
           if (targetTile) {
-            // Don't clear other powerups unless they are the one being activated
             if (targetTile.powerUp && targetTile.id !== tile.id) {
               continue;
             }
@@ -286,7 +280,18 @@ export const activatePowerUp = (
         clearedTiles.add(targetTile);
       }
     }
+  } else if (tile.powerUp === 'rainbow') {
+    clearedTiles.add(tile);
+    const availableTiles = board.flat().filter((t): t is Tile => t !== null && t.id !== tile.id && !t.powerUp);
+    if(availableTiles.length > 0) {
+      const randomTileType = availableTiles[Math.floor(Math.random() * availableTiles.length)].type;
+      board.flat().forEach(t => {
+        if (t?.type === randomTileType) {
+          clearedTiles.add(t);
+        }
+      });
+    }
   }
 
-  return { clearedTiles: Array.from(clearedTiles), randomBombTile };
+  return { clearedTiles: Array.from(clearedTiles) };
 };

@@ -52,3 +52,7 @@ export const ColumnClearIcon = (props: HTMLAttributes<HTMLSpanElement>) => (
 export const RowClearIcon = (props: HTMLAttributes<HTMLSpanElement>) => (
   <Emoji emoji="🔥" {...props} />
 );
+
+export const RainbowIcon = (props: HTMLAttributes<HTMLSpanElement>) => (
+  <Emoji emoji="🌈" {...props} />
+);

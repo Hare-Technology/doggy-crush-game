@@ -1,7 +1,7 @@
 import { TILE_TYPES } from './constants';
 
 export type TileType = (typeof TILE_TYPES)[number];
-export type PowerUpType = 'bomb' | 'column_clear' | 'row_clear';
+export type PowerUpType = 'bomb' | 'column_clear' | 'row_clear' | 'rainbow';
 
 export type Tile = {
   id: number;

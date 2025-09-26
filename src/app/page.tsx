@@ -363,7 +363,8 @@ export default function Home() {
         if (
           tile.powerUp === 'bomb' ||
           tile.powerUp === 'column_clear' ||
-          tile.powerUp === 'row_clear'
+          tile.powerUp === 'row_clear' ||
+          tile.powerUp === 'rainbow'
         ) {
           const { clearedTiles } = activatePowerUp(currentBoard, tile);
           setScore(prev => prev + clearedTiles.length * 10);
