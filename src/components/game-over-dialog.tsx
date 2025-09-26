@@ -9,7 +9,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
-import { Loader2, PartyPopper, Frown } from 'lucide-react';
+import { Loader2, PartyPopper, Frown, RefreshCw } from 'lucide-react';
 import type { GameState } from '@/lib/types';
 import { useSound } from '@/hooks/use-sound';
 
@@ -31,13 +31,13 @@ export default function GameOverDialog({
   const isOpen = gameState === 'win' || gameState === 'lose';
   const { playSound } = useSound();
 
-  const handleActionClick = () => {
+  const handleNextLevelClick = () => {
     playSound('click');
-    if (gameState === 'win') {
-      onNextLevel();
-    } else {
-      onRestart();
-    }
+    onNextLevel();
+  };
+  const handleRestartClick = () => {
+    playSound('click');
+    onRestart();
   };
 
   return (
@@ -65,23 +65,34 @@ export default function GameOverDialog({
           </AlertDialogDescription>
         </AlertDialogHeader>
 
-        <AlertDialogFooter className="sm:justify-center pt-4">
+        <AlertDialogFooter className="sm:justify-center pt-4 sm:flex-row sm:gap-2">
           {gameState === 'win' && (
-            <Button
-              onClick={handleActionClick}
-              disabled={isProcessing}
-              size="lg"
-            >
-              {isProcessing ? (
-                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-              ) : (
-                'Next Level'
-              )}
-            </Button>
+            <>
+              <Button
+                onClick={handleRestartClick}
+                disabled={isProcessing}
+                size="lg"
+                variant="outline"
+              >
+                <RefreshCw className="mr-2 h-5 w-5" />
+                Replay
+              </Button>
+              <Button
+                onClick={handleNextLevelClick}
+                disabled={isProcessing}
+                size="lg"
+              >
+                {isProcessing ? (
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                ) : (
+                  'Next Level'
+                )}
+              </Button>
+            </>
           )}
           {gameState === 'lose' && (
             <Button
-              onClick={handleActionClick}
+              onClick={handleRestartClick}
               disabled={isProcessing}
               size="lg"
             >

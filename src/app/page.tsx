@@ -291,8 +291,8 @@ export default function Home() {
   ]);
 
   const handleRestart = useCallback(() => {
-    startNewLevel(level, INITIAL_MOVES, targetScore);
-  }, [level, targetScore, startNewLevel]);
+    startNewLevel(level, movesLeft, targetScore);
+  }, [level, movesLeft, targetScore, startNewLevel]);
 
   const handleNextLevel = useCallback(async () => {
     setIsProcessing(true);
