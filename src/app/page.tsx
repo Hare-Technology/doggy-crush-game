@@ -278,19 +278,15 @@ export default function Home() {
       await delay(100);
 
       let workingBoard = boardWithNulls;
-      let hasEmptySpaces = true;
-      while (hasEmptySpaces) {
-        const { newBoard: boardAfterGravity } = applyGravity(workingBoard);
-        setBoard(boardAfterGravity); // show gravity in action
-        await delay(200);
+      
+      const { newBoard: boardAfterGravity } = applyGravity(workingBoard);
+      setBoard(boardAfterGravity); // show gravity in action
+      await delay(200);
 
-        const boardWithNewTiles = fillEmptyTiles(boardAfterGravity);
-        workingBoard = boardWithNewTiles;
-        setBoard(workingBoard);
-        await delay(200);
-
-        hasEmptySpaces = workingBoard.flat().some(tile => tile === null);
-      }
+      const boardWithNewTiles = fillEmptyTiles(boardAfterGravity);
+      workingBoard = boardWithNewTiles;
+      setBoard(workingBoard);
+      await delay(200);
       
       const boardAfterCascade = await processMatchesAndCascades(workingBoard);
       setBoard(boardAfterCascade);
@@ -316,8 +312,8 @@ export default function Home() {
     setBoard(tempBoard);
     await delay(300);
 
-    const { matches } = findMatches(tempBoard);
-    if (matches.length === 0) {
+    const { matches, powerUps } = findMatches(tempBoard);
+    if (matches.length === 0 && powerUps.length === 0) {
       setBoard(board); // Swap back
       await delay(300);
       setIsProcessing(false);
@@ -388,11 +384,10 @@ export default function Home() {
         setBoard(currentBoard);
         setIsProcessing(false);
 
-      } else if (!tile1.powerUp && !tile2.powerUp) {
-        // Regular swap
+      } else {
+        // Regular swap (handles powerup vs powerup, and regular vs regular)
         await handleRegularSwap(tile1, tile2);
       }
-      // Note: Swapping two powerups is not handled here, can be added later
 
     } else {
       // This is the first tile selection

@@ -149,11 +149,23 @@ export const findMatches = (
   }
   
   combinedMatches.flat().forEach(tile => {
-      // Only add to allMatches if it's not part of a group that created a powerup
+      // If a powerup is formed, the tiles forming it are also part of a match.
+      // But if it's just a 3-tile match, we only add them if not part of a powerup.
       if(!tilesInPowerups.has(tile.id)) {
           allMatches.add(tile);
       }
   })
+
+  // If a powerup was created, it implies a valid match. We need to ensure `matches` is not empty.
+  if (powerUps.length > 0 && allMatches.size === 0) {
+    const powerUpTileIds = new Set(powerUps.map(p => p.tile.id));
+    for (const match of combinedMatches) {
+        if (match.some(t => powerUpTileIds.has(t.id))) {
+            match.forEach(t => allMatches.add(t));
+            break; // Add the first power-up-creating match and stop.
+        }
+    }
+  }
 
   return { matches: Array.from(allMatches), powerUps };
 };
@@ -185,16 +197,14 @@ export const fillEmptyTiles = (board: Board): Board => {
   const newBoard = board.map(row => [...row]);
   for (let col = 0; col < BOARD_SIZE; col++) {
     for (let row = 0; row < BOARD_SIZE; row++) {
-      if (newBoard[row][col] === null) {
-        // Only create new tiles at the top where there's space.
-        // The gravity function will handle moving them down.
-        newBoard[row][col] = {
-          id: tileIdCounter++,
-          type: getRandomTileType(),
-          row,
-          col,
-        };
-      }
+        if (newBoard[row][col] === null) {
+            newBoard[row][col] = {
+                id: tileIdCounter++,
+                type: getRandomTileType(),
+                row,
+                col,
+            };
+        }
     }
   }
   return newBoard;
@@ -215,13 +225,15 @@ export const checkBoardForMoves = (board: Board): boolean => {
       if (col < BOARD_SIZE - 1) {
         if (!board[row][col + 1]) continue;
         const newBoard = swapTiles(board, row, col, row, col + 1);
-        if (findMatches(newBoard).matches.length > 0) return true;
+        const { matches, powerUps } = findMatches(newBoard);
+        if (matches.length > 0 || powerUps.length > 0) return true;
       }
       // Try swapping down
       if (row < BOARD_SIZE - 1) {
         if (!board[row + 1][col]) continue;
         const newBoard = swapTiles(board, row, col, row + 1, col);
-        if (findMatches(newBoard).matches.length > 0) return true;
+        const { matches, powerUps } = findMatches(newBoard);
+        if (matches.length > 0 || powerUps.length > 0) return true;
       }
     }
   }
