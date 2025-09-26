@@ -16,7 +16,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { getLeaderboard, LeaderboardEntry } from '@/lib/firestore';
+import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import type { LeaderboardEntry } from '@/lib/firestore';
 import { Trophy, Coins, Loader2 } from 'lucide-react';
 
 export default function LeaderboardPage() {
@@ -24,13 +26,33 @@ export default function LeaderboardPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchLeaderboard = async () => {
-      setLoading(true);
-      const data = await getLeaderboard();
-      setLeaderboardData(data);
+    setLoading(true);
+    const usersCol = collection(db, 'users');
+    const q = query(
+      usersCol,
+      orderBy('totalScore', 'desc'),
+      limit(10)
+    );
+
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const leaderboardList = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        name: doc.data().displayName || 'Anonymous',
+        totalScore: doc.data().totalScore || 0,
+        highestLevel: doc.data().highestLevel || 1,
+        wins: doc.data().wins || 0,
+        losses: doc.data().losses || 0,
+        totalCoinsEarned: doc.data().totalCoinsEarned || 0,
+      }));
+      setLeaderboardData(leaderboardList);
       setLoading(false);
-    };
-    fetchLeaderboard();
+    }, (error) => {
+      console.error("Error fetching real-time leaderboard: ", error);
+      setLoading(false);
+    });
+
+    // Cleanup subscription on component unmount
+    return () => unsubscribe();
   }, []);
 
   return (
