@@ -45,7 +45,6 @@ const MemoizedTile: FC<{
       )}
       style={
         {
-          transform: tile ? 'scale(1)' : 'scale(0)',
           '--tile-color': `var(--tile-color-${tile.type})`,
         } as React.CSSProperties
       }
@@ -90,7 +89,7 @@ const GameBoard: FC<GameBoardProps> = ({ board, onSwap, isProcessing }) => {
       {board.map((row, rowIndex) =>
         row.map((tile, colIndex) => (
           <MemoizedTile
-            key={tile?.id ?? `${rowIndex}-${colIndex}`}
+            key={tile ? tile.id : `${rowIndex}-${colIndex}`}
             tile={tile}
             onClick={handleTileClick}
             isSelected={!!(selectedTile && tile && selectedTile.id === tile.id)}
