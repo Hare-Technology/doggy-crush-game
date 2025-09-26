@@ -105,8 +105,6 @@ export default function Home() {
         targetScore,
       };
       localStorage.setItem('doggyCrushGameState', JSON.stringify(stateToSave));
-    } else {
-      localStorage.removeItem('doggyCrushGameState');
     }
   }, [board, level, score, movesLeft, targetScore, gameState]);
 
@@ -128,6 +126,10 @@ export default function Home() {
       setPowerUpsMade(0);
       setLevelStartTime(Date.now());
       setLevelEndTime(0);
+      
+      if (newLevel === 1 && newMoves === INITIAL_MOVES && newTarget === INITIAL_TARGET_SCORE) {
+          localStorage.removeItem('doggyCrushGameState');
+      }
 
       let newBoard = createInitialBoard();
       while (!checkBoardForMoves(newBoard)) {
@@ -325,6 +327,7 @@ export default function Home() {
       if (tile.powerUp) {
         setSelectedTile(null);
         setIsProcessing(true);
+        setMovesLeft(prev => prev -1);
         let finalBoard: Board;
 
         if (tile.powerUp === 'bomb') {
