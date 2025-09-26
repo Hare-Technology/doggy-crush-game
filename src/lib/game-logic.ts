@@ -119,9 +119,10 @@ export const findMatches = (
         vMatch.some(vt => vt.id === ht.id)
       );
       if (intersection) {
+        const newPowerupTile = {...intersection, id: tileIdCounter++};
         hMatch.forEach(t => tilesInPowerups.add(t.id));
         vMatch.forEach(t => tilesInPowerups.add(t.id));
-        powerUps.push({ tile: intersection, powerUp: 'rainbow' });
+        powerUps.push({ tile: newPowerupTile, powerUp: 'rainbow' });
       }
     }
   }
@@ -132,16 +133,18 @@ export const findMatches = (
     
     if (match.length >= 5) {
        const powerUpTile = match[Math.floor(match.length / 2)] || match[0];
+       const newPowerupTile = {...powerUpTile, id: tileIdCounter++};
        powerUps.push({
-        tile: powerUpTile,
+        tile: newPowerupTile,
         powerUp: 'bomb',
       });
       match.forEach(t => tilesInPowerups.add(t.id));
     } else if (match.length === 4) {
       const powerUpTile = match[1] || match[0];
+      const newPowerupTile = {...powerUpTile, id: tileIdCounter++};
       const isVertical = match[0].col === match[1].col;
       powerUps.push({
-        tile: powerUpTile,
+        tile: newPowerupTile,
         powerUp: isVertical ? 'column_clear' : 'row_clear',
       });
       match.forEach(t => tilesInPowerups.add(t.id));
@@ -149,8 +152,6 @@ export const findMatches = (
   }
   
   combinedMatches.flat().forEach(tile => {
-      // If a powerup is formed, the tiles forming it are also part of a match.
-      // But if it's just a 3-tile match, we only add them if not part of a powerup.
       if(!tilesInPowerups.has(tile.id)) {
           allMatches.add(tile);
       }
@@ -158,9 +159,13 @@ export const findMatches = (
 
   // If a powerup was created, it implies a valid match. We need to ensure `matches` is not empty.
   if (powerUps.length > 0) {
-    const powerUpTileIds = new Set(powerUps.map(p => p.tile.id));
+    const powerUpOriginalTileIds = new Set(powerUps.map(p => {
+        const originalMatch = combinedMatches.find(m => m.some(t => t.row === p.tile.row && t.col === p.tile.col && t.type === p.tile.type));
+        return originalMatch ? originalMatch.map(t => t.id) : [];
+    }).flat());
+    
     for (const match of combinedMatches) {
-        if (match.some(t => powerUpTileIds.has(t.id))) {
+        if (match.some(t => powerUpOriginalTileIds.has(t.id))) {
             match.forEach(t => allMatches.add(t));
         }
     }
@@ -172,35 +177,33 @@ export const findMatches = (
 export const applyGravity = (
   board: Board
 ): { newBoard: Board; movedTiles: Set<number> } => {
+  const movedTiles = new Set<number>();
   const newBoard: Board = Array.from({ length: BOARD_SIZE }, () =>
     Array(BOARD_SIZE).fill(null)
   );
-  const movedTiles = new Set<number>();
 
   for (let col = 0; col < BOARD_SIZE; col++) {
     const columnTiles: Tile[] = [];
-    // Collect all tiles in the current column, from the board and above
-    for (let row = board.length - 1; row >= 0; row--) {
+    // Get all tiles from the column, including newly created ones above the board
+    for (let row = 0; row < BOARD_SIZE; row++) {
       if (board[row][col]) {
         columnTiles.push(board[row][col]!);
       }
     }
 
-    // Place tiles back into the column from the bottom up
-    let newRow = BOARD_SIZE - 1;
-    for (const tile of columnTiles) {
-      if (newRow >= 0) {
-        if (tile.row !== newRow || tile.col !== col) {
-          movedTiles.add(tile.id);
-        }
-        newBoard[newRow][col] = { ...tile, row: newRow, col };
-        newRow--;
+    let newRowIndex = BOARD_SIZE - 1;
+    columnTiles.reverse().forEach(tile => {
+      if (tile.row !== newRowIndex || tile.col !== col) {
+        movedTiles.add(tile.id);
       }
-    }
+      newBoard[newRowIndex][col] = { ...tile, row: newRowIndex, col };
+      newRowIndex--;
+    });
   }
 
   return { newBoard, movedTiles };
 };
+
 
 export const fillEmptyTiles = (board: Board): Board => {
   const newBoard = board.map(row => [...row]);
@@ -209,10 +212,16 @@ export const fillEmptyTiles = (board: Board): Board => {
     let newTileRow = -1;
     for (let row = BOARD_SIZE - 1; row >= 0; row--) {
       if (newBoard[row][col] === null) {
-        newBoard[row][col] = {
+        // Find the first empty spot from the top to place the new off-screen tile
+        let finalRow = row;
+        while(finalRow > 0 && newBoard[finalRow - 1][col] === null) {
+          finalRow--;
+        }
+
+        newBoard[finalRow][col] = {
           id: tileIdCounter++,
           type: getRandomTileType(),
-          row: newTileRow,
+          row: newTileRow, // Start above the board
           col,
         };
         newTileRow--;

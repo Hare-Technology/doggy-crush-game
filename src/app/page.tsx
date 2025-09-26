@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
@@ -146,13 +147,13 @@ export default function Home() {
         } = JSON.parse(savedGame);
 
         setBoard(board);
-        setLevel(level);
-        setScore(score);
-        setMovesLeft(movesLeft);
-        setTargetScore(targetScore);
-        if (typeof idCounter === 'number') {
-          setTileIdCounter(idCounter);
-        }
+setLevel(level);
+setScore(score);
+setMovesLeft(movesLeft);
+setTargetScore(targetScore);
+if (typeof idCounter === 'number') {
+  setTileIdCounter(idCounter);
+}
         // If user logs out, keep their local coins.
         // If they log in, we defer to server coins.
         if (!user) {
@@ -232,14 +233,13 @@ export default function Home() {
           powerUps.forEach(p => {
               const { row, col } = p.tile;
               if (boardWithPowerups[row][col]) {
+                boardWithPowerups[row][col] = p.tile;
                 boardWithPowerups[row][col]!.powerUp = p.powerUp;
               }
           });
         }
         
-        const powerUpTileIds = new Set(powerUps.map(p => p.tile.id));
-        const matchedTileIds = new Set(matches.map(t => t.id).filter(id => !powerUpTileIds.has(id)));
-
+        const matchedTileIds = new Set(matches.map(t => t.id));
         setIsAnimating(prev => new Set([...prev, ...matchedTileIds]));
         await delay(500);
 
@@ -255,7 +255,7 @@ export default function Home() {
         
         setIsAnimating(new Set());
 
-        const boardWithNewTiles = fillEmptyTiles(newBoardWithNulls);
+        let boardWithNewTiles = fillEmptyTiles(newBoardWithNulls);
         const { newBoard: boardAfterGravity } = applyGravity(boardWithNewTiles);
         
         setBoard(boardAfterGravity);
@@ -299,7 +299,7 @@ export default function Home() {
       
       setIsAnimating(new Set());
 
-      const boardWithNewTiles = fillEmptyTiles(boardWithNulls);
+      let boardWithNewTiles = fillEmptyTiles(boardWithNulls);
       const { newBoard: boardAfterGravity } = applyGravity(boardWithNewTiles);
       
       setBoard(boardAfterGravity);
