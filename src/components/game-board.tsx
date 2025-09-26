@@ -20,7 +20,11 @@ const tileEmojiMap: Record<string, string> = {
   bowl: '🐶',
 };
 
-const MemoizedTile: FC<{ tile: TileType | null; onDragStart: (tile: TileType) => void; onDrop: (tile: TileType) => void }> = memo(({ tile, onDragStart, onDrop }) => {
+const MemoizedTile: FC<{ 
+  tile: TileType | null;
+  onClick: (tile: TileType) => void;
+  isSelected: boolean;
+}> = memo(({ tile, onClick, isSelected }) => {
   if (!tile) {
     return (
       <div className="w-full h-full aspect-square rounded-lg bg-primary/10" />
@@ -33,16 +37,13 @@ const MemoizedTile: FC<{ tile: TileType | null; onDragStart: (tile: TileType) =>
   return (
     <div
       key={tile.id}
-      draggable
-      onDragStart={() => onDragStart(tile)}
-      onDragOver={(e) => e.preventDefault()}
-      onDrop={() => onDrop(tile)}
-      onDragEnd={(e) => e.currentTarget.classList.remove('opacity-50')}
+      onClick={() => onClick(tile)}
       className={cn(
-        'w-full h-full aspect-square rounded-lg flex items-center justify-center cursor-grab active:cursor-grabbing transition-all duration-300',
+        'w-full h-full aspect-square rounded-lg flex items-center justify-center cursor-pointer transition-all duration-300',
         'transform-gpu hover:scale-105 active:scale-95',
         'shadow-md hover:shadow-lg',
-        'bg-[hsl(var(--tile-color))]'
+        'bg-[hsl(var(--tile-color))]',
+        isSelected && 'ring-4 ring-offset-2 ring-white'
       )}
       style={{
         transform: tile ? 'scale(1)' : 'scale(0)',
@@ -57,17 +58,17 @@ MemoizedTile.displayName = 'MemoizedTile';
 
 
 const GameBoard: FC<GameBoardProps> = ({ board, onSwap, isProcessing }) => {
-  const [draggedTile, setDraggedTile] = useState<TileType | null>(null);
+  const [selectedTile, setSelectedTile] = useState<TileType | null>(null);
 
-  const handleDragStart = (tile: TileType) => {
-    setDraggedTile(tile);
-  };
+  const handleTileClick = (tile: TileType) => {
+    if (isProcessing) return;
 
-  const handleDrop = (targetTile: TileType) => {
-    if (draggedTile) {
-      onSwap(draggedTile, targetTile);
+    if (selectedTile) {
+      onSwap(selectedTile, tile);
+      setSelectedTile(null);
+    } else {
+      setSelectedTile(tile);
     }
-    setDraggedTile(null);
   };
 
   return (
@@ -82,8 +83,8 @@ const GameBoard: FC<GameBoardProps> = ({ board, onSwap, isProcessing }) => {
           <MemoizedTile
             key={`${rowIndex}-${colIndex}-${tile?.id}`}
             tile={tile}
-            onDragStart={handleDragStart}
-            onDrop={handleDrop}
+            onClick={handleTileClick}
+            isSelected={!!(selectedTile && tile && selectedTile.id === tile.id)}
           />
         ))
       )}

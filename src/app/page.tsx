@@ -17,6 +17,7 @@ import {
   applyGravity,
   fillEmptyTiles,
   areTilesAdjacent,
+  checkBoardForMoves
 } from '@/lib/game-logic';
 import { useToast } from '@/hooks/use-toast';
 import { suggestNextLevelParams } from '@/ai/flows/suggest-next-level-params';
@@ -40,13 +41,38 @@ export default function Home() {
   const scoreNeeded = useMemo(() => Math.max(0, targetScore - score), [targetScore, score]);
 
   const startNewLevel = useCallback(
-    (newLevel: number, newMoves: number, newTarget: number) => {
+    async (newLevel: number, newMoves: number, newTarget: number) => {
       setLevel(newLevel);
       setMovesLeft(newMoves);
       setTargetScore(newTarget);
       setScore(0);
-      setBoard(createInitialBoard());
       setGameState('playing');
+      setIsProcessing(true);
+      
+      let newBoard = createInitialBoard();
+      let cascades = 0;
+      do {
+        const points = await processMatchesAndCascades(newBoard, true);
+        if (points > 0) {
+          cascades++;
+        }
+      } while (findMatches(newBoard).length > 0);
+      
+      if(cascades > 0) {
+        // give a fresh board if there were starting matches
+        newBoard = createInitialBoard();
+      }
+
+      setBoard(newBoard);
+      
+      // Check for available moves and reshuffle if none
+      if (!checkBoardForMoves(newBoard)) {
+        toast({ title: "No moves available, reshuffling!"});
+        await delay(1000);
+        startNewLevel(newLevel, newMoves, newTarget);
+        return;
+      }
+      setIsProcessing(false);
     },
     []
   );
@@ -56,7 +82,7 @@ export default function Home() {
   }, [startNewLevel]);
 
   const processMatchesAndCascades = useCallback(
-    async (currentBoard: Board): Promise<number> => {
+    async (currentBoard: Board, isInitialSetup = false): Promise<number> => {
       let totalPoints = 0;
       let boardAfterMatches = currentBoard;
       
@@ -66,22 +92,29 @@ export default function Home() {
           break;
         }
 
-        const points = matches.length * 10 * (totalPoints > 0 ? 2 : 1);
-        totalPoints += points;
+        if (!isInitialSetup) {
+          const points = matches.length * 10 * (totalPoints > 0 ? 2 : 1);
+          setScore(prev => prev + points);
+          totalPoints += points;
+        }
         
         const newBoardWithNulls = boardAfterMatches.map(row => [...row]);
         matches.forEach(({ row, col }) => {
           newBoardWithNulls[row][col] = null;
         });
         
-        setBoard(newBoardWithNulls);
-        await delay(250);
+        if (!isInitialSetup) {
+          setBoard(newBoardWithNulls);
+          await delay(250);
+        }
 
         const boardAfterGravity = applyGravity(newBoardWithNulls);
         const newFilledBoard = fillEmptyTiles(boardAfterGravity);
         
-        setBoard(newFilledBoard);
-        await delay(250);
+        if (!isInitialSetup) {
+          setBoard(newFilledBoard);
+          await delay(250);
+        }
 
         boardAfterMatches = newFilledBoard;
       }
@@ -103,31 +136,49 @@ export default function Home() {
       newBoard[tile1.row][tile1.col] = tile2;
       newBoard[tile2.row][tile2.col] = tile1;
 
+      // Update tile objects with new positions
       const tempTile1 = newBoard[tile1.row][tile1.col];
       newBoard[tile1.row][tile1.col] = { ...tempTile1, row: tile1.row, col: tile1.col };
       const tempTile2 = newBoard[tile2.row][tile2.col];
       newBoard[tile2.row][tile2.col] = { ...tempTile2, row: tile2.row, col: tile2.col };
 
+      setBoard(newBoard);
+      await delay(200);
+
       const matches = findMatches(newBoard);
 
       if (matches.length === 0) {
-        setBoard(newBoard);
-        await delay(200);
         setBoard(board); // Swap back
         setIsProcessing(false);
         return;
       }
       
       setMovesLeft((prev) => prev - 1);
-      setBoard(newBoard);
-      await delay(200);
 
-      const points = await processMatchesAndCascades(newBoard);
-      setScore((prev) => prev + points);
+      await processMatchesAndCascades(newBoard);
 
-      setIsProcessing(false);
+      const finalBoard = await (async () => {
+        let currentBoard = newBoard;
+        while(findMatches(currentBoard).length > 0) {
+          const boardWithNulls = currentBoard.map(row => [...row]);
+          findMatches(currentBoard).forEach(({ row, col }) => {
+            boardWithNulls[row][col] = null;
+          });
+          const boardAfterGravity = applyGravity(boardWithNulls);
+          currentBoard = fillEmptyTiles(boardAfterGravity);
+        }
+        return currentBoard;
+      })();
+
+      if (!checkBoardForMoves(finalBoard)) {
+        toast({ title: "No moves left, reshuffling!"});
+        await delay(1000);
+        startNewLevel(level, movesLeft - 1, targetScore);
+      } else {
+        setIsProcessing(false);
+      }
     },
-    [board, isProcessing, gameState, processMatchesAndCascades]
+    [board, isProcessing, gameState, processMatchesAndCascades, level, movesLeft, targetScore, startNewLevel, toast]
   );
   
   useEffect(() => {
@@ -141,8 +192,8 @@ export default function Home() {
   }, [score, movesLeft, targetScore, isProcessing]);
 
   const handleRestart = useCallback(() => {
-    startNewLevel(level, movesLeft > 0 ? movesLeft : INITIAL_MOVES, targetScore);
-  }, [level, movesLeft, targetScore, startNewLevel]);
+    startNewLevel(level, INITIAL_MOVES, targetScore);
+  }, [level, targetScore, startNewLevel]);
 
   const handleNextLevel = useCallback(async () => {
     setIsProcessing(true);
@@ -177,7 +228,7 @@ export default function Home() {
         INITIAL_TARGET_SCORE + level * 500
       );
     } finally {
-      setIsProcessing(false);
+      // setIsProcessing is handled by startNewLevel
     }
   }, [level, score, movesLeft, startNewLevel, toast]);
 
