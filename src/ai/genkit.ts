@@ -1,23 +1,22 @@
-import {genkit, getFirebaseApp} from 'genkit';
+'use server';
+import {genkit} from 'genkit';
 import {googleAI} from '@genkit-ai/googleai';
 import {firebase as firebasePlugin} from '@genkit-ai/firebase';
-import {defineAuth, firebaseAuth} from '@genkit-ai/firebase/auth';
 import {googleCloud} from '@genkit-ai/google-cloud';
 
 export const ai = genkit({
   plugins: [
+    // The googleCloud plugin must be initialized before googleAI
+    // to provide credentials in a production environment.
+    googleCloud(),
     firebasePlugin(),
     googleAI({
-      // The API key is configured in a .env file.
-      // You can create a new key in Google AI Studio:
-      // https://aistudio.google.com/app/apikey
+      // The API key is configured in a .env file for local development.
+      // In production, the googleCloud plugin provides authentication.
     }),
-    // The googleCloud plugin is used to provide credentials in
-    // a production environment.
-    googleCloud(),
   ],
-  // Log events to the console.
+  // Log events to the console for debugging.
   logLevel: 'debug',
   // Use a more capable model for the main flow.
-  model: 'googleai/gemini-2.5-flash',
+  model: 'googleai/gemini-pro',
 });
