@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import Header from '@/components/header';
-import GameSidebar from '@/components/game-sidebar';
+import GameStats from '@/components/game-stats';
 import GameBoard from '@/components/game-board';
 import GameOverDialog from '@/components/game-over-dialog';
 import ComboEffect from '@/components/combo-effect';
@@ -213,15 +213,15 @@ export default function Home() {
   return (
     <div className="flex flex-col min-h-screen bg-background font-headline">
       <Header />
-      <main className="flex-grow container mx-auto p-4 flex flex-col lg:flex-row items-start gap-8">
-        <GameSidebar
-          level={level}
-          score={score}
-          scoreNeeded={scoreNeeded}
-          movesLeft={movesLeft}
-          targetScore={targetScore}
-        />
-        <div className="w-full lg:w-auto flex-grow flex items-center justify-center relative">
+      <GameStats
+        level={level}
+        score={score}
+        scoreNeeded={scoreNeeded}
+        movesLeft={movesLeft}
+        targetScore={targetScore}
+      />
+      <main className="flex-grow container mx-auto p-4 flex flex-col items-center justify-center">
+        <div className="w-full max-w-lg flex items-center justify-center relative">
            <GameBoard
             board={board}
             onSwap={handleSwap}
