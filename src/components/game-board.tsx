@@ -98,11 +98,11 @@ const GameBoard: FC<GameBoardProps> = ({
     >
       <style jsx global>{`
         :root {
-          --tile-color-paw: 25 90% 80%;
-          --tile-color-bone: 45 95% 80%;
-          --tile-color-house: 190 85% 80%;
+          --tile-color-paw: 35 90% 80%;
+          --tile-color-bone: 200 85% 80%;
+          --tile-color-house: 100 85% 80%;
           --tile-color-ball: 300 80% 80%;
-          --tile-color-bowl: 120 85% 80%;
+          --tile-color-bowl: 0 85% 80%;
         }
         @keyframes pulse {
           0%,
