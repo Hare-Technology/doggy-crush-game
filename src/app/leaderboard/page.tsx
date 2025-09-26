@@ -26,8 +26,8 @@ export default async function LeaderboardPage() {
         <Card className="w-full max-w-4xl mx-auto">
           <CardHeader>
             <CardTitle className="flex items-center justify-center gap-2">
-              <Trophy className="w-8 h-8 text-yellow-400" />
               Top 10 Player
+              <Trophy className="w-8 h-8 text-yellow-400" />
             </CardTitle>
           </CardHeader>
           <CardContent>
