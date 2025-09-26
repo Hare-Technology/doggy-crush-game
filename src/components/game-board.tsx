@@ -36,9 +36,9 @@ const MemoizedTile: FC<{
     <div
       onClick={() => onClick(tile)}
       className={cn(
-        'absolute aspect-square rounded-lg flex items-center justify-center cursor-pointer transition-all duration-1000 ease-in-out',
+        'absolute aspect-square rounded-lg flex items-center justify-center cursor-pointer transition-all duration-300 ease-in-out',
         'transform-gpu',
-        isSelected && 'ring-4 ring-offset-2 ring-white z-10',
+        isSelected && 'ring-4 ring-offset-2 ring-white z-10 scale-110',
         'shadow-md',
         tile.isNew && 'animate-drop-in',
         'bg-[hsl(var(--tile-color))]'
@@ -50,7 +50,6 @@ const MemoizedTile: FC<{
           height: `${size}px`,
           top: `${tile.row * tileSize + offset}px`,
           left: `${tile.col * tileSize + offset}px`,
-          transition: 'top 1s ease-in-out, left 1s ease-in-out',
         } as React.CSSProperties
       }
     >
@@ -130,9 +129,9 @@ const GameBoard: FC<GameBoardProps> = ({ board, onSwap, isProcessing }) => {
 
       {/* Tiles */}
       <div className="absolute top-2 left-2 right-2 bottom-2">
-        {flattenedBoard.map((tile) => (
+        {flattenedBoard.map((tile, i) => (
             <MemoizedTile
-              key={tile.id}
+              key={tile.id || i}
               tile={tile}
               onClick={handleTileClick}
               isSelected={!!(selectedTile && tile && selectedTile.id === tile.id)}
