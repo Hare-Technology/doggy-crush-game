@@ -344,12 +344,12 @@ export default function Home() {
   );
 
   const handleTileClick = useCallback(
-    async (tile: Tile): Promise<Board> => {
+    async (tile: Tile): Promise<void> => {
       if (
         isProcessing ||
         (gameState !== 'playing' && gameState !== 'level_end')
       )
-        return board;
+        return;
 
       if (tile.powerUp) {
         setSelectedTile(null);
@@ -413,7 +413,7 @@ export default function Home() {
 
         setBoard(finalBoard);
         setIsProcessing(false);
-        return finalBoard;
+        return;
       }
 
       if (selectedTile) {
@@ -424,7 +424,6 @@ export default function Home() {
       } else {
         setSelectedTile(tile);
       }
-      return board;
     },
     [
       isProcessing,
@@ -534,42 +533,34 @@ export default function Home() {
 
   useEffect(() => {
     const runLevelEndCascade = async () => {
-      if (gameState !== 'level_end' || isProcessing) return;
-    
-      setIsProcessing(true);
-    
-      let powerUpsOnBoard = board.flat().filter((t): t is Tile => !!t?.powerUp);
-    
-      while (powerUpsOnBoard.length > 0) {
-        const tileToClick = powerUpsOnBoard[0];
-        
-        // Find the most up-to-date version of the tile on the board
-        const currentTile = board.flat().find(t => t?.id === tileToClick.id);
-        
-        if (currentTile) {
-          await handleTileClick(currentTile);
-          // After click, the board state is updated inside handleTileClick.
-          // We re-evaluate the powerups on the new board state in the next iteration.
-        }
-        
-        // Let state update and animations run before the next check
-        await delay(500); 
-        powerUpsOnBoard = board.flat().filter((t): t is Tile => !!t?.powerUp);
+      if (gameState !== 'level_end' || isProcessing) {
+        return;
       }
-    
-      // Final check for any remaining matches that might have formed
-      const finalBoard = await processMatchesAndCascades(board);
-      setBoard(finalBoard);
-      
-      setIsProcessing(false);
-      handleGameOver(true);
-      setGameState('win');
-    };
-    
-    runLevelEndCascade();
-  }, [gameState, board, handleTileClick, processMatchesAndCascades, handleGameOver, isProcessing]);
   
-
+      const powerUpsOnBoard = board.flat().filter((t): t is Tile => !!t?.powerUp);
+  
+      if (powerUpsOnBoard.length > 0) {
+        const tileToClick = powerUpsOnBoard[0];
+        // The handleTileClick function is now async but we don't need to await it
+        // here because the useEffect will re-run when the board state changes.
+        // Wrapping in a timeout prevents a React state update warning.
+        setTimeout(() => handleTileClick(tileToClick), 0);
+      } else {
+        // No power-ups left, finish the level
+        setIsProcessing(true);
+        const finalBoard = await processMatchesAndCascades(board);
+        setBoard(finalBoard);
+        
+        await handleGameOver(true);
+        setGameState('win');
+        setIsProcessing(false);
+      }
+    };
+  
+    runLevelEndCascade();
+  }, [gameState, board, isProcessing, handleTileClick, processMatchesAndCascades, handleGameOver]);
+  
+  
   const handleRestart = useCallback(async () => {
     try {
       setIsProcessing(true);
