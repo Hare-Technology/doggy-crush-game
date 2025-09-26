@@ -107,7 +107,7 @@ export default function Home() {
 
       return boardAfterCascade;
     },
-    [playSound]
+    [playSound, processMatchesAndCascades]
   );
 
   const processMatchesAndCascades = useCallback(
@@ -192,9 +192,7 @@ export default function Home() {
       setIsProcessing(true);
       
       let tempBoard = board.map(r => r.map(tile => (tile ? { ...tile } : null)));
-      const { row: r1, col: c1 } = tile1;
-      const { row: r2, col: c2 } = tile2;
-
+      
       // Handle power-up activation
       const bombTile = tile1.powerUp === 'bomb' ? tile1 : tile2.powerUp === 'bomb' ? tile2 : null;
       const otherTile = bombTile === tile1 ? tile2 : tile1;
@@ -202,31 +200,33 @@ export default function Home() {
       if (bombTile) {
           setMovesLeft(prev => prev - 1);
           
-          // First explosion
+          // Store the position of the second tile before any changes
+          const otherTilePos = { row: otherTile.row, col: otherTile.col };
+
+          // First explosion at bomb's original location
           const { clearedTiles: cleared1 } = activatePowerUp(tempBoard, bombTile);
           setScore(prev => prev + cleared1.length * 10);
           let boardAfterFirstExplosion = await processBoardChanges(tempBoard, cleared1);
           
           await delay(1000); // 1 second delay
           
-          // Find the swapped tile's new position if it moved
-          let currentOtherTile: Tile | null | undefined = boardAfterFirstExplosion.flat().find(t => t?.id === otherTile.id);
-          if (!currentOtherTile) {
-            // It might have been cleared or is off-board, end here
-            setIsProcessing(false);
-            return;
-          }
+          // The tile to explode next is whatever is now at the otherTile's original position
+          const tileForSecondExplosion = boardAfterFirstExplosion[otherTilePos.row][otherTilePos.col];
 
-          // Second explosion
-          const { clearedTiles: cleared2 } = activatePowerUp(boardAfterFirstExplosion, currentOtherTile);
-          setScore(prev => prev + cleared2.length * 10);
-          await processBoardChanges(boardAfterFirstExplosion, cleared2);
+          if (tileForSecondExplosion) {
+            // Second explosion
+            const { clearedTiles: cleared2 } = activatePowerUp(boardAfterFirstExplosion, tileForSecondExplosion);
+            setScore(prev => prev + cleared2.length * 10);
+            await processBoardChanges(boardAfterFirstExplosion, cleared2);
+          }
 
           setIsProcessing(false);
           return;
       }
 
-
+      // Regular swap
+      const { row: r1, col: c1 } = tile1;
+      const { row: r2, col: c2 } = tile2;
       tempBoard[r1][c1] = { ...tile2, row: r1, col: c1 };
       tempBoard[r2][c2] = { ...tile1, row: r2, col: c2 };
       
@@ -257,7 +257,7 @@ export default function Home() {
       setBoard(finalBoard);
       setIsProcessing(false);
     },
-    [board, isProcessing, gameState, processMatchesAndCascades, processBoardChanges, toast, playSound]
+    [board, isProcessing, gameState, processMatchesAndCascades, processBoardChanges, toast]
   );
 
   const handleGameOver = useCallback(
