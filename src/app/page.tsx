@@ -202,7 +202,7 @@ export default function Home() {
       setBoard(boardAfterGravity);
       await delay(300);
 
-      const newFilledBoard = fillEmptyTiles(boardWithNulls);
+      const newFilledBoard = fillEmptyTiles(boardAfterGravity);
       setBoard(newFilledBoard);
       await delay(300);
 
@@ -331,7 +331,6 @@ export default function Home() {
           finalBoard = board;
         }
         
-        setMovesLeft(prev => prev - 1);
         let checkBoard = finalBoard;
         while (!checkBoardForMoves(checkBoard)) {
           toast({ title: 'No moves left, reshuffling!' });
