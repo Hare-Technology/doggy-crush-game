@@ -199,14 +199,12 @@ export const fillEmptyTiles = (board: Board): Board => {
   for (let col = 0; col < BOARD_SIZE; col++) {
     let newTileRow = -1;
     for (let row = BOARD_SIZE - 1; row >= 0; row--) {
-      if (newBoard[row][col] === null || (newBoard[row][col] as any)?.needsBomb) {
-        const needsBomb = (newBoard[row][col] as any)?.needsBomb;
+      if (newBoard[row][col] === null) {
         newBoard[row][col] = {
           id: tileIdCounter++,
-          type: needsBomb ? 'paw' : getRandomTileType(), // Type doesn't matter for bomb
+          type: getRandomTileType(),
           row: newTileRow, // Start above the board
           col,
-          powerUp: needsBomb ? 'bomb' : undefined,
         };
         newTileRow--;
       }
@@ -368,3 +366,5 @@ export const activatePowerUp = (
 
   return { clearedTiles: Array.from(clearedTilesMap.values()), secondaryExplosions };
 };
+
+    

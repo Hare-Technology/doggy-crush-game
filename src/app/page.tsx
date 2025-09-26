@@ -121,9 +121,12 @@ export default function Home() {
       } while (!checkBoardForMoves(newBoard));
 
       setBoard(newBoard);
-      await delay(1000); // Wait for shuffle animation
-      setIsShuffling(false);
-      setIsProcessing(false);
+      const doShuffle = async () => {
+        await delay(1000); // Wait for shuffle animation
+        setIsShuffling(false);
+        setIsProcessing(false);
+      };
+      doShuffle();
     },
     []
   );
@@ -311,8 +314,7 @@ export default function Home() {
   const processBoardChanges = useCallback(
     async (
       initialBoard: Board,
-      clearedTiles: Tile[],
-      spawnBomb?: boolean
+      clearedTiles: Tile[]
     ): Promise<Board> => {
       const clearedTileIds = new Set(clearedTiles.map(t => t.id));
       setIsAnimating(prev => new Set([...prev, ...clearedTileIds]));
@@ -332,26 +334,7 @@ export default function Home() {
           return tile;
         })
       );
-
-      if (spawnBomb) {
-        // Mark a spot for a new bomb, but let fillEmptyTiles create it.
-        // Using a temporary marker.
-        let emptyCells: { row: number; col: number }[] = [];
-        boardWithNulls.forEach((row, r) => {
-            row.forEach((cell, c) => {
-                if (cell === null) {
-                    emptyCells.push({ row: r, col: c });
-                }
-            });
-        });
-    
-        if (emptyCells.length > 0) {
-            const spawnIndex = Math.floor(Math.random() * emptyCells.length);
-            const { row, col } = emptyCells[spawnIndex];
-            (boardWithNulls[row] as any)[col] = { needsBomb: true };
-        }
-      }
-
+      
       setIsAnimating(new Set());
 
       let boardWithNewTiles = fillEmptyTiles(boardWithNulls);
@@ -370,6 +353,62 @@ export default function Home() {
     },
     [playSound, processMatchesAndCascades]
   );
+  
+  const handleBombChainReaction = useCallback(
+    async (boardAfterPrimary: Board) => {
+      // Find a random empty spot to spawn the new bomb
+      const emptyCells: { row: number; col: number }[] = [];
+      boardAfterPrimary.forEach((row, r) => {
+        row.forEach((cell, c) => {
+          if (!cell) {
+            emptyCells.push({ row: r, col: c });
+          }
+        });
+      });
+
+      if (emptyCells.length === 0) return boardAfterPrimary;
+
+      const spawnLocation = emptyCells[Math.floor(Math.random() * emptyCells.length)];
+
+      // Create and place the new bomb (off-screen initially)
+      const newBomb: Tile = {
+        id: tileIdCounter + 1000, // Use a temporary high ID to avoid collisions
+        type: 'paw', // Type doesn't matter
+        row: -1, // Spawn off-screen
+        col: spawnLocation.col,
+        powerUp: 'bomb',
+      };
+      
+      // Manually add the bomb and apply gravity to bring it onto the board
+      let tempBoard = boardAfterPrimary.map(r => [...r]);
+      tempBoard[spawnLocation.row][spawnLocation.col] = newBomb;
+      let filledBoard = fillEmptyTiles(tempBoard);
+      const { newBoard: gravityBoard } = applyGravity(filledBoard);
+
+      setBoard(gravityBoard);
+      await delay(700); // Let gravity animation finish
+
+      // Now find the bomb on the board to detonate it
+      const bombToDetonate = gravityBoard.flat().find(t => t?.id === newBomb.id);
+
+      if (bombToDetonate) {
+        await delay(250); // Fuse time
+
+        const { clearedTiles: secondaryCleared } = activatePowerUp(
+          gravityBoard,
+          bombToDetonate,
+          undefined,
+          false // This is NOT a primary activation
+        );
+        setScore(prev => prev + secondaryCleared.length * 10);
+        const finalBoard = await processBoardChanges(gravityBoard, secondaryCleared);
+        return finalBoard;
+      }
+      return gravityBoard;
+    },
+    [processBoardChanges]
+  );
+
 
   const handleRegularSwap = useCallback(
     async (tile1: Tile, tile2: Tile) => {
@@ -436,9 +475,13 @@ export default function Home() {
         setScore(prev => prev + clearedTiles.length * 10);
         let currentBoard = await processBoardChanges(
           board,
-          clearedTiles,
-          spawnBomb
+          clearedTiles
         );
+
+        // Handle the secondary bomb spawn
+        if(spawnBomb) {
+          currentBoard = await handleBombChainReaction(currentBoard);
+        }
 
         if (secondaryExplosions && secondaryExplosions.length > 0) {
           let chainBoard = currentBoard;
@@ -452,8 +495,7 @@ export default function Home() {
             setScore(prev => prev + secondClearedTiles.length * 10);
             chainBoard = await processBoardChanges(
               chainBoard,
-              secondClearedTiles,
-              false // Secondary explosions don't spawn more bombs
+              secondClearedTiles
             );
           }
           currentBoard = chainBoard;
@@ -548,6 +590,7 @@ export default function Home() {
       toast,
       processMatchesAndCascades,
       resetHintTimer,
+      handleBombChainReaction,
     ]
   );
 
@@ -662,7 +705,7 @@ export default function Home() {
         tile
       );
       setScore(prev => prev + clearedTiles.length * 10);
-      let currentBoard = await processBoardChanges(board, clearedTiles, spawnBomb);
+      let currentBoard = await processBoardChanges(board, clearedTiles);
 
       if (secondaryExplosions && secondaryExplosions.length > 0) {
         let chainBoard = currentBoard;
@@ -956,3 +999,5 @@ export default function Home() {
     </div>
   );
 }
+
+    
