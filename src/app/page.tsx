@@ -349,6 +349,7 @@ export default function Home() {
       if (tile.powerUp) {
         setSelectedTile(null);
         setIsProcessing(true);
+        setMovesLeft(prev => prev - 1);
 
         let finalBoard: Board;
 

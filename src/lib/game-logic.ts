@@ -45,10 +45,6 @@ export const createInitialBoard = (): Board => {
       };
     }
   }
-  
-  if (!checkBoardForMoves(board)) {
-    return createInitialBoard();
-  }
 
   return board;
 };
