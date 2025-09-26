@@ -172,25 +172,25 @@ export const findMatches = (
 export const applyGravity = (
   board: Board
 ): { newBoard: Board; movedTiles: Set<number> } => {
-  const newBoard: Board = Array.from({ length: BOARD_SIZE }, () => Array(BOARD_SIZE).fill(null));
+  const newBoard: Board = Array.from({ length: BOARD_SIZE }, () =>
+    Array(BOARD_SIZE).fill(null)
+  );
   const movedTiles = new Set<number>();
 
   for (let col = 0; col < BOARD_SIZE; col++) {
     const columnTiles: Tile[] = [];
-    // Collect all tiles in the current column, including those off-screen
-    for (let row = BOARD_SIZE - 1; row >= -BOARD_SIZE; row--) {
-      const tile = (row >= 0 && board[row] && board[row][col]) ? board[row][col] : null;
-      if (tile) {
-        columnTiles.push(tile);
+    // Collect all tiles in the current column, from the board and above
+    for (let row = board.length - 1; row >= 0; row--) {
+      if (board[row][col]) {
+        columnTiles.push(board[row][col]!);
       }
     }
-    
+
     // Place tiles back into the column from the bottom up
     let newRow = BOARD_SIZE - 1;
     for (const tile of columnTiles) {
       if (newRow >= 0) {
-        const hasMoved = tile.row !== newRow;
-        if(hasMoved) {
+        if (tile.row !== newRow || tile.col !== col) {
           movedTiles.add(tile.id);
         }
         newBoard[newRow][col] = { ...tile, row: newRow, col };
@@ -199,50 +199,14 @@ export const applyGravity = (
     }
   }
 
-  // The board is now partially filled from the bottom.
-  // We need to find all tiles on the board, even those that were off-screen.
-  const allTiles: Tile[] = [];
-  board.flat().forEach(tile => {
-    if (tile) allTiles.push(tile);
-  });
-
-  const finalBoard: Board = Array.from({ length: BOARD_SIZE }, () => Array(BOARD_SIZE).fill(null));
-
-  for (let col = 0; col < BOARD_SIZE; col++) {
-    const currentColumn: Tile[] = [];
-    // Get all tiles for this column from the original board, including above-board ones
-    allTiles.forEach(tile => {
-      if (tile.col === col) {
-        currentColumn.push(tile);
-      }
-    });
-
-    // Sort them by row to maintain relative order
-    currentColumn.sort((a, b) => a.row - b.row);
-    
-    // Place them in the new board from the bottom up
-    let newRowIndex = BOARD_SIZE - 1;
-    for (let i = currentColumn.length - 1; i >= 0; i--) {
-      if (newRowIndex >= 0) {
-        const tile = currentColumn[i];
-        if (tile.row !== newRowIndex) {
-          movedTiles.add(tile.id);
-        }
-        finalBoard[newRowIndex][col] = { ...tile, row: newRowIndex, col: col };
-        newRowIndex--;
-      }
-    }
-  }
-  
-  return { newBoard: finalBoard, movedTiles };
+  return { newBoard, movedTiles };
 };
 
 export const fillEmptyTiles = (board: Board): Board => {
   const newBoard = board.map(row => [...row]);
-  let newTileRow = -1;
 
   for (let col = 0; col < BOARD_SIZE; col++) {
-    newTileRow = -1;
+    let newTileRow = -1;
     for (let row = BOARD_SIZE - 1; row >= 0; row--) {
       if (newBoard[row][col] === null) {
         newBoard[row][col] = {
@@ -342,7 +306,8 @@ export const activatePowerUp = (
   tile: Tile,
   targetType?: TileTypeEnum,
 ): { clearedTiles: Tile[]; secondaryExplosions?: Tile[] } => {
-  const clearedTiles = new Set<Tile>([tile]);
+  const clearedTilesMap = new Map<number, Tile>();
+  clearedTilesMap.set(tile.id, tile);
   const secondaryExplosions: Tile[] = [];
 
   if (tile.powerUp === 'bomb') {
@@ -355,7 +320,7 @@ export const activatePowerUp = (
             if (targetTile.powerUp && targetTile.id !== tile.id) {
               secondaryExplosions.push(targetTile);
             }
-            clearedTiles.add(targetTile);
+            clearedTilesMap.set(targetTile.id, targetTile);
           }
         }
       }
@@ -367,7 +332,7 @@ export const activatePowerUp = (
         if (targetTile.powerUp && targetTile.id !== tile.id) {
           secondaryExplosions.push(targetTile);
         }
-        clearedTiles.add(targetTile);
+        clearedTilesMap.set(targetTile.id, targetTile);
       }
     }
   } else if (tile.powerUp === 'row_clear') {
@@ -377,7 +342,7 @@ export const activatePowerUp = (
          if (targetTile.powerUp && targetTile.id !== tile.id) {
           secondaryExplosions.push(targetTile);
         }
-        clearedTiles.add(targetTile);
+        clearedTilesMap.set(targetTile.id, targetTile);
       }
     }
   } else if (tile.powerUp === 'rainbow') {
@@ -395,11 +360,11 @@ export const activatePowerUp = (
               if (t.powerUp) {
                 secondaryExplosions.push(t);
               }
-              clearedTiles.add(t);
+              clearedTilesMap.set(t.id, t);
             }
         });
     }
   }
 
-  return { clearedTiles: Array.from(clearedTiles), secondaryExplosions };
+  return { clearedTiles: Array.from(clearedTilesMap.values()), secondaryExplosions };
 };
