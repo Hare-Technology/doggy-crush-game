@@ -116,7 +116,7 @@ export const findMatches = (
       const intersection = hMatch.find(ht =>
         vMatch.some(vt => vt.id === ht.id)
       );
-      if (intersection) {
+      if (intersection && hMatch.length >= 3 && vMatch.length >= 3) {
         // Mark all tiles in both intersecting matches as part of a powerup
         hMatch.forEach(t => tilesInPowerups.add(t.id));
         vMatch.forEach(t => tilesInPowerups.add(t.id));
@@ -125,12 +125,19 @@ export const findMatches = (
     }
   }
 
-  // Detect 4-matches for row/column clears
+  // Detect 4-matches for row/column clears and 5+ for bombs
   for (const match of combinedMatches) {
     // Only consider matches not already part of a bomb
     if (match.some(t => tilesInPowerups.has(t.id))) continue;
     
-    if (match.length === 4) {
+    if (match.length >= 5) {
+       const powerUpTile = match[2] || match[0];
+       powerUps.push({
+        tile: powerUpTile,
+        powerUp: 'bomb',
+      });
+      tilesInPowerups.add(powerUpTile.id);
+    } else if (match.length === 4) {
       const powerUpTile = match[1] || match[0];
       const isVertical = match[0].col === match[1].col;
       powerUps.push({
@@ -138,13 +145,6 @@ export const findMatches = (
         powerUp: isVertical ? 'column_clear' : 'row_clear',
       });
       // Mark the chosen powerup tile so it's not cleared
-      tilesInPowerups.add(powerUpTile.id);
-    } else if (match.length >= 5) {
-       const powerUpTile = match[2] || match[0];
-       powerUps.push({
-        tile: powerUpTile,
-        powerUp: 'bomb',
-      });
       tilesInPowerups.add(powerUpTile.id);
     }
   }
