@@ -5,6 +5,7 @@ import Header from '@/components/header';
 import GameSidebar from '@/components/game-sidebar';
 import GameBoard from '@/components/game-board';
 import GameOverDialog from '@/components/game-over-dialog';
+import ComboEffect from '@/components/combo-effect';
 import {
   BOARD_SIZE,
   INITIAL_MOVES,
@@ -33,6 +34,7 @@ export default function Home() {
   const [gameState, setGameState] = useState<GameState>('playing');
   const [isProcessing, setIsProcessing] = useState(true);
   const [isAnimating, setIsAnimating] = useState<Set<number>>(new Set());
+  const [comboMessage, setComboMessage] = useState<string>('');
   const { toast } = useToast();
 
   const scoreNeeded = useMemo(
@@ -51,7 +53,6 @@ export default function Home() {
 
       let newBoard = createInitialBoard();
       while (!checkBoardForMoves(newBoard)) {
-        toast({ title: 'No moves available, reshuffling!' });
         newBoard = createInitialBoard();
       }
 
@@ -59,7 +60,7 @@ export default function Home() {
       await delay(100);
       setIsProcessing(false);
     },
-    [toast]
+    []
   );
 
   const processMatchesAndCascades = useCallback(
@@ -72,10 +73,9 @@ export default function Home() {
         if (matches.length === 0) break;
 
         if (cascadeCount > 1) {
-          toast({
-            title: `Combo x${cascadeCount}!`,
-            description: `+${matches.length * 10 * cascadeCount} points!`,
-          });
+          const comboText = `Combo x${cascadeCount}!`;
+          setComboMessage(comboText);
+          setTimeout(() => setComboMessage(''), 1500);
         }
 
         const points = matches.length * 10 * cascadeCount;
@@ -107,13 +107,13 @@ export default function Home() {
       }
       return tempBoard;
     },
-    [toast]
+    []
   );
 
   useEffect(() => {
     // Generate the initial board on the client side to avoid hydration errors
-    if (board.length === 0) {
-      startNewLevel(1, INITIAL_MOVES, INITIAL_TARGET_SCORE);
+    if (board.length === 0 && typeof window !== 'undefined') {
+       startNewLevel(1, INITIAL_MOVES, INITIAL_TARGET_SCORE);
     }
   }, [board.length, startNewLevel]);
 
@@ -221,13 +221,14 @@ export default function Home() {
           movesLeft={movesLeft}
           targetScore={targetScore}
         />
-        <div className="w-full lg:w-auto flex-grow flex items-center justify-center">
-          <GameBoard
+        <div className="w-full lg:w-auto flex-grow flex items-center justify-center relative">
+           <GameBoard
             board={board}
             onSwap={handleSwap}
             isProcessing={isProcessing}
             isAnimating={isAnimating}
           />
+          <ComboEffect message={comboMessage} />
         </div>
       </main>
       <GameOverDialog
