@@ -374,7 +374,7 @@ export default function Home() {
       if (didWin) {
         playSound('win');
         const timeTaken = Math.round((endTime - levelStartTime) / 1000); // in seconds
-        const timeBonus = Math.max(0, 180 - timeTaken) * 1; // 1 coin per second under 3 minutes
+        const timeBonus = Math.floor(Math.max(0, 180 - timeTaken) * 0.5); // 0.5 coin per second under 3 minutes
         const moveBonus = movesLeft * 5; // 5 coins per move left
         const comboBonus = highestCombo * 10; // 10 coins per max combo
         const powerUpBonus = powerUpsMade * 15; // 15 coins per power-up created
@@ -481,7 +481,7 @@ export default function Home() {
         movesLeft: movesLeft * 5,
         highestCombo: highestCombo * 10,
         powerUpsMade: powerUpsMade * 15,
-        time: Math.max(0, 180 - timeTaken) * 1,
+        time: Math.floor(Math.max(0, 180 - timeTaken) * 0.5),
     }
   }, [gameState, levelEndTime, levelStartTime, movesLeft, highestCombo, powerUpsMade]);
 
