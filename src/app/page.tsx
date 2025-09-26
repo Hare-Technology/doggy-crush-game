@@ -344,12 +344,20 @@ export default function Home() {
 
   const handleTileClick = useCallback(
     async (tile: Tile) => {
-      if (isProcessing || gameState !== 'playing') return;
+      if (
+        isProcessing ||
+        (gameState !== 'playing' && gameState !== 'level_end')
+      )
+        return;
 
       if (tile.powerUp) {
         setSelectedTile(null);
         setIsProcessing(true);
-        setMovesLeft(prev => prev - 1);
+
+        // Don't consume a move if it's the end of level cascade
+        if (gameState === 'playing') {
+          setMovesLeft(prev => prev - 1);
+        }
 
         let finalBoard: Board;
 
@@ -401,13 +409,15 @@ export default function Home() {
         }
 
         let checkBoard = finalBoard;
-        while (!checkBoardForMoves(checkBoard)) {
-          toast({ title: 'No moves left, reshuffling!' });
-          await delay(500);
-          let reshuffledBoard = createInitialBoard();
-          setBoard(reshuffledBoard);
-          await delay(300);
-          checkBoard = await processMatchesAndCascades(reshuffledBoard);
+        if (gameState === 'playing') {
+          while (!checkBoardForMoves(checkBoard)) {
+            toast({ title: 'No moves left, reshuffling!' });
+            await delay(500);
+            let reshuffledBoard = createInitialBoard();
+            setBoard(reshuffledBoard);
+            await delay(300);
+            checkBoard = await processMatchesAndCascades(reshuffledBoard);
+          }
         }
         setBoard(checkBoard);
         setIsProcessing(false);
@@ -500,7 +510,12 @@ export default function Home() {
   );
 
   useEffect(() => {
-    if (gameState !== 'playing' || board.length === 0 || isProcessing) return;
+    if (
+      gameState !== 'playing' ||
+      board.length === 0 ||
+      isProcessing
+    )
+      return;
 
     if (score > highScore) {
       setHighScore(score);
@@ -508,8 +523,7 @@ export default function Home() {
     }
 
     if (score >= targetScore) {
-      handleGameOver(true);
-      setGameState('win');
+      setGameState('level_end');
     } else if (movesLeft <= 0) {
       handleGameOver(false);
       setGameState('lose');
@@ -524,6 +538,38 @@ export default function Home() {
     gameState,
     isProcessing,
   ]);
+
+  useEffect(() => {
+    const runLevelEndCascade = async () => {
+      if (gameState !== 'level_end') return;
+
+      setIsProcessing(true);
+      const powerUpsOnBoard = board.flat().filter(t => t?.powerUp);
+
+      if (powerUpsOnBoard.length > 0) {
+        for (const tile of powerUpsOnBoard) {
+          if (tile) {
+            // Find the current version of the tile on the board before clicking
+            const currentTile = board.flat().find(t => t?.id === tile.id);
+            if (currentTile) {
+              await handleTileClick(currentTile);
+              await delay(500); // Wait a bit between explosions
+            }
+          }
+        }
+      }
+
+      // Final check for any remaining matches
+      let finalBoard = await processMatchesAndCascades(board);
+      setBoard(finalBoard);
+      
+      setIsProcessing(false);
+      handleGameOver(true);
+      setGameState('win');
+    };
+
+    runLevelEndCascade();
+  }, [gameState, board, handleTileClick, handleGameOver, processMatchesAndCascades]);
 
   const handleRestart = useCallback(async () => {
     try {

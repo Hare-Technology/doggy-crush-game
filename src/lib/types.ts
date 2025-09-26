@@ -13,4 +13,4 @@ export type Tile = {
 
 export type Board = (Tile | null)[][];
 
-export type GameState = 'playing' | 'win' | 'lose';
+export type GameState = 'playing' | 'win' | 'lose' | 'level_end';
