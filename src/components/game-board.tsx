@@ -1,16 +1,23 @@
 'use client';
 
 import type { FC } from 'react';
-import { memo, useState, useCallback } from 'react';
+import { useState } from 'react';
 import type { Board, Tile as TileType } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { PawIcon, BoneIcon, DogHouseIcon, BallIcon, FoodBowlIcon } from '@/components/dog-icons';
+import {
+  PawIcon,
+  BoneIcon,
+  DogHouseIcon,
+  BallIcon,
+  FoodBowlIcon,
+} from '@/components/dog-icons';
 import { BOARD_SIZE } from '@/lib/constants';
 
 interface GameBoardProps {
   board: Board;
   onSwap: (tile1: TileType, tile2: TileType) => void;
   isProcessing: boolean;
+  isAnimating: Set<number>;
 }
 
 const tileComponentMap: Record<string, React.ElementType> = {
@@ -21,23 +28,33 @@ const tileComponentMap: Record<string, React.ElementType> = {
   bowl: FoodBowlIcon,
 };
 
-const MemoizedTile: FC<{
+const Tile: FC<{
   tile: TileType;
-  onClick: (tile: TileType) => void;
+  onClick: () => void;
   isSelected: boolean;
-}> = memo(({ tile, onClick, isSelected }) => {
+  isAnimating: boolean;
+}> = ({ tile, onClick, isSelected, isAnimating }) => {
   const Icon = tileComponentMap[tile.type] || PawIcon;
+  const top = (tile.row / BOARD_SIZE) * 100;
+  const left = (tile.col / BOARD_SIZE) * 100;
+
   return (
     <div
-      onClick={() => onClick(tile)}
+      onClick={onClick}
       className={cn(
-        'aspect-square rounded-lg flex items-center justify-center cursor-pointer',
-        isSelected && 'ring-4 ring-offset-2 ring-white z-10 scale-110',
+        'absolute rounded-lg flex items-center justify-center cursor-pointer transition-all duration-300 ease-in-out',
         'shadow-md',
-        'bg-[hsl(var(--tile-color))]'
+        'bg-[hsl(var(--tile-color))]',
+        isSelected && 'ring-4 ring-offset-2 ring-white z-10 scale-110',
+        isAnimating && 'animate-pop'
       )}
       style={
         {
+          top: `${top}%`,
+          left: `${left}%`,
+          width: `calc(${100 / BOARD_SIZE}% - 4px)`,
+          height: `calc(${100 / BOARD_SIZE}% - 4px)`,
+          margin: '2px',
           '--tile-color': `var(--tile-color-${tile.type})`,
         } as React.CSSProperties
       }
@@ -45,10 +62,9 @@ const MemoizedTile: FC<{
       <Icon className="drop-shadow-lg w-full h-full flex items-center justify-center" />
     </div>
   );
-});
-MemoizedTile.displayName = 'MemoizedTile';
+};
 
-const GameBoard: FC<GameBoardProps> = ({ board, onSwap, isProcessing }) => {
+const GameBoard: FC<GameBoardProps> = ({ board, onSwap, isProcessing, isAnimating }) => {
   const [selectedTile, setSelectedTile] = useState<TileType | null>(null);
 
   const handleTileClick = (tile: TileType) => {
@@ -64,11 +80,12 @@ const GameBoard: FC<GameBoardProps> = ({ board, onSwap, isProcessing }) => {
     }
   };
 
+  const allTiles = board.flat().filter(Boolean) as TileType[];
+
   return (
     <div
       className={cn(
-        'grid gap-1 p-2 bg-primary/20 rounded-xl shadow-inner max-w-lg w-full aspect-square',
-        `grid-cols-${BOARD_SIZE}`
+        'relative bg-primary/20 rounded-xl shadow-inner max-w-lg w-full aspect-square'
       )}
     >
       <style jsx global>{`
@@ -80,20 +97,36 @@ const GameBoard: FC<GameBoardProps> = ({ board, onSwap, isProcessing }) => {
           --tile-color-bowl: 120 85% 80%;
         }
       `}</style>
-      
-      {board.map((row, rowIndex) =>
-        row.map((tile, colIndex) => (
-          <div key={`${rowIndex}-${colIndex}`} className="w-full h-full flex items-center justify-center bg-primary/10 rounded-lg">
-            {tile && (
-              <MemoizedTile
-                tile={tile}
-                onClick={handleTileClick}
-                isSelected={!!(selectedTile && selectedTile.id === tile.id)}
-              />
-            )}
-          </div>
-        ))
-      )}
+
+      {/* Grid background */}
+      {Array.from({ length: BOARD_SIZE * BOARD_SIZE }).map((_, i) => (
+        <div
+          key={i}
+          className="w-full h-full flex items-center justify-center bg-primary/10 rounded-lg"
+          style={{
+            position: 'absolute',
+            top: `${Math.floor(i / BOARD_SIZE) * (100 / BOARD_SIZE)}%`,
+            left: `${(i % BOARD_SIZE) * (100 / BOARD_SIZE)}%`,
+            width: `${100 / BOARD_SIZE}%`,
+            height: `${100 / BOARD_SIZE}%`,
+            boxSizing: 'border-box',
+            padding: '1px'
+          }}
+        >
+          <div className="bg-primary/10 rounded-lg w-full h-full" />
+        </div>
+      ))}
+
+      {/* Tiles */}
+      {allTiles.map(tile => (
+        <Tile
+          key={tile.id}
+          tile={tile}
+          onClick={() => handleTileClick(tile)}
+          isSelected={!!(selectedTile && selectedTile.id === tile.id)}
+          isAnimating={isAnimating.has(tile.id)}
+        />
+      ))}
     </div>
   );
 };

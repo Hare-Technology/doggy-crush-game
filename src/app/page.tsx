@@ -17,62 +17,27 @@ import {
   applyGravity,
   fillEmptyTiles,
   areTilesAdjacent,
-  checkBoardForMoves
+  checkBoardForMoves,
 } from '@/lib/game-logic';
 import { useToast } from '@/hooks/use-toast';
 import { suggestNextLevelParams } from '@/ai/flows/suggest-next-level-params';
 
-const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
+const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 
 export default function Home() {
-  const [board, setBoard] = useState<Board>(() =>
-    Array(BOARD_SIZE)
-      .fill(null)
-      .map(() => Array(BOARD_SIZE).fill(null))
-  );
+  const [board, setBoard] = useState<Board>(createInitialBoard());
   const [level, setLevel] = useState(1);
   const [score, setScore] = useState(0);
   const [targetScore, setTargetScore] = useState(INITIAL_TARGET_SCORE);
   const [movesLeft, setMovesLeft] = useState(INITIAL_MOVES);
   const [gameState, setGameState] = useState<GameState>('playing');
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(true);
+  const [isAnimating, setIsAnimating] = useState<Set<number>>(new Set());
   const { toast } = useToast();
 
-  const scoreNeeded = useMemo(() => Math.max(0, targetScore - score), [targetScore, score]);
-
-  const processMatchesAndCascades = useCallback(
-    (currentBoard: Board): Board => {
-      let boardAfterMatches = currentBoard.map(row => row.map(tile => tile ? {...tile} : null));
-      let cascadeCount = 1;
-      let totalPoints = 0;
-      
-      while (true) {
-        const matches = findMatches(boardAfterMatches);
-        if (matches.length === 0) {
-          break;
-        }
-
-        const points = matches.length * 10 * cascadeCount;
-        totalPoints += points;
-        cascadeCount++;
-        
-        const newBoardWithNulls = boardAfterMatches.map(row => [...row]);
-        matches.forEach(({ row, col }) => {
-            newBoardWithNulls[row][col] = null;
-        });
-
-        const { newBoard: boardAfterGravity } = applyGravity(newBoardWithNulls);
-        const newFilledBoard = fillEmptyTiles(boardAfterGravity);
-        boardAfterMatches = newFilledBoard;
-      }
-
-      if (totalPoints > 0) {
-        setScore(prev => prev + totalPoints);
-      }
-      
-      return boardAfterMatches;
-    },
-    []
+  const scoreNeeded = useMemo(
+    () => Math.max(0, targetScore - score),
+    [targetScore, score]
   );
 
   const startNewLevel = useCallback(
@@ -83,71 +48,109 @@ export default function Home() {
       setScore(0);
       setGameState('playing');
       setIsProcessing(true);
-      
+
       let newBoard = createInitialBoard();
-      
-      // Check for available moves and reshuffle if none
       while (!checkBoardForMoves(newBoard)) {
-        toast({ title: "No moves available, reshuffling!"});
+        toast({ title: 'No moves available, reshuffling!' });
         newBoard = createInitialBoard();
       }
+
       setBoard(newBoard);
+      await delay(100);
       setIsProcessing(false);
     },
     [toast]
+  );
+
+  const processMatchesAndCascades = useCallback(
+    async (currentBoard: Board) => {
+      let tempBoard = currentBoard;
+      let cascadeCount = 1;
+
+      while (true) {
+        const matches = findMatches(tempBoard);
+        if (matches.length === 0) break;
+
+        const points = matches.length * 10 * cascadeCount;
+        setScore(prev => prev + points);
+
+        const matchedTileIds = new Set(matches.map(t => t.id));
+        setIsAnimating(prev => new Set([...prev, ...matchedTileIds]));
+        await delay(300);
+
+        let newBoardWithNulls = tempBoard.map(row =>
+          row.map(tile =>
+            tile && matchedTileIds.has(tile.id) ? null : tile
+          )
+        );
+        setBoard(newBoardWithNulls);
+        setIsAnimating(new Set());
+        await delay(100);
+
+        const { newBoard: boardAfterGravity } = applyGravity(newBoardWithNulls);
+        setBoard(boardAfterGravity);
+        await delay(300);
+
+        const newFilledBoard = fillEmptyTiles(boardAfterGravity);
+        setBoard(newFilledBoard);
+        await delay(300);
+
+        tempBoard = newFilledBoard;
+        cascadeCount++;
+      }
+      return tempBoard;
+    },
+    []
   );
 
   useEffect(() => {
     startNewLevel(1, INITIAL_MOVES, INITIAL_TARGET_SCORE);
   }, [startNewLevel]);
 
-
   const handleSwap = useCallback(
     async (tile1: Tile, tile2: Tile) => {
-      if (isProcessing || gameState !== 'playing' || !areTilesAdjacent(tile1, tile2)) {
-        return;
-      }
+      if (isProcessing || gameState !== 'playing') return;
+      if (!areTilesAdjacent(tile1, tile2)) return;
 
       setIsProcessing(true);
 
-      const tempBoard = board.map(r => r.map(tile => tile ? {...tile} : null));
+      let tempBoard = board.map(r => r.map(tile => (tile ? { ...tile } : null)));
       const { row: r1, col: c1 } = tile1;
       const { row: r2, col: c2 } = tile2;
 
-      // Swap tiles in the board
-      const swappedTile1 = { ...tile2, row: r1, col: c1 };
-      const swappedTile2 = { ...tile1, row: r2, col: c2 };
-      tempBoard[r1][c1] = swappedTile1;
-      tempBoard[r2][c2] = swappedTile2;
+      tempBoard[r1][c1] = { ...tile2, row: r1, col: c1 };
+      tempBoard[r2][c2] = { ...tile1, row: r2, col: c2 };
       
-      const matches = findMatches(tempBoard);
+      setBoard(tempBoard);
+      await delay(300);
 
+      const matches = findMatches(tempBoard);
       if (matches.length === 0) {
-        // No match, don't swap, just end processing
+        // No match, swap back
+        setBoard(board);
+        await delay(300);
         setIsProcessing(false);
         return;
       }
       
-      setMovesLeft((prev) => prev - 1);
-
-      const finalBoard = processMatchesAndCascades(tempBoard);
+      setMovesLeft(prev => prev - 1);
+      const boardAfterMatches = await processMatchesAndCascades(tempBoard);
       
-      if (!checkBoardForMoves(finalBoard)) {
+      let finalBoard = boardAfterMatches;
+      while (!checkBoardForMoves(finalBoard)) {
         toast({ title: "No moves left, reshuffling!"});
+        await delay(500);
         let reshuffledBoard = createInitialBoard();
-        while (!checkBoardForMoves(reshuffledBoard)) {
-          reshuffledBoard = createInitialBoard();
-        }
         setBoard(reshuffledBoard);
-      } else {
-        setBoard(finalBoard);
+        finalBoard = await processMatchesAndCascades(reshuffledBoard);
       }
       
+      setBoard(finalBoard);
       setIsProcessing(false);
     },
-    [board, isProcessing, gameState, processMatchesAndCascades, startNewLevel, toast]
+    [board, isProcessing, gameState, processMatchesAndCascades, toast]
   );
-  
+
   useEffect(() => {
     if (isProcessing) return;
 
@@ -166,8 +169,8 @@ export default function Home() {
     setIsProcessing(true);
     try {
       toast({
-        title: "Designing Next Level...",
-        description: "Our AI is crafting a new challenge for you!",
+        title: 'Designing Next Level...',
+        description: 'Our AI is crafting a new challenge for you!',
       });
 
       const result = await suggestNextLevelParams({
@@ -182,11 +185,11 @@ export default function Home() {
         result.suggestedTargetScore
       );
     } catch (error) {
-      console.error("AI level suggestion failed:", error);
+      console.error('AI level suggestion failed:', error);
       toast({
-        title: "Error",
-        description: "Could not generate next level. Using default settings.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Could not generate next level. Using default settings.',
+        variant: 'destructive',
       });
       // Fallback to a simple progression
       startNewLevel(
@@ -194,8 +197,6 @@ export default function Home() {
         Math.max(10, INITIAL_MOVES - level),
         INITIAL_TARGET_SCORE + level * 500
       );
-    } finally {
-      // setIsProcessing is handled by startNewLevel
     }
   }, [level, score, movesLeft, startNewLevel, toast]);
 
@@ -211,7 +212,12 @@ export default function Home() {
           targetScore={targetScore}
         />
         <div className="w-full lg:w-auto flex-grow flex items-center justify-center">
-           <GameBoard board={board} onSwap={handleSwap} isProcessing={isProcessing} />
+          <GameBoard
+            board={board}
+            onSwap={handleSwap}
+            isProcessing={isProcessing}
+            isAnimating={isAnimating}
+          />
         </div>
       </main>
       <GameOverDialog
