@@ -112,11 +112,13 @@ export const findMatches = (
 
   // Detect intersections for rainbow power-ups
   for (const hMatch of horizontalMatches) {
+    if (hMatch.length < 3) continue;
     for (const vMatch of verticalMatches) {
+       if (vMatch.length < 3) continue;
       const intersection = hMatch.find(ht =>
         vMatch.some(vt => vt.id === ht.id)
       );
-      if (intersection && hMatch.length >= 3 && vMatch.length >= 3) {
+      if (intersection) {
         hMatch.forEach(t => tilesInPowerups.add(t.id));
         vMatch.forEach(t => tilesInPowerups.add(t.id));
         powerUps.push({ tile: intersection, powerUp: 'rainbow' });
@@ -134,7 +136,7 @@ export const findMatches = (
         tile: powerUpTile,
         powerUp: 'bomb',
       });
-      tilesInPowerups.add(powerUpTile.id);
+      match.forEach(t => tilesInPowerups.add(t.id));
     } else if (match.length === 4) {
       const powerUpTile = match[1] || match[0];
       const isVertical = match[0].col === match[1].col;
@@ -142,11 +144,12 @@ export const findMatches = (
         tile: powerUpTile,
         powerUp: isVertical ? 'column_clear' : 'row_clear',
       });
-      tilesInPowerups.add(powerUpTile.id);
+      match.forEach(t => tilesInPowerups.add(t.id));
     }
   }
   
   combinedMatches.flat().forEach(tile => {
+      // Only add to allMatches if it's not part of a group that created a powerup
       if(!tilesInPowerups.has(tile.id)) {
           allMatches.add(tile);
       }
@@ -180,9 +183,11 @@ export const applyGravity = (
 
 export const fillEmptyTiles = (board: Board): Board => {
   const newBoard = board.map(row => [...row]);
-  for (let row = 0; row < BOARD_SIZE; row++) {
-    for (let col = 0; col < BOARD_SIZE; col++) {
+  for (let col = 0; col < BOARD_SIZE; col++) {
+    for (let row = 0; row < BOARD_SIZE; row++) {
       if (newBoard[row][col] === null) {
+        // Only create new tiles at the top where there's space.
+        // The gravity function will handle moving them down.
         newBoard[row][col] = {
           id: tileIdCounter++,
           type: getRandomTileType(),

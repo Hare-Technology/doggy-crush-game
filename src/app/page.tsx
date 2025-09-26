@@ -213,9 +213,9 @@ export default function Home() {
         
         if (powerUps.length > 0) {
           localPowerUpsMade += powerUps.length;
-          newBoardWithNulls = newBoardWithNulls.map(row =>
-            row.map(t => {
-                const powerUpToApply = powerUps.find(p => p.tile.id === t?.id);
+          newBoardWithNulls = newBoardWithNulls.map((row, rIdx) =>
+            row.map((t, cIdx) => {
+                const powerUpToApply = powerUps.find(p => p.tile.row === rIdx && p.tile.col === cIdx);
                 if (t && powerUpToApply) {
                     return { ...t, powerUp: powerUpToApply.powerUp };
                 }
@@ -275,15 +275,18 @@ export default function Home() {
       setIsAnimating(new Set());
       await delay(100);
 
-      const { newBoard: boardAfterGravity } = applyGravity(boardWithNulls);
-      setBoard(boardAfterGravity);
-      await delay(300);
+      let workingBoard = boardWithNulls;
+      let hasEmptySpaces = true;
+      while (hasEmptySpaces) {
+        const { newBoard: boardAfterGravity } = applyGravity(workingBoard);
+        workingBoard = fillEmptyTiles(boardAfterGravity);
+        setBoard(workingBoard);
+        await delay(200);
 
-      const newFilledBoard = fillEmptyTiles(boardWithNulls);
-      setBoard(newFilledBoard);
-      await delay(300);
-
-      const boardAfterCascade = await processMatchesAndCascades(newFilledBoard);
+        hasEmptySpaces = workingBoard.flat().some(tile => tile === null);
+      }
+      
+      const boardAfterCascade = await processMatchesAndCascades(workingBoard);
       setBoard(boardAfterCascade);
 
       return boardAfterCascade;
@@ -357,6 +360,7 @@ export default function Home() {
 
       if (rainbowTile && otherTile && !otherTile.powerUp) {
         setIsProcessing(true);
+        setMovesLeft(prev => prev - 1);
         
         // Activate rainbow power-up by swapping
         const { clearedTiles } = activatePowerUp(board, rainbowTile, otherTile.type);
@@ -373,6 +377,7 @@ export default function Home() {
         }
         
         setBoard(currentBoard);
+        setMovesLeft(prev => prev + 1); // Give back the move
         setIsProcessing(false);
 
       } else if (!tile1.powerUp && !tile2.powerUp) {
@@ -530,21 +535,17 @@ export default function Home() {
   }, [board, gameState, isProcessing, processBoardChanges]);
   
   useEffect(() => {
-    const runLevelEndCascade = async () => {
-      if (gameState !== 'level_end' || isProcessing) {
-        return;
-      }
+    if (gameState !== 'level_end' || isProcessing) {
+      return;
+    }
   
-      const powerUpsOnBoard = board.flat().filter((t): t is Tile => !!t?.powerUp);
+    const powerUpsOnBoard = board.flat().filter((t): t is Tile => !!t?.powerUp);
   
-      if (powerUpsOnBoard.length > 0) {
-        const tileToClick = powerUpsOnBoard[0];
-        // The handleTileClick function is now async but we don't need to await it
-        // here because the useEffect will re-run when the board state changes.
-        // Wrapping in a timeout prevents a React state update warning.
-        setTimeout(() => handleLevelEndClick(tileToClick), 0);
-      } else {
-        // No power-ups left, finish the level
+    if (powerUpsOnBoard.length > 0) {
+      const tileToClick = powerUpsOnBoard[0];
+      setTimeout(() => handleLevelEndClick(tileToClick), 100);
+    } else {
+      const finishLevel = async () => {
         setIsProcessing(true);
         const finalBoard = await processMatchesAndCascades(board);
         setBoard(finalBoard);
@@ -553,9 +554,8 @@ export default function Home() {
         setGameState('win');
         setIsProcessing(false);
       }
-    };
-  
-    runLevelEndCascade();
+      finishLevel();
+    }
   }, [gameState, board, isProcessing, handleLevelEndClick, processMatchesAndCascades, handleGameOver]);
   
   
