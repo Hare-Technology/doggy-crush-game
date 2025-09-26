@@ -1,7 +1,5 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import {
   AlertDialog,
   AlertDialogContent,
@@ -11,11 +9,8 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Loader2, PartyPopper, Frown } from 'lucide-react';
 import type { GameState } from '@/lib/types';
-import { addScore } from '@/lib/firestore';
-import { useToast } from '@/hooks/use-toast';
 
 interface GameOverDialogProps {
   gameState: GameState;
@@ -32,11 +27,6 @@ export default function GameOverDialog({
   onRestart,
   isProcessing,
 }: GameOverDialogProps) {
-  const router = useRouter();
-  const { toast } = useToast();
-  const [name, setName] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [scoreSubmitted, setScoreSubmitted] = useState(false);
   const isOpen = gameState === 'win' || gameState === 'lose';
 
   const handleActionClick = () => {
@@ -45,53 +35,10 @@ export default function GameOverDialog({
     } else {
       onRestart();
     }
-    // Reset state for next game
-    setName('');
-    setScoreSubmitted(false);
   };
-
-  const handleSubmitScore = async () => {
-    if (!name.trim()) {
-      toast({
-        title: 'Please enter your name',
-        variant: 'destructive',
-      });
-      return;
-    }
-    setIsSubmitting(true);
-    try {
-      await addScore(name, score);
-      setScoreSubmitted(true);
-      toast({
-        title: 'Score Submitted!',
-        description: 'Check out your ranking on the leaderboard.',
-      });
-      setTimeout(() => {
-        router.push('/leaderboard');
-      }, 1000);
-    } catch (error) {
-      console.error('Failed to submit score', error);
-      toast({
-        title: 'Submission Failed',
-        description: 'Could not save your score. Please try again.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const showSubmitForm =
-    gameState === 'lose' && score > 0 && !scoreSubmitted;
 
   return (
-    <AlertDialog open={isOpen} onOpenChange={() => {
-      if (isOpen) {
-        // Reset local component state when dialog is about to close
-        setName('');
-        setScoreSubmitted(false);
-      }
-    }}>
+    <AlertDialog open={isOpen}>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle className="flex items-center justify-center text-3xl gap-4">
@@ -114,30 +61,6 @@ export default function GameOverDialog({
             </span>
           </AlertDialogDescription>
         </AlertDialogHeader>
-
-        {showSubmitForm && (
-          <div className="flex flex-col gap-4 pt-4">
-            <p className="text-center text-sm font-medium">
-              Add your score to the leaderboard!
-            </p>
-            <div className="flex gap-2">
-              <Input
-                placeholder="Enter your name"
-                value={name}
-                onChange={e => setName(e.target.value)}
-                disabled={isSubmitting}
-                maxLength={20}
-              />
-              <Button onClick={handleSubmitScore} disabled={isSubmitting}>
-                {isSubmitting ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  'Submit'
-                )}
-              </Button>
-            </div>
-          </div>
-        )}
 
         <AlertDialogFooter className="sm:justify-center pt-4">
           {gameState === 'win' && (
