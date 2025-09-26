@@ -90,7 +90,7 @@ export default function Home() {
   }, [gameState, isProcessing, resetHintTimer]);
 
   const startNewLevel = useCallback(
-    async (newLevel: number, newMoves: number, newTarget: number) => {
+    (newLevel: number, newMoves: number, newTarget: number) => {
       resetTileIdCounter();
       setLevel(newLevel);
       setMovesLeft(newMoves);
@@ -459,12 +459,6 @@ export default function Home() {
           currentBoard = chainBoard;
         }
         
-        let newBomb: Tile | undefined;
-        if(spawnBomb) {
-          const clearedTileIds = new Set(clearedTiles.map(t => t.id));
-          newBomb = currentBoard.flat().find(t => t?.powerUp === 'bomb' && !clearedTileIds.has(t.id));
-        }
-
         while (!checkBoardForMoves(currentBoard)) {
           toast({ title: 'No moves left, reshuffling!' });
           await delay(700);
@@ -478,11 +472,6 @@ export default function Home() {
         
         setBoard(currentBoard);
         setIsProcessing(false);
-
-        if (newBomb) {
-            await delay(250);
-            handleTileClick(newBomb);
-        }
         return;
       }
 
