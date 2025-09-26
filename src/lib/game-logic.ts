@@ -11,6 +11,7 @@ export const createInitialBoard = (): Board => {
   let board: Board = [];
   do {
     board = [];
+    tileIdCounter = 0;
     for (let row = 0; row < BOARD_SIZE; row++) {
       board[row] = [];
       for (let col = 0; col < BOARD_SIZE; col++) {
@@ -30,11 +31,14 @@ export const createInitialBoard = (): Board => {
           type: newType,
           row,
           col,
+          isNew: true,
         };
       }
     }
   } while (findMatches(board).length > 0 || !checkBoardForMoves(board));
-  return board;
+  
+  // Set isNew to false for the initial board
+  return board.map(row => row.map(tile => (tile ? { ...tile, isNew: false } : null)));
 };
 
 export const findMatches = (board: Board): Tile[] => {
@@ -57,7 +61,7 @@ export const findMatches = (board: Board): Tile[] => {
         if (match.length >= 3) {
           match.forEach(t => matches.add(t));
         }
-        col += match.length;
+        col += match.length > 1 ? match.length : 1;
       } else {
         col++;
       }
@@ -81,7 +85,7 @@ export const findMatches = (board: Board): Tile[] => {
         if (match.length >= 3) {
           match.forEach(t => matches.add(t));
         }
-        row += match.length;
+        row += match.length > 1 ? match.length : 1;
       } else {
         row++;
       }
@@ -110,7 +114,7 @@ export const applyGravity = (board: Board): Board => {
     return newBoard;
 };
 
-export const fillEmptyTiles = (board: Board): Board => {
+export const fillEmptyTiles = (board: Board, isNew = false): Board => {
     const newBoard = board.map(row => [...row]);
     for (let row = 0; row < BOARD_SIZE; row++) {
         for (let col = 0; col < BOARD_SIZE; col++) {
@@ -120,6 +124,7 @@ export const fillEmptyTiles = (board: Board): Board => {
                     type: getRandomTileType(),
                     row,
                     col,
+                    isNew,
                 };
             }
         }

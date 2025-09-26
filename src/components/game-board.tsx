@@ -5,6 +5,7 @@ import { memo, useState } from 'react';
 import type { Board, Tile as TileType } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { PawIcon, BoneIcon, DogHouseIcon, BallIcon, FoodBowlIcon } from '@/components/dog-icons';
+import { BOARD_SIZE } from '@/lib/constants';
 
 interface GameBoardProps {
   board: Board;
@@ -21,35 +22,36 @@ const tileComponentMap: Record<string, React.ElementType> = {
 };
 
 const MemoizedTile: FC<{
-  tile: TileType | null;
+  tile: TileType;
   onClick: (tile: TileType) => void;
   isSelected: boolean;
-}> = memo(({ tile, onClick, isSelected }) => {
-  if (!tile) {
-    return (
-      <div className="w-full h-full aspect-square rounded-lg bg-primary/10" />
-    );
-  }
-
+  tileSize: number;
+}> = memo(({ tile, onClick, isSelected, tileSize }) => {
   const Icon = tileComponentMap[tile.type] || PawIcon;
 
   return (
     <div
       onClick={() => onClick(tile)}
       className={cn(
-        'w-full h-full aspect-square rounded-lg flex items-center justify-center cursor-pointer transition-all duration-300',
-        'transform-gpu hover:scale-105 active:scale-95',
-        'shadow-md hover:shadow-lg',
-        'bg-[hsl(var(--tile-color))]',
-        isSelected && 'ring-4 ring-offset-2 ring-white'
+        'absolute aspect-square rounded-lg flex items-center justify-center cursor-pointer transition-all duration-300',
+        'transform-gpu',
+        isSelected && 'ring-4 ring-offset-2 ring-white z-10',
+        'shadow-md',
+        tile.isNew && 'animate-drop-in',
+        'bg-[hsl(var(--tile-color))]'
       )}
       style={
         {
           '--tile-color': `var(--tile-color-${tile.type})`,
+          width: `${tileSize}px`,
+          height: `${tileSize}px`,
+          top: `${tile.row * tileSize}px`,
+          left: `${tile.col * tileSize}px`,
+          transition: 'top 0.2s ease-out, left 0.2s ease-out',
         } as React.CSSProperties
       }
     >
-      <Icon className="drop-shadow-lg" />
+      <Icon className="drop-shadow-lg w-full h-full flex items-center justify-center" />
     </div>
   );
 });
@@ -57,6 +59,18 @@ MemoizedTile.displayName = 'MemoizedTile';
 
 const GameBoard: FC<GameBoardProps> = ({ board, onSwap, isProcessing }) => {
   const [selectedTile, setSelectedTile] = useState<TileType | null>(null);
+  const [containerSize, setContainerSize] = useState(500);
+  const tileSize = containerSize / BOARD_SIZE;
+
+  const boardRef = useCallback((node: HTMLDivElement | null) => {
+    if (node) {
+      const resizeObserver = new ResizeObserver(() => {
+        setContainerSize(node.offsetWidth);
+      });
+      resizeObserver.observe(node);
+      return () => resizeObserver.disconnect();
+    }
+  }, []);
 
   const handleTileClick = (tile: TileType) => {
     if (isProcessing) return;
@@ -71,10 +85,13 @@ const GameBoard: FC<GameBoardProps> = ({ board, onSwap, isProcessing }) => {
     }
   };
 
+  const flattenedBoard = board.flat().filter((tile): tile is TileType => tile !== null);
+
   return (
     <div
+      ref={boardRef}
       className={cn(
-        'relative grid grid-cols-8 grid-rows-8 gap-1 p-2 bg-primary/20 rounded-xl shadow-inner max-w-lg w-full aspect-square'
+        'relative p-2 bg-primary/20 rounded-xl shadow-inner max-w-lg w-full aspect-square'
       )}
     >
       <style jsx global>{`
@@ -86,18 +103,36 @@ const GameBoard: FC<GameBoardProps> = ({ board, onSwap, isProcessing }) => {
           --tile-color-bowl: 120 85% 80%;
         }
       `}</style>
-      {board.map((row, rowIndex) =>
-        row.map((tile, colIndex) => (
-          <MemoizedTile
-            key={tile ? tile.id : `${rowIndex}-${colIndex}`}
-            tile={tile}
-            onClick={handleTileClick}
-            isSelected={!!(selectedTile && tile && selectedTile.id === tile.id)}
+      
+      {/* Background grid */}
+      <div className="grid grid-cols-8 grid-rows-8 gap-0 w-full h-full">
+        {Array.from({ length: BOARD_SIZE * BOARD_SIZE }).map((_, i) => (
+          <div key={i} className="w-full h-full aspect-square rounded-lg bg-primary/10"
+           style={{
+             width: `${tileSize}px`,
+             height: `${tileSize}px`,
+           }}
           />
-        ))
-      )}
+        ))}
+      </div>
+
+      {/* Tiles */}
+      <div className="absolute top-0 left-0 p-2">
+        {flattenedBoard.map((tile) => (
+            <MemoizedTile
+              key={tile.id}
+              tile={tile}
+              onClick={handleTileClick}
+              isSelected={!!(selectedTile && tile && selectedTile.id === tile.id)}
+              tileSize={tileSize}
+            />
+        ))}
+      </div>
     </div>
   );
 };
+
+// We need a custom hook to get a callback ref
+const { useCallback } = require('react');
 
 export default GameBoard;
