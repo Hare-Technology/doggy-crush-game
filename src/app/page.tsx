@@ -64,11 +64,44 @@ export default function Home() {
     if (savedCoins) {
       setCoins(parseInt(savedCoins, 10));
     }
+
+    const savedGame = localStorage.getItem('doggyCrushGameState');
+    if (savedGame) {
+      try {
+        const { board, level, score, movesLeft, targetScore, coins } = JSON.parse(savedGame);
+        setBoard(board);
+        setLevel(level);
+        setScore(score);
+        setMovesLeft(movesLeft);
+        setTargetScore(targetScore);
+        setCoins(coins);
+        setGameState('playing');
+        setIsProcessing(false);
+      } catch (e) {
+        // If parsing fails, start a new game
+        startNewLevel(1, INITIAL_MOVES, INITIAL_TARGET_SCORE);
+      }
+    } else {
+      startNewLevel(1, INITIAL_MOVES, INITIAL_TARGET_SCORE);
+    }
   }, []);
 
   useEffect(() => {
     localStorage.setItem('doggyCrushCoins', coins.toString());
-  }, [coins]);
+    if (gameState === 'playing' && board.length > 0) {
+      const stateToSave = JSON.stringify({
+        board,
+        level,
+        score,
+        movesLeft,
+        targetScore,
+        coins,
+      });
+      localStorage.setItem('doggyCrushGameState', stateToSave);
+    } else {
+      localStorage.removeItem('doggyCrushGameState');
+    }
+  }, [board, level, score, movesLeft, targetScore, coins, gameState]);
 
   const startNewLevel = useCallback(
     async (newLevel: number, newMoves: number, newTarget: number) => {
@@ -128,6 +161,7 @@ export default function Home() {
         let newBoardWithNulls = tempBoard.map(row =>
           row.map(tile => {
             if (!tile) return null;
+            // Protect existing powerups unless they are part of the match
             if (tile.powerUp && !matchedTileIds.has(tile.id)) {
               return tile;
             }
@@ -141,9 +175,12 @@ export default function Home() {
         if (powerUp) {
           setPowerUpsMade(prev => prev + 1);
           const { tile: powerUpTile, powerUp: powerUpType } = powerUp;
+          // Find the tile on the board to turn into a power-up
+          let powerupApplied = false;
           newBoardWithNulls = newBoardWithNulls.map(row =>
             row.map(t => {
-              if (t && t.id === powerUpTile.id) {
+              if (t && t.id === powerUpTile.id && !powerupApplied) {
+                powerupApplied = true;
                 return { ...t, powerUp: powerUpType };
               }
               return t;
@@ -214,12 +251,6 @@ export default function Home() {
     [playSound, processMatchesAndCascades]
   );
 
-  useEffect(() => {
-    if (board.length === 0 && typeof window !== 'undefined') {
-      startNewLevel(1, INITIAL_MOVES, INITIAL_TARGET_SCORE);
-    }
-  }, [board.length, startNewLevel]);
-
   const handleSwap = useCallback(
     async (tile1: Tile, tile2: Tile) => {
       if (isProcessing || gameState !== 'playing') return;
@@ -281,7 +312,6 @@ export default function Home() {
       if (tile.powerUp) {
         setSelectedTile(null);
         setIsProcessing(true);
-        setMovesLeft(prev => prev - 1);
         let finalBoard: Board;
 
         if (tile.powerUp === 'bomb') {
@@ -370,6 +400,7 @@ export default function Home() {
     async (didWin: boolean) => {
       const endTime = Date.now();
       setLevelEndTime(endTime);
+      localStorage.removeItem('doggyCrushGameState');
 
       if (didWin) {
         playSound('win');
