@@ -1,12 +1,14 @@
 import type { HTMLAttributes } from 'react';
+import { cn } from '@/lib/utils';
 
 const Emoji = ({
   emoji,
+  className,
   ...props
 }: { emoji: string } & HTMLAttributes<HTMLSpanElement>) => (
   <span
     role="img"
-    style={{ fontSize: '2.5rem', lineHeight: 1 }}
+    className={cn('text-3xl md:text-5xl leading-none', className)}
     {...props}
   >
     {emoji}
