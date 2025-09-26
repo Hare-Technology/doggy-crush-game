@@ -24,7 +24,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { suggestNextLevelParams } from '@/ai/flows/suggest-next-level-params';
 import { useAuth } from '@/hooks/use-auth';
-import { updateUserStats } from '@/lib/firestore';
+import { updateUserStats, getUserCoins } from '@/lib/firestore';
 import { useSound } from '@/hooks/use-sound';
 
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
@@ -60,48 +60,61 @@ export default function Home() {
     if (savedHighScore) {
       setHighScore(parseInt(savedHighScore, 10));
     }
-    const savedCoins = localStorage.getItem('doggyCrushCoins');
-    if (savedCoins) {
-      setCoins(parseInt(savedCoins, 10));
-    }
+  }, []);
 
+  const loadGame = useCallback(async () => {
     const savedGame = localStorage.getItem('doggyCrushGameState');
+    let userCoins = 0;
+    if (user) {
+      userCoins = await getUserCoins(user.uid);
+    } else {
+      const localCoins = localStorage.getItem('doggyCrushCoins');
+      userCoins = localCoins ? parseInt(localCoins, 10) : 0;
+    }
+    setCoins(userCoins);
+
     if (savedGame) {
       try {
-        const { board, level, score, movesLeft, targetScore, coins } = JSON.parse(savedGame);
+        const { board, level, score, movesLeft, targetScore } = JSON.parse(savedGame);
         setBoard(board);
         setLevel(level);
         setScore(score);
         setMovesLeft(movesLeft);
         setTargetScore(targetScore);
-        setCoins(coins);
         setGameState('playing');
         setIsProcessing(false);
       } catch (e) {
-        // If parsing fails, start a new game
         startNewLevel(1, INITIAL_MOVES, INITIAL_TARGET_SCORE);
       }
     } else {
       startNewLevel(1, INITIAL_MOVES, INITIAL_TARGET_SCORE);
     }
-  }, []);
+  }, [user]);
 
   useEffect(() => {
-    localStorage.setItem('doggyCrushCoins', coins.toString());
+    loadGame();
+  }, [loadGame]);
+
+  useEffect(() => {
     if (gameState === 'playing' && board.length > 0) {
-      const stateToSave = JSON.stringify({
+      const stateToSave = {
         board,
         level,
         score,
         movesLeft,
         targetScore,
-        coins,
-      });
-      localStorage.setItem('doggyCrushGameState', stateToSave);
+      };
+      localStorage.setItem('doggyCrushGameState', JSON.stringify(stateToSave));
     } else {
       localStorage.removeItem('doggyCrushGameState');
     }
-  }, [board, level, score, movesLeft, targetScore, coins, gameState]);
+  }, [board, level, score, movesLeft, targetScore, gameState]);
+
+  useEffect(() => {
+    if (!user) {
+      localStorage.setItem('doggyCrushCoins', coins.toString());
+    }
+  }, [coins, user]);
 
   const startNewLevel = useCallback(
     async (newLevel: number, newMoves: number, newTarget: number) => {
@@ -133,15 +146,15 @@ export default function Home() {
       let tempBoard = currentBoard;
       let cascadeCount = 0;
       let totalPoints = 0;
+      let localPowerUpsMade = 0;
 
       while (true) {
         const { matches, powerUp } = findMatches(tempBoard);
         if (matches.length === 0) break;
 
         cascadeCount++;
-        if (cascadeCount > highestCombo) {
-          setHighestCombo(cascadeCount);
-        }
+        setHighestCombo(prev => Math.max(prev, cascadeCount));
+        
         if (cascadeCount > 1) {
           playSound('combo');
           const comboText = `Combo x${cascadeCount}!`;
@@ -161,7 +174,6 @@ export default function Home() {
         let newBoardWithNulls = tempBoard.map(row =>
           row.map(tile => {
             if (!tile) return null;
-            // Protect existing powerups unless they are part of the match
             if (tile.powerUp && !matchedTileIds.has(tile.id)) {
               return tile;
             }
@@ -173,9 +185,8 @@ export default function Home() {
         );
 
         if (powerUp) {
-          setPowerUpsMade(prev => prev + 1);
+          localPowerUpsMade++;
           const { tile: powerUpTile, powerUp: powerUpType } = powerUp;
-          // Find the tile on the board to turn into a power-up
           let powerupApplied = false;
           newBoardWithNulls = newBoardWithNulls.map(row =>
             row.map(t => {
@@ -206,10 +217,13 @@ export default function Home() {
       if (totalPoints > 0) {
         setScore(prev => prev + totalPoints);
       }
+      if (localPowerUpsMade > 0) {
+        setPowerUpsMade(prev => prev + localPowerUpsMade);
+      }
 
       return tempBoard;
     },
-    [playSound, highestCombo]
+    [playSound]
   );
 
   const processBoardChanges = useCallback(
@@ -258,7 +272,6 @@ export default function Home() {
 
       if (tile1.powerUp || tile2.powerUp) {
         setSelectedTile(null);
-        setIsProcessing(false);
         return;
       }
 
@@ -402,6 +415,7 @@ export default function Home() {
       setLevelEndTime(endTime);
       localStorage.removeItem('doggyCrushGameState');
 
+      let coinsEarned = 0;
       if (didWin) {
         playSound('win');
         const timeTaken = Math.round((endTime - levelStartTime) / 1000); // in seconds
@@ -409,21 +423,20 @@ export default function Home() {
         const moveBonus = movesLeft * 2; // 2 coins per move left
         const comboBonus = highestCombo * 10; // 10 coins per max combo
         const powerUpBonus = powerUpsMade * 15; // 15 coins per power-up created
-        const coinsEarned = timeBonus + moveBonus + comboBonus + powerUpBonus;
+        coinsEarned = timeBonus + moveBonus + comboBonus + powerUpBonus;
         setCoins(prev => prev + coinsEarned);
       } else {
         playSound('lose');
-        setLevel(1);
       }
 
-      if (user && score > 0) {
+      if (user) {
         try {
           await updateUserStats({
             userId: user.uid,
-            level,
+            level: didWin ? level : 0, // only update level on win
             score,
             didWin,
-            coins: didWin ? coins : 0, // Only save coin updates on win
+            coins: coinsEarned,
           });
           toast({
             title: 'Score Saved!',
@@ -437,6 +450,10 @@ export default function Home() {
           });
         }
       }
+      
+      if (!didWin) {
+        setLevel(1);
+      }
     },
     [
       user,
@@ -448,7 +465,6 @@ export default function Home() {
       movesLeft,
       highestCombo,
       powerUpsMade,
-      coins,
     ]
   );
 

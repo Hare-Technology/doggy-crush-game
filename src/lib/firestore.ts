@@ -35,7 +35,11 @@ export async function isDisplayNameTaken(displayName: string): Promise<boolean> 
 export async function getLeaderboard(): Promise<LeaderboardEntry[]> {
   try {
     const usersCol = collection(db, 'users');
-    const q = query(usersCol, orderBy('totalScore', 'desc'), limit(10));
+    const q = query(
+      usersCol,
+      orderBy('totalScore', 'desc'),
+      limit(10)
+    );
     const querySnapshot = await getDocs(q);
     const leaderboardList = querySnapshot.docs.map(doc => ({
       id: doc.id,
@@ -63,7 +67,8 @@ interface UserStats {
 
 export async function updateUserStats(stats: UserStats): Promise<void> {
   if (!stats.userId) {
-    throw new Error('User ID is required.');
+    console.warn('User ID is missing, cannot update stats.');
+    return;
   }
 
   const userRef = doc(db, 'users', stats.userId);
@@ -73,24 +78,25 @@ export async function updateUserStats(stats: UserStats): Promise<void> {
       const userDoc = await transaction.get(userRef);
 
       if (!userDoc.exists()) {
-        // If user document doesn't exist, we can't get their displayName,
-        // so we'll have to rely on it being set at signup.
-        // This transaction will just create the user with their game stats.
         transaction.set(userRef, {
           totalScore: stats.score,
           highestLevel: stats.level,
           wins: stats.didWin ? 1 : 0,
           losses: stats.didWin ? 0 : 1,
           coins: stats.coins,
+          // Note: displayName is not available here, it's set on signup
         });
       } else {
         const currentData = userDoc.data();
+        const currentCoins = currentData.coins || 0;
+        
         transaction.update(userRef, {
           totalScore: increment(stats.score),
           highestLevel: Math.max(currentData.highestLevel || 1, stats.level),
           wins: increment(stats.didWin ? 1 : 0),
           losses: increment(stats.didWin ? 0 : 1),
-          coins: increment(stats.coins),
+          // Set coins directly instead of incrementing to avoid issues if local and remote are out of sync
+          coins: currentCoins + stats.coins,
         });
       }
     });
@@ -99,6 +105,7 @@ export async function updateUserStats(stats: UserStats): Promise<void> {
     throw new Error('Could not update user stats.');
   }
 }
+
 
 export async function setUserDisplayName(
   userId: string,
@@ -114,5 +121,20 @@ export async function setUserDisplayName(
   } catch (error) {
     console.error('Error setting display name: ', error);
     throw new Error('Could not set display name.');
+  }
+}
+
+export async function getUserCoins(userId: string): Promise<number> {
+  if (!userId) return 0;
+  const userRef = doc(db, 'users', userId);
+  try {
+    const userDoc = await getDoc(userRef);
+    if (userDoc.exists()) {
+      return userDoc.data().coins || 0;
+    }
+    return 0;
+  } catch (error) {
+    console.error('Error getting user coins:', error);
+    return 0;
   }
 }
