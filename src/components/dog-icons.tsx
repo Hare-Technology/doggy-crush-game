@@ -14,7 +14,7 @@ const Emoji = ({
 );
 
 export const PawIcon = (props: HTMLAttributes<HTMLSpanElement>) => (
-  <Emoji emoji="🐾" {...props} />
+  <Emoji emoji="🐕" {...props} />
 );
 
 export const BoneIcon = (props: HTMLAttributes<HTMLSpanElement>) => (
@@ -30,7 +30,7 @@ export const BallIcon = (props: HTMLAttributes<HTMLSpanElement>) => (
 );
 
 export const FoodBowlIcon = (props: HTMLAttributes<HTMLSpanElement>) => (
-  <Emoji emoji="🐕" {...props} />
+  <Emoji emoji="🦮" {...props} />
 );
 
 export const BombIcon = (props: HTMLAttributes<HTMLSpanElement>) => (
