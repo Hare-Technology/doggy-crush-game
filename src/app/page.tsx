@@ -115,7 +115,7 @@ export default function Home() {
       } while (!checkBoardForMoves(newBoard));
 
       setBoard(newBoard);
-      await delay(800); // Wait for shuffle animation
+      await delay(1000); // Wait for shuffle animation
       setIsShuffling(false);
       setIsProcessing(false);
     },
@@ -218,7 +218,7 @@ export default function Home() {
           playSound('combo');
           const comboText = `Combo x${cascadeCount}!`;
           setComboMessage(comboText);
-          setTimeout(() => setComboMessage(''), 1500);
+          setTimeout(() => setComboMessage(''), 1900);
         } else {
           playSound('match');
         }
@@ -241,7 +241,7 @@ export default function Home() {
         const matchedTileIds = new Set(matches.map(t => t.id).filter(id => !powerUpTileIds.has(id)));
 
         setIsAnimating(prev => new Set([...prev, ...matchedTileIds]));
-        await delay(300);
+        await delay(500);
 
         let newBoardWithNulls = boardWithPowerups.map(row =>
           row.map(tile => {
@@ -259,7 +259,7 @@ export default function Home() {
         const { newBoard: boardAfterGravity } = applyGravity(boardWithNewTiles);
         
         setBoard(boardAfterGravity);
-        await delay(500);
+        await delay(700);
         
         tempBoard = boardAfterGravity;
       }
@@ -281,7 +281,7 @@ export default function Home() {
       const clearedTileIds = new Set(clearedTiles.map(t => t.id));
       setIsAnimating(prev => new Set([...prev, ...clearedTileIds]));
       playSound('bomb');
-      await delay(300);
+      await delay(500);
 
       let boardWithNulls = initialBoard.map(row =>
         row.map(tile => {
@@ -303,7 +303,7 @@ export default function Home() {
       const { newBoard: boardAfterGravity } = applyGravity(boardWithNewTiles);
       
       setBoard(boardAfterGravity);
-      await delay(500);
+      await delay(700);
       
       const boardAfterCascade = await processMatchesAndCascades(boardAfterGravity);
       setBoard(boardAfterCascade);
@@ -327,12 +327,12 @@ export default function Home() {
     tempBoard[r2][c2] = landingTileForT2;
 
     setBoard(tempBoard);
-    await delay(500);
+    await delay(700);
 
     const { matches, powerUps } = findMatches(tempBoard);
     if (matches.length === 0 && powerUps.length === 0) {
       setBoard(board); // Swap back
-      await delay(500);
+      await delay(700);
       setIsProcessing(false);
       return; // Do not decrement moves
     }
@@ -344,11 +344,11 @@ export default function Home() {
     let finalBoard = boardAfterMatches;
     while (!checkBoardForMoves(finalBoard)) {
       toast({ title: 'No moves left, reshuffling!' });
-      await delay(500);
+      await delay(700);
       setIsShuffling(true);
       let reshuffledBoard = createInitialBoard();
       setBoard(reshuffledBoard);
-      await delay(800);
+      await delay(1000);
       setIsShuffling(false);
       finalBoard = await processMatchesAndCascades(reshuffledBoard);
     }
@@ -391,11 +391,11 @@ export default function Home() {
         
         while (!checkBoardForMoves(currentBoard)) {
             toast({ title: 'No moves left, reshuffling!' });
-            await delay(500);
+            await delay(700);
             setIsShuffling(true);
             let reshuffledBoard = createInitialBoard();
             setBoard(reshuffledBoard);
-            await delay(800);
+            await delay(1000);
             setIsShuffling(false);
             currentBoard = await processMatchesAndCascades(reshuffledBoard);
         }
@@ -431,11 +431,11 @@ export default function Home() {
 
         while (!checkBoardForMoves(currentBoard)) {
             toast({ title: 'No moves left, reshuffling!' });
-            await delay(500);
+            await delay(700);
             setIsShuffling(true);
             let reshuffledBoard = createInitialBoard();
             setBoard(reshuffledBoard);
-            await delay(800);
+            await delay(1000);
             setIsShuffling(false);
             currentBoard = await processMatchesAndCascades(reshuffledBoard);
         }

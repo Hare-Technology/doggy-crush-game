@@ -16,7 +16,7 @@ export default function ComboEffect({ message }: ComboEffectProps) {
       setVisible(true);
       const timer = setTimeout(() => {
         setVisible(false);
-      }, 1400); // Should be slightly less than animation duration
+      }, 1900); // Should be slightly less than animation duration
       return () => clearTimeout(timer);
     }
   }, [message]);

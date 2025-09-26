@@ -79,7 +79,7 @@ const Tile: FC<{
     <div
       onClick={onClick}
       className={cn(
-        'absolute rounded-lg flex items-center justify-center cursor-pointer transition-all duration-500',
+        'absolute rounded-lg flex items-center justify-center cursor-pointer transition-all duration-700',
         'shadow-md',
         isSelected && 'ring-4 ring-offset-2 ring-white z-10 scale-110',
         isAnimating && 'animate-pop',
@@ -137,7 +137,7 @@ const GameBoard: FC<GameBoardProps> = ({
           }
         }
         .animate-pulse {
-          animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+          animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
         }
       `}</style>
 
