@@ -26,6 +26,9 @@ interface GameOverDialogProps {
     powerUpsMade: number;
     time: number;
   } | null;
+  coins: number;
+  canBuyContinue: boolean;
+  onBuyExtraMoves: () => void;
 }
 
 export default function GameOverDialog({
@@ -36,6 +39,9 @@ export default function GameOverDialog({
   onNewGame,
   isProcessing,
   coinBonuses,
+  coins,
+  canBuyContinue,
+  onBuyExtraMoves,
 }: GameOverDialogProps) {
   const isOpen = gameState === 'win' || gameState === 'lose';
   const { playSound } = useSound();
@@ -52,8 +58,13 @@ export default function GameOverDialog({
     playSound('click');
     onNewGame();
   }
+  const handleBuyMovesClick = () => {
+      playSound('click');
+      onBuyExtraMoves();
+  }
     
   const totalCoins = coinBonuses ? Object.values(coinBonuses).reduce((a, b) => a + b, 0) : 0;
+  const showContinue = gameState === 'lose' && canBuyContinue && coins >= 500;
 
   return (
     <AlertDialog open={isOpen}>
@@ -73,7 +84,7 @@ export default function GameOverDialog({
             )}
           </AlertDialogTitle>
           <AlertDialogDescription className="text-center text-lg">
-            {gameState === 'lose' && "Better luck next time. "}
+            {gameState === 'lose' && !showContinue && "Better luck next time. "}
             Your final score was:{' '}
             <span className="font-bold text-foreground">
               {score.toLocaleString()}
@@ -109,7 +120,7 @@ export default function GameOverDialog({
           </div>
         )}
 
-        <AlertDialogFooter className="sm:justify-center pt-4 sm:flex-row sm:gap-2">
+        <AlertDialogFooter className="sm:justify-center pt-4 sm:flex-col sm:gap-2">
           {gameState === 'win' && (
             <>
               <Button
@@ -127,10 +138,28 @@ export default function GameOverDialog({
           )}
           {gameState === 'lose' && (
             <>
+              {showContinue && (
+                <Button
+                    onClick={handleBuyMovesClick}
+                    disabled={isProcessing || coins < 500}
+                    size="lg"
+                    className="bg-green-500 hover:bg-green-600"
+                >
+                   {isProcessing ? (
+                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                   ) : (
+                    <>
+                     Continue? (+5 moves)
+                     <Coins className="w-4 h-4 ml-2" /> 500
+                    </>
+                   )}
+                </Button>
+              )}
                <Button
                 onClick={handleRestartClick}
                 disabled={isProcessing}
                 size="lg"
+                variant={showContinue ? "outline" : "default"}
               >
                 {isProcessing ? (
                   <Loader2 className="mr-2 h-5 w-5 animate-spin" />

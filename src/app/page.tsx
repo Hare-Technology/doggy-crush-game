@@ -58,6 +58,7 @@ export default function Home() {
   const [hintTile, setHintTile] = useState<Tile | null>(null);
   const hintTimer = useRef<NodeJS.Timeout | null>(null);
   const [winStreak, setWinStreak] = useState(0);
+  const [canBuyContinue, setCanBuyContinue] = useState(true);
 
   const scoreNeeded = useMemo(
     () => Math.max(0, targetScore - score),
@@ -103,6 +104,7 @@ export default function Home() {
       setLevelStartTime(Date.now());
       setLevelEndTime(0);
       setIsShuffling(true);
+      setCanBuyContinue(true);
 
       if (
         newLevel === 1 &&
@@ -558,6 +560,7 @@ export default function Home() {
       if (!didWin) {
         localStorage.removeItem('doggyCrushGameState');
         setWinStreak(0);
+        setCanBuyContinue(false); // Can't buy continue after official game over
       } else {
         setWinStreak(prev => prev + 1);
       }
@@ -630,8 +633,12 @@ export default function Home() {
     if (score >= targetScore) {
       setGameState('level_end');
     } else if (movesLeft <= 0) {
-      handleGameOver(false);
-      setGameState('lose');
+      if (canBuyContinue && coins >= 500) {
+        setGameState('lose'); // Show the dialog with the "continue" option
+      } else {
+        handleGameOver(false); // No continue possible, official game over
+        setGameState('lose');
+      }
     }
   }, [
     score,
@@ -642,6 +649,8 @@ export default function Home() {
     handleGameOver,
     gameState,
     isProcessing,
+    canBuyContinue,
+    coins,
   ]);
 
   const handleLevelEndClick = useCallback(
@@ -888,6 +897,20 @@ export default function Home() {
     },
     [board, toast]
   );
+  
+  const handleBuyExtraMoves = useCallback(() => {
+    if (coins >= 500 && canBuyContinue) {
+      setCoins(prev => prev - 500);
+      setMovesLeft(prev => prev + 5);
+      setPurchasedMoves(prev => prev + 5);
+      setCanBuyContinue(false);
+      setGameState('playing');
+      toast({
+        title: 'Second Chance!',
+        description: 'You got 5 extra moves. Good luck!',
+      });
+    }
+  }, [coins, canBuyContinue, toast]);
 
   return (
     <div className="flex flex-col min-h-screen bg-background font-headline">
@@ -928,6 +951,9 @@ export default function Home() {
         onNewGame={handleNewGame}
         isProcessing={isProcessing}
         coinBonuses={coinBonuses}
+        coins={coins}
+        canBuyContinue={canBuyContinue}
+        onBuyExtraMoves={handleBuyExtraMoves}
       />
     </div>
   );
