@@ -10,6 +10,8 @@ export const TILE_TYPES: TileType[] = [
   'house',
   'ball',
   'bowl',
+  'leash',
+  'pawprint',
 ];
 
 export const TILE_COLORS: Record<TileType, string> = {
@@ -18,4 +20,6 @@ export const TILE_COLORS: Record<TileType, string> = {
   house: '221 83% 75%',
   ball: '45 100% 75%',
   bowl: '283 81% 75%',
+  leash: '345 81% 75%',
+  pawprint: '190 81% 75%',
 };
