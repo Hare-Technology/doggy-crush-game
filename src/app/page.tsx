@@ -42,8 +42,7 @@ export default function Home() {
   const scoreNeeded = useMemo(() => Math.max(0, targetScore - score), [targetScore, score]);
 
   const processMatchesAndCascades = useCallback(
-    async (currentBoard: Board, isInitialSetup = false): Promise<number> => {
-      let totalPoints = 0;
+    async (currentBoard: Board): Promise<Board> => {
       let boardAfterMatches = currentBoard.map(row => row.map(tile => tile ? {...tile} : null));
       let cascadeCount = 1;
       
@@ -53,48 +52,35 @@ export default function Home() {
           break;
         }
 
-        if (!isInitialSetup) {
-          setIsAnimating(true);
-          const points = matches.length * 10 * cascadeCount;
-          setScore(prev => prev + points);
-          totalPoints += points;
-          cascadeCount++;
-          await delay(100);
-        }
+        setIsAnimating(true);
+        const points = matches.length * 10 * cascadeCount;
+        setScore(prev => prev + points);
+        cascadeCount++;
         
         const newBoardWithNulls = boardAfterMatches.map(row => [...row]);
         matches.forEach(({ row, col }) => {
             newBoardWithNulls[row][col] = null;
         });
 
-        if (!isInitialSetup) {
-          setBoard(newBoardWithNulls);
-          await delay(200); // Animation for tiles disappearing
-        }
+        setBoard(newBoardWithNulls);
+        await delay(500); // Animation for tiles disappearing
 
         const boardAfterGravity = applyGravity(newBoardWithNulls);
         
-        if (!isInitialSetup) {
-            setBoard(boardAfterGravity);
-            await delay(200); // Animation for gravity
-        }
+        setBoard(boardAfterGravity);
+        await delay(500); // Animation for gravity
 
         const newFilledBoard = fillEmptyTiles(boardAfterGravity, true);
         
-        if (!isInitialSetup) {
-          setBoard(newFilledBoard);
-          await delay(200); // Animation for new tiles appearing
-        }
+        setBoard(newFilledBoard);
+        await delay(500); // Animation for new tiles appearing
         
         const finalFilledBoard = fillEmptyTiles(boardAfterGravity, false);
         boardAfterMatches = finalFilledBoard;
       }
       
-      if (!isInitialSetup) {
-        setIsAnimating(false);
-      }
-      
-      return totalPoints;
+      setIsAnimating(false);
+      return boardAfterMatches;
     },
     []
   );
@@ -108,11 +94,8 @@ export default function Home() {
       setGameState('playing');
       setIsProcessing(true);
       
-      let newBoard : Board;
-      do {
-          newBoard = createInitialBoard();
-      } while(findMatches(newBoard).length > 0 || !checkBoardForMoves(newBoard));
-
+      let newBoard = createInitialBoard();
+      
       setBoard(newBoard);
       
       // Check for available moves and reshuffle if none
@@ -124,7 +107,7 @@ export default function Home() {
       }
       setIsProcessing(false);
     },
-    []
+    [toast]
   );
 
   useEffect(() => {
@@ -140,45 +123,29 @@ export default function Home() {
 
       setIsProcessing(true);
 
-      const newBoard = board.map(r => [...r]);
+      const tempBoard = board.map(r => [...r]);
       const { row: r1, col: c1 } = tile1;
       const { row: r2, col: c2 } = tile2;
 
       // Swap tiles in the board
-      newBoard[r1][c1] = { ...tile2, row: r1, col: c1 };
-      newBoard[r2][c2] = { ...tile1, row: r2, col: c2 };
+      tempBoard[r1][c1] = { ...tile2, row: r1, col: c1 };
+      tempBoard[r2][c2] = { ...tile1, row: r2, col: c2 };
       
-      setBoard(newBoard);
-      await delay(200);
+      setBoard(tempBoard);
+      await delay(500);
 
-      const matches = findMatches(newBoard);
+      const matches = findMatches(tempBoard);
 
       if (matches.length === 0) {
         setBoard(board); // Swap back
-        await delay(200);
+        await delay(500);
         setIsProcessing(false);
         return;
       }
       
       setMovesLeft((prev) => prev - 1);
 
-      let boardAfterSwap = newBoard;
-      await processMatchesAndCascades(boardAfterSwap);
-      
-      // This part ensures we get the final state of the board after all cascades
-      let finalBoard = newBoard;
-      while(true) {
-        const matches = findMatches(finalBoard);
-        if (matches.length === 0) break;
-        
-        const boardWithNulls = finalBoard.map(row => row.map(tile => tile ? {...tile, isNew: false} : null));
-        matches.forEach(({ row, col }) => {
-            boardWithNulls[row][col] = null;
-        });
-
-        const boardAfterGravity = applyGravity(boardWithNulls);
-        finalBoard = fillEmptyTiles(boardAfterGravity);
-      }
+      const finalBoard = await processMatchesAndCascades(tempBoard);
       
       setBoard(finalBoard);
 

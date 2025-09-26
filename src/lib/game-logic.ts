@@ -9,40 +9,79 @@ const getRandomTileType = (): (typeof TILE_TYPES)[number] => {
 
 export const createInitialBoard = (): Board => {
   let board: Board = [];
-  do {
-    board = [];
-    tileIdCounter = 0;
-    for (let row = 0; row < BOARD_SIZE; row++) {
-      board[row] = [];
-      for (let col = 0; col < BOARD_SIZE; col++) {
-        let newType;
-        do {
-          newType = getRandomTileType();
-        } while (
-          (col >= 2 &&
-            board[row][col - 1]?.type === newType &&
-            board[row][col - 2]?.type === newType) ||
-          (row >= 2 &&
-            board[row - 1][col]?.type === newType &&
-            board[row - 2][col]?.type === newType)
-        );
-        board[row][col] = {
-          id: tileIdCounter++,
-          type: newType,
-          row,
-          col,
-          isNew: true,
-        };
-      }
+  tileIdCounter = 0;
+  for (let row = 0; row < BOARD_SIZE; row++) {
+    board[row] = [];
+    for (let col = 0; col < BOARD_SIZE; col++) {
+      board[row][col] = {
+        id: tileIdCounter++,
+        type: getRandomTileType(),
+        row,
+        col,
+        isNew: true,
+      };
     }
-  } while (findMatches(board).length > 0 || !checkBoardForMoves(board));
+  }
+
+  // Ensure no matches on creation
+  while (findMatches(board).length > 0) {
+    const matches = findMatches(board);
+    matches.forEach(tile => {
+        if (board[tile.row]) {
+            board[tile.row][tile.col] = {
+                id: tileIdCounter++,
+                type: getRandomTileType(),
+                row: tile.row,
+                col: tile.col,
+                isNew: true
+            };
+        }
+    });
+  }
   
-  // Set isNew to false for the initial board
+  // Ensure there are possible moves
+  while (!checkBoardForMoves(board)) {
+      for (let row = 0; row < BOARD_SIZE; row++) {
+          for (let col = 0; col < BOARD_SIZE; col++) {
+              board[row][col] = {
+                  id: tileIdCounter++,
+                  type: getRandomTileType(),
+                  row,
+                  col,
+                  isNew: true
+              }
+          }
+      }
+      // re-check for matches after reshuffle
+      while (findMatches(board).length > 0) {
+          const matches = findMatches(board);
+          matches.forEach(tile => {
+              if(board[tile.row]) {
+                  board[tile.row][tile.col] = {
+                      id: tileIdCounter++,
+                      type: getRandomTileType(),
+                      row: tile.row,
+                      col: tile.col,
+                      isNew: true
+                  };
+              }
+          });
+      }
+  }
+
   return board.map(row => row.map(tile => (tile ? { ...tile, isNew: false } : null)));
 };
 
 export const findMatches = (board: Board): Tile[] => {
-  const matches = new Set<Tile>();
+  const matches = new Set<string>();
+  const matchedTiles: Tile[] = [];
+
+  const addMatch = (tile: Tile) => {
+    if (!matches.has(String(tile.id))) {
+      matches.add(String(tile.id));
+      matchedTiles.push(tile);
+    }
+  }
 
   // Find horizontal matches
   for (let row = 0; row < BOARD_SIZE; row++) {
@@ -59,7 +98,7 @@ export const findMatches = (board: Board): Tile[] => {
           }
         }
         if (match.length >= 3) {
-          match.forEach(t => matches.add(t));
+          match.forEach(t => addMatch(t));
         }
         col += match.length > 1 ? match.length : 1;
       } else {
@@ -83,7 +122,7 @@ export const findMatches = (board: Board): Tile[] => {
           }
         }
         if (match.length >= 3) {
-          match.forEach(t => matches.add(t));
+          match.forEach(t => addMatch(t));
         }
         row += match.length > 1 ? match.length : 1;
       } else {
@@ -92,7 +131,7 @@ export const findMatches = (board: Board): Tile[] => {
     }
   }
 
-  return Array.from(matches);
+  return matchedTiles;
 };
 
 
@@ -161,7 +200,9 @@ const swapTiles = (board: Board, r1: number, c1: number, r2: number, c2: number)
   const newBoard = board.map(row => row.map(tile => (tile ? { ...tile } : null)));
   const tile1 = newBoard[r1][c1];
   const tile2 = newBoard[r2][c2];
-  newBoard[r1][c1] = tile2;
-  newBoard[r2][c2] = tile1;
+  if(tile1) newBoard[r2][c2] = {...tile1, row: r2, col: c2};
+  else newBoard[r2][c2] = null;
+  if(tile2) newBoard[r1][c1] = {...tile2, row: r1, col: c1};
+  else newBoard[r1][c1] = null;
   return newBoard;
 };
