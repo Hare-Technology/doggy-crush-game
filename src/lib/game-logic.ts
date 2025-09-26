@@ -54,11 +54,11 @@ export const findMatches = (
   for (let row = 0; row < BOARD_SIZE; row++) {
     for (let col = 0; col < BOARD_SIZE - 2; ) {
       const tile1 = board[row][col];
-      if (tile1) {
+      if (tile1 && !tile1.powerUp) {
         const match: Tile[] = [tile1];
         for (let i = col + 1; i < BOARD_SIZE; i++) {
           const nextTile = board[row][i];
-          if (nextTile && nextTile.type === tile1.type) {
+          if (nextTile && !nextTile.powerUp && nextTile.type === tile1.type) {
             match.push(nextTile);
           } else {
             break;
@@ -81,11 +81,11 @@ export const findMatches = (
   for (let col = 0; col < BOARD_SIZE; col++) {
     for (let row = 0; row < BOARD_SIZE - 2; ) {
       const tile1 = board[row][col];
-      if (tile1) {
+      if (tile1 && !tile1.powerUp) {
         const match: Tile[] = [tile1];
         for (let i = row + 1; i < BOARD_SIZE; i++) {
           const nextTile = board[i][col];
-          if (nextTile && nextTile.type === tile1.type) {
+          if (nextTile && !nextTile.powerUp && nextTile.type === tile1.type) {
             match.push(nextTile);
           } else {
             break;
@@ -104,7 +104,9 @@ export const findMatches = (
     }
   }
 
-  const matchedTiles = allTiles.filter(t => matches.has(String(t.id)));
+  const matchedTiles = allTiles.filter(
+    t => matches.has(String(t.id)) && !t.powerUp
+  );
 
   return { matches: matchedTiles, powerUp };
 };
@@ -199,13 +201,20 @@ export const activatePowerUp = (
   let clearedTiles: Tile[] = [];
   const { row, col } = tile;
 
-  // Bomb clears a 3x3 area
-  for (let r = row - 1; r <= row + 1; r++) {
-    for (let c = col - 1; c <= col + 1; c++) {
-      if (r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE) {
-        const targetTile = board[r][c];
-        if (targetTile) {
-          clearedTiles.push(targetTile);
+  // Bomb clears a 3x3 area, but not other powerups
+  if (tile.powerUp === 'bomb') {
+    for (let r = row - 1; r <= row + 1; r++) {
+      for (let c = col - 1; c <= col + 1; c++) {
+        if (r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE) {
+          const targetTile = board[r][c];
+          // Only clear tiles that are not powerups
+          if (targetTile && !targetTile.powerUp) {
+            clearedTiles.push(targetTile);
+          }
+          // The bomb itself should be cleared
+          if (r === row && c === col && targetTile) {
+            clearedTiles.push(targetTile);
+          }
         }
       }
     }
