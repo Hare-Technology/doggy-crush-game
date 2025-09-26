@@ -80,17 +80,17 @@ const GameBoard: FC<GameBoardProps> = ({ board, onSwap, isProcessing }) => {
     >
       <style jsx global>{`
         :root {
-          --tile-color-paw: 25 90% 75%;
-          --tile-color-bone: 45 95% 75%;
-          --tile-color-house: 190 85% 75%;
-          --tile-color-ball: 300 80% 75%;
-          --tile-color-bowl: 120 85% 75%;
+          --tile-color-paw: 25 90% 85%;
+          --tile-color-bone: 45 95% 85%;
+          --tile-color-house: 190 85% 85%;
+          --tile-color-ball: 300 80% 85%;
+          --tile-color-bowl: 120 85% 85%;
         }
       `}</style>
       {board.map((row, rowIndex) =>
-        row.map((tile) => (
+        row.map((tile, colIndex) => (
           <MemoizedTile
-            key={`${rowIndex}-${tile?.col}-${tile?.id}`}
+            key={tile?.id ?? `${rowIndex}-${colIndex}`}
             tile={tile}
             onClick={handleTileClick}
             isSelected={!!(selectedTile && tile && selectedTile.id === tile.id)}
