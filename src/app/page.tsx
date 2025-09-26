@@ -418,7 +418,7 @@ if (typeof idCounter === 'number') {
     } else {
       // This is the first tile selection
       if (tile.powerUp && tile.powerUp !== 'rainbow') {
-        // Power-ups that activate on click do not use a move
+        // Power-ups that activate on click DO NOT use a move
         setIsProcessing(true);
 
         const { clearedTiles, secondaryExplosions } = activatePowerUp(board, tile);
