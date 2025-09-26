@@ -23,7 +23,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { Loader2, PawPrint, Eye, EyeOff } from 'lucide-react';
-import { setUserDisplayName } from '@/lib/firestore';
+import { setUserDisplayName, isDisplayNameTaken } from '@/lib/firestore';
 
 export default function AuthPage() {
   const [email, setEmail] = useState('');
@@ -45,6 +45,9 @@ export default function AuthPage() {
   }, [user, authLoading, router]);
 
   const handleAuthAction = async () => {
+    setIsLoading(true);
+    setError('');
+
     if (isSignUp) {
       if (!displayName) {
         setError('Display name is required for sign up.');
@@ -53,6 +56,7 @@ export default function AuthPage() {
           description: 'Please enter a name to display on the leaderboard.',
           variant: 'destructive',
         });
+        setIsLoading(false);
         return;
       }
       if (password !== confirmPassword) {
@@ -62,12 +66,23 @@ export default function AuthPage() {
           description: 'Please ensure your passwords match.',
           variant: 'destructive',
         });
+        setIsLoading(false);
+        return;
+      }
+      
+      const nameTaken = await isDisplayNameTaken(displayName);
+      if (nameTaken) {
+        setError('This display name is already taken.');
+        toast({
+          title: 'Display Name Taken',
+          description: 'Please choose a different display name.',
+          variant: 'destructive',
+        });
+        setIsLoading(false);
         return;
       }
     }
 
-    setIsLoading(true);
-    setError('');
     try {
       if (isSignUp) {
         const userCredential = await createUserWithEmailAndPassword(

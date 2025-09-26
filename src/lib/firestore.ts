@@ -10,6 +10,7 @@ import {
   updateDoc,
   increment,
   runTransaction,
+  where,
 } from 'firebase/firestore';
 import { db } from './firebase';
 
@@ -20,6 +21,13 @@ export interface LeaderboardEntry {
   highestLevel: number;
   wins: number;
   losses: number;
+}
+
+export async function isDisplayNameTaken(displayName: string): Promise<boolean> {
+  const usersRef = collection(db, 'users');
+  const q = query(usersRef, where('displayName', '==', displayName));
+  const querySnapshot = await getDocs(q);
+  return !querySnapshot.empty;
 }
 
 // This function now queries the 'users' collection
