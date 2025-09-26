@@ -41,6 +41,10 @@ export const PawPrintIcon = (props: HTMLAttributes<HTMLSpanElement>) => (
   <Emoji emoji="🐾" {...props} />
 );
 
+export const HotdogIcon = (props: HTMLAttributes<HTMLSpanElement>) => (
+  <Emoji emoji="🌭" {...props} />
+);
+
 export const BombIcon = (props: HTMLAttributes<HTMLSpanElement>) => (
   <Emoji emoji="💣" {...props} />
 );

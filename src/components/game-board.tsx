@@ -11,6 +11,7 @@ import {
   FoodBowlIcon,
   LeashIcon,
   PawPrintIcon,
+  HotdogIcon,
   BombIcon,
   ColumnClearIcon,
   RowClearIcon,
@@ -33,6 +34,7 @@ const tileComponentMap: Record<string, React.ElementType> = {
   bowl: FoodBowlIcon,
   leash: LeashIcon,
   pawprint: PawPrintIcon,
+  hotdog: HotdogIcon,
 };
 
 const powerUpComponentMap: Record<string, React.ElementType> = {
@@ -106,6 +108,7 @@ const GameBoard: FC<GameBoardProps> = ({
           --tile-color-bowl: 0 85% 80%;
           --tile-color-leash: 345 81% 80%;
           --tile-color-pawprint: 190 81% 80%;
+          --tile-color-hotdog: 30 90% 75%;
         }
         @keyframes pulse {
           0%,
