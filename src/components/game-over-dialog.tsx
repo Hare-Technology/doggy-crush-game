@@ -136,15 +136,6 @@ export default function GameOverDialog({
           )}
           {gameState === 'lose' && (
             <>
-              <Button
-                onClick={handleRestartClick}
-                disabled={isProcessing}
-                size="lg"
-                variant="outline"
-              >
-                <Repeat className="mr-2 h-5 w-5" />
-                Try Again
-              </Button>
                <Button
                 onClick={handleNewGameClick}
                 disabled={isProcessing}
