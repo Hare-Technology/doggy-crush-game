@@ -207,14 +207,28 @@ export const activatePowerUp = (
   let randomBombTile: Tile | null = null;
 
   if (tile.powerUp === 'bomb') {
-    // Add the clicked bomb itself to the cleared list
-    clearedTiles.add(tile);
-    // Find a random tile to also turn into a bomb
+    // Clear 3x3 area around the bomb
+    for (let r = tile.row - 1; r <= tile.row + 1; r++) {
+      for (let c = tile.col - 1; c <= tile.col + 1; c++) {
+        if (r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE) {
+          const targetTile = board[r][c];
+          if (targetTile) {
+            // Don't clear other powerups unless they are the one being activated
+            if (targetTile.powerUp && targetTile.id !== tile.id) {
+              continue;
+            }
+            clearedTiles.add(targetTile);
+          }
+        }
+      }
+    }
+
+    // Find a random tile to also turn into a bomb for the second explosion
     const allOtherTiles = board
       .flat()
       .filter(
         (t): t is Tile =>
-          t !== null && t.id !== tile.id && !t.powerUp
+          t !== null && !clearedTiles.has(t) && !t.powerUp
       );
 
     if (allOtherTiles.length > 0) {

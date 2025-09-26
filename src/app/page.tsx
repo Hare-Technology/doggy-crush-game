@@ -263,6 +263,8 @@ export default function Home() {
         setSelectedTile(null); // Clear selection
         setMovesLeft(prev => prev - 1);
 
+        let finalBoard: Board;
+
         if (tile.powerUp === 'bomb') {
           // --- First Explosion ---
           const { clearedTiles, randomBombTile } = activatePowerUp(board, tile);
@@ -291,55 +293,42 @@ export default function Home() {
               .find(t => t?.id === randomBombTile.id);
 
             if (currentSecondBombTile) {
+              // Get the 3x3 area for the second bomb
               const { clearedTiles: secondClearedTiles } = activatePowerUp(
                 tempBoardWithNewBomb,
                 currentSecondBombTile
               );
-              // Add the new bomb tile itself to the cleared list for the second explosion
-              secondClearedTiles.push(currentSecondBombTile);
-
               setScore(prev => prev + secondClearedTiles.length * 10);
+              // Process the second explosion
               boardAfterFirstExplosion = await processBoardChanges(
                 tempBoardWithNewBomb,
-                [...secondClearedTiles]
+                secondClearedTiles
               );
             }
           }
-
-          let finalBoard = boardAfterFirstExplosion;
-          while (!checkBoardForMoves(finalBoard)) {
-            toast({ title: 'No moves left, reshuffling!' });
-            await delay(500);
-            let reshuffledBoard = createInitialBoard();
-            setBoard(reshuffledBoard);
-            await delay(300);
-            finalBoard = await processMatchesAndCascades(reshuffledBoard);
-          }
-
-          setBoard(finalBoard);
+          finalBoard = boardAfterFirstExplosion;
         } else if (
           tile.powerUp === 'column_clear' ||
           tile.powerUp === 'row_clear'
         ) {
           const { clearedTiles } = activatePowerUp(board, tile);
           setScore(prev => prev + clearedTiles.length * 10);
-          let boardAfterExplosion = await processBoardChanges(
-            board,
-            clearedTiles
-          );
-
-          let finalBoard = boardAfterExplosion;
-          while (!checkBoardForMoves(finalBoard)) {
-            toast({ title: 'No moves left, reshuffling!' });
-            await delay(500);
-            let reshuffledBoard = createInitialBoard();
-            setBoard(reshuffledBoard);
-            await delay(300);
-            finalBoard = await processMatchesAndCascades(reshuffledBoard);
-          }
-          setBoard(finalBoard);
+          finalBoard = await processBoardChanges(board, clearedTiles);
+        } else {
+          finalBoard = board;
         }
 
+        // Common finalization logic
+        let checkBoard = finalBoard;
+        while (!checkBoardForMoves(checkBoard)) {
+          toast({ title: 'No moves left, reshuffling!' });
+          await delay(500);
+          let reshuffledBoard = createInitialBoard();
+          setBoard(reshuffledBoard);
+          await delay(300);
+          checkBoard = await processMatchesAndCascades(reshuffledBoard);
+        }
+        setBoard(checkBoard);
         setIsProcessing(false);
         return;
       }
