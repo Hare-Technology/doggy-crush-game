@@ -46,3 +46,16 @@
   animation: shuffle 0.5s ease-out forwards;
   animation-delay: var(--delay);
 }
+
+@keyframes flash {
+  0%, 100% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1.5);
+  }
+}
+
+.animate-flash {
+  animation: flash 1s infinite;
+}

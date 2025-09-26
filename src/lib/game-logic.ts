@@ -238,6 +238,36 @@ export const checkBoardForMoves = (board: Board): boolean => {
   return false;
 };
 
+export const findHint = (board: Board): Tile | null => {
+  for (let row = 0; row < BOARD_SIZE; row++) {
+    for (let col = 0; col < BOARD_SIZE; col++) {
+      const tile = board[row][col];
+      if (!tile) continue;
+
+      // Try swapping right
+      if (col < BOARD_SIZE - 1) {
+        const rightTile = board[row][col + 1];
+        if (rightTile) {
+          const newBoard = swapTiles(board, row, col, row, col + 1);
+          const { matches, powerUps } = findMatches(newBoard);
+          if (matches.length > 0 || powerUps.length > 0) return tile;
+        }
+      }
+
+      // Try swapping down
+      if (row < BOARD_SIZE - 1) {
+        const downTile = board[row + 1][col];
+        if (downTile) {
+          const newBoard = swapTiles(board, row, col, row + 1, col);
+          const { matches, powerUps } = findMatches(newBoard);
+          if (matches.length > 0 || powerUps.length > 0) return tile;
+        }
+      }
+    }
+  }
+  return null;
+};
+
 const swapTiles = (
   board: Board,
   r1: number,

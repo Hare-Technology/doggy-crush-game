@@ -24,6 +24,7 @@ interface GameBoardProps {
   isProcessing: boolean;
   isAnimating: Set<number>;
   isShuffling: boolean;
+  hintTile: TileType | null;
 }
 
 const tileComponentMap: Record<string, React.ElementType> = {
@@ -48,7 +49,8 @@ const Tile: FC<{
   isSelected: boolean;
   isAnimating: boolean;
   isShuffling: boolean;
-}> = ({ tile, onClick, isSelected, isAnimating, isShuffling }) => {
+  isHint: boolean;
+}> = ({ tile, onClick, isSelected, isAnimating, isShuffling, isHint }) => {
   const Icon = tile.powerUp
     ? powerUpComponentMap[tile.powerUp]
     : tileComponentMap[tile.type] || PawIcon;
@@ -81,6 +83,7 @@ const Tile: FC<{
         isSelected && 'ring-4 ring-offset-2 ring-white z-10 scale-110',
         isAnimating && 'animate-pop',
         isShuffling && 'animate-shuffle',
+        isHint && !isSelected && 'animate-flash',
         tile.powerUp && !isShuffling && 'animate-pulse'
       )}
       style={style}
@@ -97,6 +100,7 @@ const GameBoard: FC<GameBoardProps> = ({
   isProcessing,
   isAnimating,
   isShuffling,
+  hintTile,
 }) => {
   const handleTileClick = (tile: TileType) => {
     if (isProcessing) return;
@@ -164,6 +168,7 @@ const GameBoard: FC<GameBoardProps> = ({
           isSelected={!!(selectedTile && selectedTile.id === tile.id)}
           isAnimating={isAnimating.has(tile.id)}
           isShuffling={isShuffling}
+          isHint={!!(hintTile && hintTile.id === tile.id)}
         />
       ))}
     </div>

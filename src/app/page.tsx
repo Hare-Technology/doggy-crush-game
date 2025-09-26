@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import Header from '@/components/header';
 import GameStats from '@/components/game-stats';
 import GameBoard from '@/components/game-board';
@@ -23,6 +23,7 @@ import {
   resetTileIdCounter,
   setTileIdCounter,
   tileIdCounter,
+  findHint,
 } from '@/lib/game-logic';
 import { useToast } from '@/hooks/use-toast';
 import { suggestNextLevelParams } from '@/ai/flows/suggest-next-level-params';
@@ -53,11 +54,37 @@ export default function Home() {
   const [levelStartTime, setLevelStartTime] = useState(0);
   const [levelEndTime, setLevelEndTime] = useState(0);
   const [isShuffling, setIsShuffling] = useState(false);
+  const [hintTile, setHintTile] = useState<Tile | null>(null);
+  const hintTimer = useRef<NodeJS.Timeout | null>(null);
 
   const scoreNeeded = useMemo(
     () => Math.max(0, targetScore - score),
     [targetScore, score]
   );
+
+  const resetHintTimer = useCallback(() => {
+    if (hintTimer.current) {
+      clearTimeout(hintTimer.current);
+    }
+    setHintTile(null);
+    hintTimer.current = setTimeout(() => {
+      if (gameState === 'playing' && !isProcessing) {
+        const hint = findHint(board);
+        setHintTile(hint);
+      }
+    }, 10000);
+  }, [board, gameState, isProcessing]);
+
+  useEffect(() => {
+    if (gameState === 'playing' && !isProcessing) {
+      resetHintTimer();
+    }
+    return () => {
+      if (hintTimer.current) {
+        clearTimeout(hintTimer.current);
+      }
+    };
+  }, [gameState, isProcessing, resetHintTimer]);
 
   const startNewLevel = useCallback(
     async (newLevel: number, newMoves: number, newTarget: number) => {
@@ -352,6 +379,8 @@ export default function Home() {
   const handleTileInteraction = useCallback(async (tile: Tile) => {
     if (isProcessing || gameState !== 'playing') return;
 
+    resetHintTimer();
+
     if (selectedTile) {
       // This is the second tile selection
       const tile1 = selectedTile;
@@ -433,7 +462,7 @@ export default function Home() {
         setSelectedTile(tile);
       }
     }
-  }, [isProcessing, gameState, selectedTile, board, handleRegularSwap, processBoardChanges, toast, processMatchesAndCascades]);
+  }, [isProcessing, gameState, selectedTile, board, handleRegularSwap, processBoardChanges, toast, processMatchesAndCascades, resetHintTimer]);
 
   const handleGameOver = useCallback(
     async (didWin: boolean) => {
@@ -673,6 +702,7 @@ export default function Home() {
             isProcessing={isProcessing}
             isAnimating={isAnimating}
             isShuffling={isShuffling}
+            hintTile={hintTile}
           />
           <ComboEffect message={comboMessage} />
         </div>
