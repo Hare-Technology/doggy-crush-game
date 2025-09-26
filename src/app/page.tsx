@@ -20,6 +20,7 @@ import {
   areTilesAdjacent,
   checkBoardForMoves,
   activatePowerUp,
+  resetTileIdCounter,
 } from '@/lib/game-logic';
 import { useToast } from '@/hooks/use-toast';
 import { suggestNextLevelParams } from '@/ai/flows/suggest-next-level-params';
@@ -75,7 +76,8 @@ export default function Home() {
 
     if (savedGame) {
       try {
-        const { board, level, score, movesLeft, targetScore } = JSON.parse(savedGame);
+        const { board, level, score, movesLeft, targetScore } =
+          JSON.parse(savedGame);
         setBoard(board);
         setLevel(level);
         setScore(score);
@@ -116,6 +118,7 @@ export default function Home() {
 
   const startNewLevel = useCallback(
     async (newLevel: number, newMoves: number, newTarget: number) => {
+      resetTileIdCounter();
       setLevel(newLevel);
       setMovesLeft(newMoves);
       setTargetScore(newTarget);
@@ -126,9 +129,13 @@ export default function Home() {
       setPowerUpsMade(0);
       setLevelStartTime(Date.now());
       setLevelEndTime(0);
-      
-      if (newLevel === 1 && newMoves === INITIAL_MOVES && newTarget === INITIAL_TARGET_SCORE) {
-          localStorage.removeItem('doggyCrushGameState');
+
+      if (
+        newLevel === 1 &&
+        newMoves === INITIAL_MOVES &&
+        newTarget === INITIAL_TARGET_SCORE
+      ) {
+        localStorage.removeItem('doggyCrushGameState');
       }
 
       let newBoard = createInitialBoard();
@@ -156,7 +163,7 @@ export default function Home() {
 
         cascadeCount++;
         setHighestCombo(prev => Math.max(prev, cascadeCount));
-        
+
         if (cascadeCount > 1) {
           playSound('combo');
           const comboText = `Combo x${cascadeCount}!`;
@@ -327,7 +334,7 @@ export default function Home() {
       if (tile.powerUp) {
         setSelectedTile(null);
         setIsProcessing(true);
-        setMovesLeft(prev => prev -1);
+
         let finalBoard: Board;
 
         if (tile.powerUp === 'bomb') {
@@ -416,7 +423,9 @@ export default function Home() {
     async (didWin: boolean) => {
       const endTime = Date.now();
       setLevelEndTime(endTime);
-      localStorage.removeItem('doggyCrushGameState');
+      if (!didWin) {
+        localStorage.removeItem('doggyCrushGameState');
+      }
 
       let coinsEarned = 0;
       if (didWin) {
@@ -441,10 +450,12 @@ export default function Home() {
             didWin,
             coins: coinsEarned,
           });
-          toast({
-            title: 'Score Saved!',
-            description: 'Your progress has been saved to the leaderboard.',
-          });
+          if (didWin) {
+            toast({
+              title: 'Score Saved!',
+              description: 'Your progress has been saved to the leaderboard.',
+            });
+          }
         } catch (error) {
           toast({
             title: 'Sync Error',
@@ -453,7 +464,7 @@ export default function Home() {
           });
         }
       }
-      
+
       if (!didWin) {
         setLevel(1);
       }
@@ -520,7 +531,7 @@ export default function Home() {
       );
     }
   }, [startNewLevel, level]);
-  
+
   const handleNewGame = useCallback(() => {
     startNewLevel(1, INITIAL_MOVES, INITIAL_TARGET_SCORE);
   }, [startNewLevel]);

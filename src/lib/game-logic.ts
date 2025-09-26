@@ -1,7 +1,11 @@
 import { BOARD_SIZE, TILE_TYPES } from './constants';
 import type { Board, Tile, PowerUpType } from './types';
 
-let tileIdCounter = 0;
+export let tileIdCounter = 0;
+
+export const resetTileIdCounter = () => {
+  tileIdCounter = 0;
+};
 
 const getRandomTileType = (): (typeof TILE_TYPES)[number] => {
   return TILE_TYPES[Math.floor(Math.random() * TILE_TYPES.length)];
@@ -9,7 +13,6 @@ const getRandomTileType = (): (typeof TILE_TYPES)[number] => {
 
 export const createInitialBoard = (): Board => {
   let board: Board = [];
-  tileIdCounter = 0;
   for (let row = 0; row < BOARD_SIZE; row++) {
     board[row] = [];
     for (let col = 0; col < BOARD_SIZE; col++) {
