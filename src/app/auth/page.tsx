@@ -22,7 +22,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
-import { PawPrint, Loader2 } from 'lucide-react';
+import { Loader2, PawPrint } from 'lucide-react';
 import { setUserDisplayName } from '@/lib/firestore';
 
 export default function AuthPage() {
@@ -44,13 +44,13 @@ export default function AuthPage() {
 
   const handleAuthAction = async () => {
     if (isSignUp && !displayName) {
-        setError('Display name is required for sign up.');
-        toast({
-            title: 'Display Name Required',
-            description: 'Please enter a name to display on the leaderboard.',
-            variant: 'destructive',
-        });
-        return;
+      setError('Display name is required for sign up.');
+      toast({
+        title: 'Display Name Required',
+        description: 'Please enter a name to display on the leaderboard.',
+        variant: 'destructive',
+      });
+      return;
     }
 
     setIsLoading(true);
@@ -87,13 +87,13 @@ export default function AuthPage() {
       setIsLoading(false);
     }
   };
-  
+
   if (authLoading || user) {
     return (
-       <div className="flex flex-col min-h-screen bg-background items-center justify-center">
+      <div className="flex flex-col min-h-screen bg-background items-center justify-center">
         <Loader2 className="w-12 h-12 animate-spin text-primary" />
-       </div>
-    )
+      </div>
+    );
   }
 
   return (
@@ -114,17 +114,17 @@ export default function AuthPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             {isSignUp && (
-                 <div className="space-y-2">
-                    <Label htmlFor="displayName">Display Name</Label>
-                    <Input
-                      id="displayName"
-                      type="text"
-                      placeholder="YourPlayerName"
-                      value={displayName}
-                      onChange={e => setDisplayName(e.target.value)}
-                      disabled={isLoading}
-                    />
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="displayName">Display Name</Label>
+                <Input
+                  id="displayName"
+                  type="text"
+                  placeholder="YourPlayerName"
+                  value={displayName}
+                  onChange={e => setDisplayName(e.target.value)}
+                  disabled={isLoading}
+                />
+              </div>
             )}
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
@@ -159,8 +159,10 @@ export default function AuthPage() {
             >
               {isLoading ? (
                 <Loader2 className="animate-spin" />
+              ) : isSignUp ? (
+                'Sign Up'
               ) : (
-                isSignUp ? 'Sign Up' : 'Login'
+                'Login'
               )}
             </Button>
             <Button

@@ -82,7 +82,11 @@ export default function GameOverDialog({
               disabled={isProcessing}
               size="lg"
             >
-              Try Again
+              {isProcessing ? (
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+              ) : (
+                'Try Again'
+              )}
             </Button>
           )}
         </AlertDialogFooter>

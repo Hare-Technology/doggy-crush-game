@@ -140,7 +140,7 @@ export default function Home() {
 
       tempBoard[r1][c1] = { ...tile2, row: r1, col: c1 };
       tempBoard[r2][c2] = { ...tile1, row: r2, col: c2 };
-      
+
       setBoard(tempBoard);
       await delay(300);
 
@@ -151,51 +151,54 @@ export default function Home() {
         setIsProcessing(false);
         return;
       }
-      
+
       setMovesLeft(prev => prev - 1);
       const boardAfterMatches = await processMatchesAndCascades(tempBoard);
-      
+
       let finalBoard = boardAfterMatches;
       while (!checkBoardForMoves(finalBoard)) {
-        toast({ title: "No moves left, reshuffling!"});
+        toast({ title: 'No moves left, reshuffling!' });
         await delay(500);
         let reshuffledBoard = createInitialBoard();
         setBoard(reshuffledBoard);
         await delay(300);
         finalBoard = await processMatchesAndCascades(reshuffledBoard);
       }
-      
+
       setBoard(finalBoard);
       setIsProcessing(false);
     },
     [board, isProcessing, gameState, processMatchesAndCascades, toast]
   );
-    
-  const handleGameOver = useCallback(async (didWin: boolean) => {
-    if (user && score > 0) {
-      setIsProcessing(true);
-      try {
-        await updateUserStats({
+
+  const handleGameOver = useCallback(
+    async (didWin: boolean) => {
+      if (user && score > 0) {
+        setIsProcessing(true);
+        try {
+          await updateUserStats({
             userId: user.uid,
             level,
             score,
             didWin,
-        });
-        toast({
-            title: "Score Saved!",
-            description: "Your progress has been saved to the leaderboard.",
-        });
-      } catch (error) {
-        toast({
-            title: "Sync Error",
-            description: "Could not save your score. Please try again later.",
-            variant: "destructive",
-        });
-      } finally {
-        setIsProcessing(false);
+          });
+          toast({
+            title: 'Score Saved!',
+            description: 'Your progress has been saved to the leaderboard.',
+          });
+        } catch (error) {
+          toast({
+            title: 'Sync Error',
+            description: 'Could not save your score. Please try again later.',
+            variant: 'destructive',
+          });
+        } finally {
+          setIsProcessing(false);
+        }
       }
-    }
-  }, [user, level, score, toast]);
+    },
+    [user, level, score, toast]
+  );
 
   useEffect(() => {
     if (isProcessing || board.length === 0) return;
@@ -212,7 +215,15 @@ export default function Home() {
       setGameState('lose');
       handleGameOver(false);
     }
-  }, [score, movesLeft, targetScore, isProcessing, board.length, highScore, handleGameOver]);
+  }, [
+    score,
+    movesLeft,
+    targetScore,
+    isProcessing,
+    board.length,
+    highScore,
+    handleGameOver,
+  ]);
 
   const handleRestart = useCallback(() => {
     startNewLevel(level, INITIAL_MOVES, targetScore);
@@ -264,7 +275,7 @@ export default function Home() {
       />
       <main className="flex-grow container mx-auto p-4 flex flex-col items-center justify-center">
         <div className="w-full max-w-lg flex items-center justify-center relative">
-           <GameBoard
+          <GameBoard
             board={board}
             onSwap={handleSwap}
             isProcessing={isProcessing}
