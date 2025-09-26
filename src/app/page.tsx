@@ -36,7 +36,7 @@ export default function Home() {
   const [movesLeft, setMovesLeft] = useState(INITIAL_MOVES);
   const [gameState, setGameState] = useState<GameState>('playing');
   const [isProcessing, setIsProcessing] = useState(true);
-  const [isAnimating, setIsAnimating] = new Set<number>();
+  const [isAnimating, setIsAnimating] = useState(new Set<number>());
   const [comboMessage, setComboMessage] = useState<string>('');
   const { toast } = useToast();
   const { user } = useAuth();
@@ -118,7 +118,7 @@ export default function Home() {
       }
       return tempBoard;
     },
-    []
+    [setIsAnimating]
   );
 
   useEffect(() => {
