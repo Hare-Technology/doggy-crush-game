@@ -343,85 +343,76 @@ export default function Home() {
   );
 
   const handleTileClick = useCallback(
-    async (tile: Tile) => {
+    async (tile: Tile): Promise<Board> => {
       if (
         isProcessing ||
         (gameState !== 'playing' && gameState !== 'level_end')
       )
-        return;
+        return board;
 
       if (tile.powerUp) {
         setSelectedTile(null);
         setIsProcessing(true);
 
-        // Don't consume a move if it's the end of level cascade
         if (gameState === 'playing') {
           setMovesLeft(prev => prev - 1);
         }
 
-        let finalBoard: Board;
-
-        if (tile.powerUp === 'bomb') {
-          const { clearedTiles, randomBombTile } = activatePowerUp(board, tile);
+        let currentBoard = board;
+        if (
+          tile.powerUp === 'bomb' ||
+          tile.powerUp === 'column_clear' ||
+          tile.powerUp === 'row_clear'
+        ) {
+          const { clearedTiles } = activatePowerUp(currentBoard, tile);
           setScore(prev => prev + clearedTiles.length * 10);
-          let boardAfterFirstExplosion = await processBoardChanges(board, [
-            ...clearedTiles,
-          ]);
+          currentBoard = await processBoardChanges(currentBoard, clearedTiles);
 
-          if (randomBombTile) {
-            let tempBoardWithNewBomb = boardAfterFirstExplosion.map(row =>
-              row.map(t => {
-                if (t && t.id === randomBombTile.id) {
-                  return { ...t, powerUp: 'bomb' as 'bomb' };
-                }
-                return t;
-              })
-            );
-            setBoard(tempBoardWithNewBomb);
-            await delay(0);
-
-            const currentSecondBombTile = tempBoardWithNewBomb
+          // Handle bomb's second explosion
+          const originalTileData = board.flat().find(t => t?.id === tile.id);
+          if (
+            originalTileData?.powerUp === 'bomb' &&
+            clearedTiles.length > 0
+          ) {
+            const allOtherTiles = currentBoard
               .flat()
-              .find(t => t?.id === randomBombTile.id);
-
-            if (currentSecondBombTile) {
+              .filter(
+                (t): t is Tile =>
+                  t !== null && !clearedTiles.find(ct => ct.id === t.id)
+              );
+            if (allOtherTiles.length > 0) {
+              const randomBombTile =
+                allOtherTiles[
+                  Math.floor(Math.random() * allOtherTiles.length)
+                ];
               const { clearedTiles: secondClearedTiles } = activatePowerUp(
-                tempBoardWithNewBomb,
-                currentSecondBombTile
+                currentBoard,
+                { ...randomBombTile, powerUp: 'bomb' }
               );
               setScore(prev => prev + secondClearedTiles.length * 10);
-              boardAfterFirstExplosion = await processBoardChanges(
-                tempBoardWithNewBomb,
+              currentBoard = await processBoardChanges(
+                currentBoard,
                 secondClearedTiles
               );
             }
           }
-          finalBoard = boardAfterFirstExplosion;
-        } else if (
-          tile.powerUp === 'column_clear' ||
-          tile.powerUp === 'row_clear'
-        ) {
-          const { clearedTiles } = activatePowerUp(board, tile);
-          setScore(prev => prev + clearedTiles.length * 10);
-          finalBoard = await processBoardChanges(board, clearedTiles);
-        } else {
-          finalBoard = board;
         }
 
-        let checkBoard = finalBoard;
+        let finalBoard = currentBoard;
         if (gameState === 'playing') {
-          while (!checkBoardForMoves(checkBoard)) {
+          while (!checkBoardForMoves(finalBoard)) {
             toast({ title: 'No moves left, reshuffling!' });
             await delay(500);
             let reshuffledBoard = createInitialBoard();
             setBoard(reshuffledBoard);
             await delay(300);
-            checkBoard = await processMatchesAndCascades(reshuffledBoard);
+            finalBoard = await processMatchesAndCascades(reshuffledBoard);
           }
         }
-        setBoard(checkBoard);
+
+        setBoard(finalBoard);
         setIsProcessing(false);
-        return;
+        return finalBoard;
       }
 
       if (selectedTile) {
@@ -432,6 +423,7 @@ export default function Home() {
       } else {
         setSelectedTile(tile);
       }
+      return board;
     },
     [
       isProcessing,
@@ -542,34 +534,36 @@ export default function Home() {
   useEffect(() => {
     const runLevelEndCascade = async () => {
       if (gameState !== 'level_end') return;
-
+  
       setIsProcessing(true);
-      const powerUpsOnBoard = board.flat().filter(t => t?.powerUp);
-
-      if (powerUpsOnBoard.length > 0) {
+      let currentBoard = board;
+  
+      // Keep activating powerups until there are no more
+      while (currentBoard.flat().some(t => t?.powerUp)) {
+        const powerUpsOnBoard = currentBoard.flat().filter(t => t?.powerUp);
+  
         for (const tile of powerUpsOnBoard) {
           if (tile) {
-            // Find the current version of the tile on the board before clicking
-            const currentTile = board.flat().find(t => t?.id === tile.id);
+            const currentTile = currentBoard.flat().find(t => t?.id === tile.id);
             if (currentTile) {
-              await handleTileClick(currentTile);
-              await delay(500); // Wait a bit between explosions
+              currentBoard = await handleTileClick(currentTile);
+              await delay(500); 
             }
           }
         }
       }
-
+  
       // Final check for any remaining matches
-      let finalBoard = await processMatchesAndCascades(board);
+      const finalBoard = await processMatchesAndCascades(currentBoard);
       setBoard(finalBoard);
       
       setIsProcessing(false);
       handleGameOver(true);
       setGameState('win');
     };
-
+  
     runLevelEndCascade();
-  }, [gameState, board, handleTileClick, handleGameOver, processMatchesAndCascades]);
+  }, [gameState]);
 
   const handleRestart = useCallback(async () => {
     try {

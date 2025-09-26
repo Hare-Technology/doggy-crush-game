@@ -270,18 +270,6 @@ export const activatePowerUp = (
       }
     }
 
-    // Find a random tile to also turn into a bomb for the second explosion
-    const allOtherTiles = board
-      .flat()
-      .filter(
-        (t): t is Tile =>
-          t !== null && !clearedTiles.has(t) && !t.powerUp
-      );
-
-    if (allOtherTiles.length > 0) {
-      randomBombTile =
-        allOtherTiles[Math.floor(Math.random() * allOtherTiles.length)];
-    }
   } else if (tile.powerUp === 'column_clear') {
     for (let r = 0; r < BOARD_SIZE; r++) {
       const targetTile = board[r][tile.col];
