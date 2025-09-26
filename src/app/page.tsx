@@ -434,14 +434,18 @@ export default function Home() {
         setIsProcessing(true);
         setMovesLeft(prev => prev - 1);
 
-        const { clearedTiles, secondaryExplosionTile } = activatePowerUp(board, tile);
+        const { clearedTiles, secondaryExplosions } = activatePowerUp(board, tile);
         setScore(prev => prev + clearedTiles.length * 10);
         let currentBoard = await processBoardChanges(board, clearedTiles);
 
-        if (secondaryExplosionTile) {
-            const { clearedTiles: secondClearedTiles } = activatePowerUp(currentBoard, secondaryExplosionTile);
+        if (secondaryExplosions && secondaryExplosions.length > 0) {
+          let chainBoard = currentBoard;
+          for (const secondaryTile of secondaryExplosions) {
+            const { clearedTiles: secondClearedTiles } = activatePowerUp(chainBoard, secondaryTile);
             setScore(prev => prev + secondClearedTiles.length * 10);
-            currentBoard = await processBoardChanges(currentBoard, secondClearedTiles);
+            chainBoard = await processBoardChanges(chainBoard, secondClearedTiles);
+          }
+          currentBoard = chainBoard;
         }
 
         while (!checkBoardForMoves(currentBoard)) {
@@ -563,14 +567,19 @@ export default function Home() {
     
     setIsProcessing(true);
 
-    const { clearedTiles, secondaryExplosionTile } = activatePowerUp(board, tile);
+    const { clearedTiles, secondaryExplosions } = activatePowerUp(board, tile);
     setScore(prev => prev + clearedTiles.length * 10);
     let currentBoard = await processBoardChanges(board, clearedTiles);
     
-    if (secondaryExplosionTile) {
-        const { clearedTiles: secondClearedTiles } = activatePowerUp(currentBoard, secondaryExplosionTile);
+    if (secondaryExplosions && secondaryExplosions.length > 0) {
+      let chainBoard = currentBoard;
+      for (const secondaryTile of secondaryExplosions) {
+        // At level end, just clear, don't create more explosions
+        const { clearedTiles: secondClearedTiles } = activatePowerUp(chainBoard, {...secondaryTile, powerUp: 'bomb'});
         setScore(prev => prev + secondClearedTiles.length * 10);
-        currentBoard = await processBoardChanges(currentBoard, secondClearedTiles);
+        chainBoard = await processBoardChanges(chainBoard, secondClearedTiles);
+      }
+      currentBoard = chainBoard;
     }
     
     setBoard(currentBoard);
