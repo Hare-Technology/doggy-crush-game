@@ -253,25 +253,15 @@ export default function Home() {
           })
         );
         
-        setBoard(newBoardWithNulls);
         setIsAnimating(new Set());
-        await delay(100);
+
+        const boardWithNewTiles = fillEmptyTiles(newBoardWithNulls);
+        const { newBoard: boardAfterGravity } = applyGravity(boardWithNewTiles);
         
-        let workingBoard = newBoardWithNulls;
-        let hasEmptyTiles = true;
-        while (hasEmptyTiles) {
-          const { newBoard: boardAfterGravity } = applyGravity(workingBoard);
-          workingBoard = boardAfterGravity;
-          const boardWithNewTiles = fillEmptyTiles(workingBoard);
-          workingBoard = boardWithNewTiles;
-          
-          setBoard(workingBoard);
-          await delay(200);
-
-          hasEmptyTiles = workingBoard.flat().some(t => t === null);
-        }
-
-        tempBoard = workingBoard;
+        setBoard(boardAfterGravity);
+        await delay(300);
+        
+        tempBoard = boardAfterGravity;
       }
 
       if (totalPoints > 0) {
@@ -306,25 +296,16 @@ export default function Home() {
           return tile;
         })
       );
-      setBoard(boardWithNulls);
-      setIsAnimating(new Set());
-      await delay(100);
-
-      let workingBoard = boardWithNulls;
-      let hasEmptyTiles = true;
-      while(hasEmptyTiles) {
-        const { newBoard: boardAfterGravity } = applyGravity(workingBoard);
-        workingBoard = boardAfterGravity;
-        const boardWithNewTiles = fillEmptyTiles(workingBoard);
-        workingBoard = boardWithNewTiles;
-        
-        setBoard(workingBoard);
-        await delay(200);
-
-        hasEmptyTiles = workingBoard.flat().some(t => t === null);
-      }
       
-      const boardAfterCascade = await processMatchesAndCascades(workingBoard);
+      setIsAnimating(new Set());
+
+      const boardWithNewTiles = fillEmptyTiles(boardWithNulls);
+      const { newBoard: boardAfterGravity } = applyGravity(boardWithNewTiles);
+      
+      setBoard(boardAfterGravity);
+      await delay(300);
+      
+      const boardAfterCascade = await processMatchesAndCascades(boardAfterGravity);
       setBoard(boardAfterCascade);
 
       return boardAfterCascade;
@@ -402,6 +383,7 @@ export default function Home() {
 
       if (rainbowTile && otherTile && !otherTile.powerUp) {
         setIsProcessing(true);
+        setMovesLeft(prev => prev - 1);
         
         // Activate rainbow power-up by swapping
         const { clearedTiles } = activatePowerUp(board, rainbowTile, otherTile.type);

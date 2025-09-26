@@ -177,32 +177,61 @@ export const applyGravity = (
 
   for (let col = 0; col < BOARD_SIZE; col++) {
     let emptyRow = BOARD_SIZE - 1;
-    for (let row = BOARD_SIZE - 1; row >= 0; row--) {
-      if (newBoard[row][col]) {
+    for (let row = BOARD_SIZE - 1; row >= -BOARD_SIZE; row--) { // Check above the board as well
+      const tile = row >= 0 ? newBoard[row][col] : null;
+
+      if (tile) {
         if (emptyRow !== row) {
-          const tile = newBoard[row][col]!;
-          newBoard[emptyRow][col] = { ...tile, row: emptyRow };
+          const newRow = emptyRow;
+          // Temporarily create a copy of the tile to update its row
+          const movedTile = { ...tile, row: newRow };
+          // Find the tile in the flat board and update it
+          let originalRowFound = false;
+          for(let r=0; r < BOARD_SIZE; r++){
+              for(let c=0; c<BOARD_SIZE; c++){
+                  if(newBoard[r][c]?.id === tile.id){
+                      newBoard[r][c] = null;
+                      originalRowFound = true;
+                      break;
+                  }
+              }
+              if(originalRowFound) break;
+          }
+          newBoard[newRow][col] = movedTile;
           movedTiles.add(tile.id);
-          newBoard[row][col] = null;
         }
         emptyRow--;
       }
     }
   }
-  return { newBoard, movedTiles };
+
+  const finalBoard: Board = Array.from({ length: BOARD_SIZE }, () => Array(BOARD_SIZE).fill(null));
+  newBoard.flat().forEach(tile => {
+    if (tile && tile.row >= 0 && tile.row < BOARD_SIZE) {
+      finalBoard[tile.row][tile.col] = tile;
+    }
+  });
+
+
+  return { newBoard: finalBoard, movedTiles };
 };
 
 export const fillEmptyTiles = (board: Board): Board => {
   const newBoard = board.map(row => [...row]);
+  let newTileRow = -1;
+
   for (let col = 0; col < BOARD_SIZE; col++) {
-    // Only create new tiles in the top row if there's an empty space
-    if (newBoard[0][col] === null) {
-      newBoard[0][col] = {
-        id: tileIdCounter++,
-        type: getRandomTileType(),
-        row: 0,
-        col,
-      };
+    newTileRow = -1;
+    for (let row = BOARD_SIZE - 1; row >= 0; row--) {
+      if (newBoard[row][col] === null) {
+        newBoard[row][col] = {
+          id: tileIdCounter++,
+          type: getRandomTileType(),
+          row: newTileRow,
+          col,
+        };
+        newTileRow--;
+      }
     }
   }
   return newBoard;

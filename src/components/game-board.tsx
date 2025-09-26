@@ -64,6 +64,7 @@ const Tile: FC<{
     height: `calc(${100 / BOARD_SIZE}% - 4px)`,
     margin: '2px',
     backgroundColor: `hsl(var(--tile-color-${tile.type}))`,
+    transitionTimingFunction: 'ease-out',
   };
 
   if (isShuffling) {
@@ -78,7 +79,7 @@ const Tile: FC<{
     <div
       onClick={onClick}
       className={cn(
-        'absolute rounded-lg flex items-center justify-center cursor-pointer transition-all duration-300 ease-in-out',
+        'absolute rounded-lg flex items-center justify-center cursor-pointer transition-all duration-300',
         'shadow-md',
         isSelected && 'ring-4 ring-offset-2 ring-white z-10 scale-110',
         isAnimating && 'animate-pop',
@@ -112,7 +113,7 @@ const GameBoard: FC<GameBoardProps> = ({
   return (
     <div
       className={cn(
-        'relative bg-primary/20 rounded-xl shadow-inner max-w-lg w-full aspect-square'
+        'relative bg-primary/20 rounded-xl shadow-inner max-w-lg w-full aspect-square overflow-hidden'
       )}
     >
       <style jsx global>{`
