@@ -109,7 +109,7 @@ export const findMatches = (
   }
 
   const matchedTiles = allTiles.filter(
-    t => matches.has(String(t.id))
+    t => !t.powerUp && matches.has(String(t.id))
   );
 
   return { matches: matchedTiles, powerUp };
@@ -206,26 +206,52 @@ export const activatePowerUp = (
   board: Board,
   tile: Tile
 ): { clearedTiles: Tile[] } => {
-  let clearedTiles: Tile[] = [];
-  const { row, col } = tile;
+  const clearedTiles = new Set<Tile>();
 
   // Bomb clears a 3x3 area
   if (tile.powerUp === 'bomb') {
-    for (let r = row - 1; r <= row + 1; r++) {
-      for (let c = col - 1; c <= col + 1; c++) {
+    // 1. Clear 3x3 area around the clicked bomb
+    for (let r = tile.row - 1; r <= tile.row + 1; r++) {
+      for (let c = tile.col - 1; c <= tile.col + 1; c++) {
         if (r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE) {
           const targetTile = board[r][c];
           if (targetTile) {
-             // Do not destroy other powerups
+            // Do not destroy other powerups
             if (targetTile.powerUp && targetTile.id !== tile.id) {
               continue;
             }
-            clearedTiles.push(targetTile);
+            clearedTiles.add(targetTile);
+          }
+        }
+      }
+    }
+
+    // 2. Select a random tile to also explode
+    const allOtherTiles = board
+      .flat()
+      .filter((t): t is Tile => t !== null && t.id !== tile.id && !t.powerUp);
+
+    if (allOtherTiles.length > 0) {
+      const randomTile =
+        allOtherTiles[Math.floor(Math.random() * allOtherTiles.length)];
+
+      // 3. Clear 3x3 area around the random tile
+      for (let r = randomTile.row - 1; r <= randomTile.row + 1; r++) {
+        for (let c = randomTile.col - 1; c <= randomTile.col + 1; c++) {
+          if (r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE) {
+            const targetTile = board[r][c];
+            if (targetTile) {
+              // Do not destroy other powerups
+              if (targetTile.powerUp) {
+                continue;
+              }
+              clearedTiles.add(targetTile);
+            }
           }
         }
       }
     }
   }
 
-  return { clearedTiles };
+  return { clearedTiles: Array.from(clearedTiles) };
 };
