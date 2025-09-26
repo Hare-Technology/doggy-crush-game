@@ -28,7 +28,7 @@ const MemoizedTile: FC<{ tile: TileType | null; onDragStart: (tile: TileType) =>
   }
 
   const emoji = tileEmojiMap[tile.type] || '❓';
-  const bgColor = TILE_COLORS[tile.type as keyof typeof TILE_COLORS] || 'bg-gray-200';
+  const color = TILE_COLORS[tile.type as keyof typeof TILE_COLORS] || '240 10% 3.9%';
 
   return (
     <div
@@ -41,12 +41,13 @@ const MemoizedTile: FC<{ tile: TileType | null; onDragStart: (tile: TileType) =>
       className={cn(
         'w-full h-full aspect-square rounded-lg flex items-center justify-center cursor-grab active:cursor-grabbing transition-all duration-300',
         'transform-gpu hover:scale-105 active:scale-95',
-        bgColor,
-        'shadow-md hover:shadow-lg'
+        'shadow-md hover:shadow-lg',
+        'bg-[hsl(var(--tile-color))]'
       )}
       style={{
         transform: tile ? 'scale(1)' : 'scale(0)',
-      }}
+        '--tile-color': color,
+      } as React.CSSProperties}
     >
       <span className="text-4xl lg:text-5xl drop-shadow-lg">{emoji}</span>
     </div>

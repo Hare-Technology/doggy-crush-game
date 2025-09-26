@@ -7,9 +7,9 @@ export const INITIAL_TARGET_SCORE = 1000;
 export const TILE_TYPES: TileType[] = ['paw', 'bone', 'house', 'ball', 'bowl'];
 
 export const TILE_COLORS: Record<TileType, string> = {
-    paw: 'bg-red-400',
-    bone: 'bg-green-400',
-    house: 'bg-blue-400',
-    ball: 'bg-yellow-400',
-    bowl: 'bg-purple-400',
+    paw: '0 72% 51%', // red
+    bone: '142 76% 36%', // green
+    house: '221 83% 53%', // blue
+    ball: '45 100% 51%', // yellow
+    bowl: '283 81% 51%', // purple
 };
