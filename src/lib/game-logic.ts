@@ -115,23 +115,22 @@ export const findMatches = (
 
   // T-shape and L-shape matches for bombs
   if (matchedTiles.length >= 5 && longestMatch < 5) {
-      // Basic check for intersection point
-      for (const tile of matchedTiles) {
-          const horizontalNeighbors = matchedTiles.filter(t => t.row === tile.row);
-          const verticalNeighbors = matchedTiles.filter(t => t.col === tile.col);
-          if (horizontalNeighbors.length >= 3 && verticalNeighbors.length >= 3) {
-              powerUp = { tile, powerUp: 'bomb' };
-              break;
-          }
+    // Basic check for intersection point
+    for (const tile of matchedTiles) {
+      const horizontalNeighbors = matchedTiles.filter(t => t.row === tile.row);
+      const verticalNeighbors = matchedTiles.filter(t => t.col === tile.col);
+      if (horizontalNeighbors.length >= 3 && verticalNeighbors.length >= 3) {
+        powerUp = { tile, powerUp: 'bomb' };
+        break;
       }
+    }
   }
-
 
   // If a 4-match created a bomb, but a 5-match also exists, don't create the bomb.
   // A 5-match could be reserved for a different power-up later.
   if (longestMatch >= 5) {
-      // For now, 5-match also creates a bomb.
-      // This can be changed later.
+    // For now, 5-match also creates a bomb.
+    // This can be changed later.
   }
 
   return { matches: matchedTiles, powerUp };

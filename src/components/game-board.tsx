@@ -35,7 +35,8 @@ const Tile: FC<{
   isSelected: boolean;
   isAnimating: boolean;
 }> = ({ tile, onClick, isSelected, isAnimating }) => {
-  const Icon = tile.powerUp === 'bomb' ? BombIcon : tileComponentMap[tile.type] || PawIcon;
+  const Icon =
+    tile.powerUp === 'bomb' ? BombIcon : tileComponentMap[tile.type] || PawIcon;
   const top = (tile.row / BOARD_SIZE) * 100;
   const left = (tile.col / BOARD_SIZE) * 100;
 
@@ -66,7 +67,12 @@ const Tile: FC<{
   );
 };
 
-const GameBoard: FC<GameBoardProps> = ({ board, onSwap, isProcessing, isAnimating }) => {
+const GameBoard: FC<GameBoardProps> = ({
+  board,
+  onSwap,
+  isProcessing,
+  isAnimating,
+}) => {
   const [selectedTile, setSelectedTile] = useState<TileType | null>(null);
 
   const handleTileClick = (tile: TileType) => {
@@ -99,7 +105,8 @@ const GameBoard: FC<GameBoardProps> = ({ board, onSwap, isProcessing, isAnimatin
           --tile-color-bowl: 120 85% 80%;
         }
         @keyframes pulse {
-          0%, 100% {
+          0%,
+          100% {
             transform: scale(1);
             filter: brightness(1);
           }
@@ -125,7 +132,7 @@ const GameBoard: FC<GameBoardProps> = ({ board, onSwap, isProcessing, isAnimatin
             width: `${100 / BOARD_SIZE}%`,
             height: `${100 / BOARD_SIZE}%`,
             boxSizing: 'border-box',
-            padding: '1px'
+            padding: '1px',
           }}
         >
           <div className="bg-primary/10 rounded-lg w-full h-full" />
