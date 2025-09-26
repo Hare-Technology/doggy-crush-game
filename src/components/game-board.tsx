@@ -46,21 +46,18 @@ const Tile: FC<{
       className={cn(
         'absolute rounded-lg flex items-center justify-center cursor-pointer transition-all duration-300 ease-in-out',
         'shadow-md',
-        'bg-[hsl(var(--tile-color))]',
         isSelected && 'ring-4 ring-offset-2 ring-white z-10 scale-110',
         isAnimating && 'animate-pop',
         tile.powerUp && 'animate-pulse'
       )}
-      style={
-        {
-          top: `${top}%`,
-          left: `${left}%`,
-          width: `calc(${100 / BOARD_SIZE}% - 4px)`,
-          height: `calc(${100 / BOARD_SIZE}% - 4px)`,
-          margin: '2px',
-          '--tile-color': `var(--tile-color-${tile.type})`,
-        } as React.CSSProperties
-      }
+      style={{
+        top: `${top}%`,
+        left: `${left}%`,
+        width: `calc(${100 / BOARD_SIZE}% - 4px)`,
+        height: `calc(${100 / BOARD_SIZE}% - 4px)`,
+        margin: '2px',
+        backgroundColor: `hsl(var(--tile-color-${tile.type}))`,
+      }}
     >
       <Icon className="drop-shadow-lg w-full h-full flex items-center justify-center" />
     </div>

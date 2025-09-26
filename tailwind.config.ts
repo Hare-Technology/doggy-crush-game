@@ -17,9 +17,7 @@ export default {
     },
     extend: {
       fontFamily: {
-        body: ['Fredoka', 'sans-serif'],
-        headline: ['Fredoka', 'sans-serif'],
-        code: ['monospace'],
+        sans: ['Arial', 'sans-serif'],
       },
       colors: {
         background: 'hsl(var(--background))',
