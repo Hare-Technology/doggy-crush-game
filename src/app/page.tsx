@@ -106,9 +106,13 @@ export default function Home() {
         await delay(300);
         
         let newBoardWithNulls = tempBoard.map(row =>
-          row.map(tile =>
-            tile && matchedTileIds.has(tile.id) ? null : tile
-          )
+          row.map(tile => {
+            if (!tile) return null;
+            if (matchedTileIds.has(tile.id)) {
+              return null;
+            }
+            return tile;
+          })
         );
 
         if (powerUp) {
@@ -157,7 +161,17 @@ export default function Home() {
       await delay(300);
 
       let boardWithNulls = initialBoard.map(row =>
-        row.map(tile => (tile && clearedTileIds.has(tile.id) ? null : tile))
+        row.map(tile => {
+          if (!tile) return null;
+          // Don't clear other powerups
+          if (clearedTileIds.has(tile.id)) {
+            if(tile.powerUp && !clearedTileIds.has(tile.id)) {
+              return tile;
+            }
+            return null;
+          }
+          return tile;
+        })
       );
       setBoard(boardWithNulls);
       setIsAnimating(new Set());
@@ -191,20 +205,26 @@ export default function Home() {
       if (!areTilesAdjacent(tile1, tile2)) return;
 
       setIsProcessing(true);
-      
-      // Prevent swapping with a power-up
-      if (tile1.powerUp || tile2.powerUp) {
+
+      // Prevent swapping with a power-up if one is a bomb
+      if (tile1.powerUp === 'bomb' || tile2.powerUp === 'bomb') {
         setIsProcessing(false);
         return;
       }
+      
 
       setMovesLeft(prev => prev - 1);
 
       let tempBoard = board.map(r => r.map(tile => (tile ? { ...tile } : null)));
       const { row: r1, col: c1 } = tile1;
       const { row: r2, col: c2 } = tile2;
-      tempBoard[r1][c1] = { ...tile2, row: r1, col: c1 };
-      tempBoard[r2][c2] = { ...tile1, row: r2, col: c2 };
+
+      // Store the destination of the tile being swapped in
+      const landingTileForT1 = { ...tile2, row: r1, col: c1 };
+      const landingTileForT2 = { ...tile1, row: r2, col: c2 };
+      
+      tempBoard[r1][c1] = landingTileForT1;
+      tempBoard[r2][c2] = landingTileForT2;
       
       setBoard(tempBoard);
       await delay(300);
@@ -317,11 +337,9 @@ export default function Home() {
     }
 
     if (score >= targetScore) {
-      setIsProcessing(true);
       setGameState('win');
       handleGameOver(true);
     } else if (movesLeft <= 0) {
-      setIsProcessing(true);
       setGameState('lose');
       handleGameOver(false);
     }
@@ -333,7 +351,7 @@ export default function Home() {
     highScore,
     handleGameOver,
     gameState,
-    isProcessing
+    isProcessing,
   ]);
 
   const handleRestart = useCallback(() => {
@@ -343,6 +361,7 @@ export default function Home() {
 
 
   const handleNextLevel = useCallback(async () => {
+    setIsProcessing(true);
     try {
       toast({
         title: 'Designing Next Level...',
