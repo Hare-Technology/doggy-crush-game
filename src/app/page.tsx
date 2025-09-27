@@ -586,7 +586,7 @@ export default function Home() {
             : tile1
           : null;
 
-        if (rainbowTile && otherTile && !otherTile.powerUp) {
+        if (rainbowTile && otherTile) {
           setIsProcessing(true);
           setMovesLeft(prev => prev - 1);
 
@@ -911,7 +911,7 @@ export default function Home() {
 
   const handleNextLevel = useCallback(() => {
     const { nextLevel, newTarget, newMoves } = getNextLevelParams();
-    startNewLevel(nextLevel, newTarget, newMoves);
+    startNewLevel(newLevel, newTarget, newMoves);
   }, [startNewLevel, getNextLevelParams]);
 
   const coinBonuses = useMemo(() => {
