@@ -84,7 +84,7 @@ const Tile: FC<{
     animationClass = 'animate-drop-in';
   } else {
      // Normal transition for swaps and gravity
-     style.transition = 'top 0.7s cubic-bezier(0.34, 1.56, 0.64, 1)';
+     style.transition = 'top 1s cubic-bezier(0.34, 1.56, 0.64, 1)';
   }
 
 

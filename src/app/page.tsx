@@ -385,7 +385,7 @@ export default function Home() {
         const matchedTileIds = new Set(matches.map(t => t.id));
         
         setIsAnimating(prev => new Set([...prev, ...matchedTileIds]));
-        await delay(700);
+        await delay(1000);
 
         let boardWithNulls = boardWithPowerups.map(row =>
           row.map(tile => {
@@ -404,7 +404,7 @@ export default function Home() {
 
         let boardAfterGravity = applyGravity(boardWithNulls);
         setBoard(boardAfterGravity);
-        await delay(700);
+        await delay(1000);
         
         let boardWithNewTiles = fillEmptyTiles(boardAfterGravity);
         setBoard(boardWithNewTiles);
@@ -412,7 +412,7 @@ export default function Home() {
         
         boardAfterGravity = applyGravity(boardWithNewTiles);
         setBoard(boardAfterGravity);
-        await delay(700);
+        await delay(1000);
 
         tempBoard = boardAfterGravity;
       }
@@ -437,7 +437,7 @@ export default function Home() {
       const clearedTileIds = new Set(clearedTiles.map(t => t.id));
       setIsAnimating(prev => new Set([...prev, ...clearedTileIds]));
       playSound('bomb');
-      await delay(700);
+      await delay(1000);
 
       let boardWithNulls = initialBoard.map(row =>
         row.map(tile => {
@@ -456,7 +456,7 @@ export default function Home() {
 
       let boardAfterGravity = applyGravity(boardWithNulls);
       setBoard(boardAfterGravity);
-      await delay(700);
+      await delay(1000);
 
       let boardWithNewTiles = fillEmptyTiles(boardAfterGravity);
       setBoard(boardWithNewTiles);
@@ -464,7 +464,7 @@ export default function Home() {
       
       boardAfterGravity = applyGravity(boardWithNewTiles);
       setBoard(boardAfterGravity);
-      await delay(700);
+      await delay(1000);
 
       const boardAfterCascade = await processMatchesAndCascades(
         boardAfterGravity
@@ -534,13 +534,13 @@ export default function Home() {
       tempBoard[r2][c2] = { ...tile1, row: r2, col: c2 };
       
       setBoard(tempBoard);
-      await delay(700);
+      await delay(1000);
 
       const { matches, matchCount } = findMatches(tempBoard, tile1, tile2);
       
       if (matches.length === 0) {
         setBoard(board); // Swap back
-        await delay(700);
+        await delay(1000);
         setIsProcessing(false);
         return; // Do not decrement moves
       }
