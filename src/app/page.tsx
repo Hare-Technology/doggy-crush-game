@@ -39,15 +39,93 @@ import { useSound } from '@/hooks/use-sound';
 
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 
+type GameStateObject = {
+  board: Board;
+  level: number;
+  score: number;
+  highScore: number;
+  targetScore: number;
+  movesLeft: number;
+  purchasedMoves: number;
+  gameState: GameState;
+  coins: number;
+  highestCombo: number;
+  powerUpsMade: number;
+  winStreak: number;
+  difficultyRating: number;
+  idCounter: number;
+};
+
 export default function Home() {
-  const [board, setBoard] = useState<Board>([]);
-  const [level, setLevel] = useState(1);
-  const [score, setScore] = useState(0);
-  const [highScore, setHighScore] = useState(0);
-  const [targetScore, setTargetScore] = useState(INITIAL_TARGET_SCORE);
-  const [movesLeft, setMovesLeft] = useState(INITIAL_MOVES);
-  const [purchasedMoves, setPurchasedMoves] = useState(0);
-  const [gameState, setGameState] = useState<GameState>('playing');
+  const [currentGameState, setCurrentGameState] = useState<GameStateObject>({
+    board: [],
+    level: 1,
+    score: 0,
+    highScore: 0,
+    targetScore: INITIAL_TARGET_SCORE,
+    movesLeft: INITIAL_MOVES,
+    purchasedMoves: 0,
+    gameState: 'playing',
+    coins: 0,
+    highestCombo: 0,
+    powerUpsMade: 0,
+    winStreak: 0,
+    difficultyRating: 1.0,
+    idCounter: 0,
+  });
+
+  const gameStateRef = useRef(currentGameState);
+  gameStateRef.current = currentGameState;
+
+  const {
+    board,
+    level,
+    score,
+    highScore,
+    targetScore,
+    movesLeft,
+    purchasedMoves,
+    gameState,
+    coins,
+    highestCombo,
+    powerUpsMade,
+    winStreak,
+    difficultyRating,
+  } = currentGameState;
+
+  const setBoard = (newBoard: Board) =>
+    setCurrentGameState(prev => ({ ...prev, board: newBoard }));
+  const setLevel = (newLevel: number) =>
+    setCurrentGameState(prev => ({ ...prev, level: newLevel }));
+  const setScore = (updater: (s: number) => number) =>
+    setCurrentGameState(prev => ({ ...prev, score: updater(prev.score) }));
+  const setHighScore = (newHighScore: number) =>
+    setCurrentGameState(prev => ({ ...prev, highScore: newHighScore }));
+  const setTargetScore = (newTarget: number) =>
+    setCurrentGameState(prev => ({ ...prev, targetScore: newTarget }));
+  const setMovesLeft = (updater: (m: number) => number) =>
+    setCurrentGameState(prev => ({ ...prev, movesLeft: updater(prev.movesLeft) }));
+  const setPurchasedMoves = (updater: (p: number) => number) =>
+    setCurrentGameState(prev => ({ ...prev, purchasedMoves: updater(prev.purchasedMoves) }));
+  const setGameState = (newState: GameState) =>
+    setCurrentGameState(prev => ({ ...prev, gameState: newState }));
+  const setCoins = (updater: (c: number) => number) =>
+    setCurrentGameState(prev => ({ ...prev, coins: updater(prev.coins) }));
+  const setHighestCombo = (updater: (c: number) => number) =>
+    setCurrentGameState(prev => ({ ...prev, highestCombo: updater(prev.highestCombo) }));
+  const setPowerUpsMade = (updater: (p: number) => number) =>
+    setCurrentGameState(prev => ({ ...prev, powerUpsMade: updater(prev.powerUpsMade) }));
+  const setWinStreak = (updater: (w: number) => number) =>
+    setCurrentGameState(prev => ({ ...prev, winStreak: updater(prev.winStreak) }));
+  const setDifficultyRating = (newRating: number) =>
+    setCurrentGameState(prev => ({ ...prev, difficultyRating: newRating }));
+  
+  const updateIdCounter = (value: number) => {
+    setTileIdCounter(value);
+    setCurrentGameState(prev => ({ ...prev, idCounter: value }));
+  }
+
+
   const [isProcessing, setIsProcessing] = useState(true);
   const [selectedTile, setSelectedTile] = useState<Tile | null>(null);
   const [isAnimating, setIsAnimating] = useState(new Set<number>());
@@ -55,18 +133,14 @@ export default function Home() {
   const { toast } = useToast();
   const { user } = useAuth();
   const { playSound } = useSound();
-  const [coins, setCoins] = useState(0);
-  const [highestCombo, setHighestCombo] = useState(0);
-  const [powerUpsMade, setPowerUpsMade] = useState(0);
+
   const [levelStartTime, setLevelStartTime] = useState(0);
   const [levelEndTime, setLevelEndTime] = useState(0);
   const [isShuffling, setIsShuffling] = useState(false);
   const [hintTile, setHintTile] = useState<Tile | null>(null);
   const hintTimer = useRef<NodeJS.Timeout | null>(null);
-  const [winStreak, setWinStreak] = useState(0);
   const [canBuyContinue, setCanBuyContinue] = useState(true);
   const [pendingRainbowPurchase, setPendingRainbowPurchase] = useState(false);
-  const [difficultyRating, setDifficultyRating] = useState(1.0);
 
   const scoreNeeded = useMemo(
     () => Math.max(0, targetScore - score),
@@ -100,20 +174,26 @@ export default function Home() {
   const startNewLevel = useCallback(
     (newLevel: number, newTarget: number, newMoves: number) => {
       resetTileIdCounter();
-      setLevel(newLevel);
-      setMovesLeft(newMoves);
-      setPurchasedMoves(0);
-      setTargetScore(newTarget);
-      setScore(0);
       setGameState('playing');
       setIsProcessing(true);
-      setHighestCombo(0);
-      setPowerUpsMade(0);
       setLevelStartTime(Date.now());
       setLevelEndTime(0);
       setIsShuffling(true);
       setCanBuyContinue(true);
       setPendingRainbowPurchase(false);
+
+      setCurrentGameState(prev => ({
+        ...prev,
+        level: newLevel,
+        movesLeft: newMoves,
+        purchasedMoves: 0,
+        targetScore: newTarget,
+        score: 0,
+        gameState: 'playing',
+        highestCombo: 0,
+        powerUpsMade: 0,
+        idCounter: 0,
+      }));
 
 
       if (
@@ -126,7 +206,7 @@ export default function Home() {
         if (user) {
           saveGameState(user.uid, null); // Clear cloud state
         }
-        setWinStreak(0);
+        setWinStreak(() => 0);
         // Reset difficulty for a brand new game
         setDifficultyRating(1.0);
         if (!user) {
@@ -151,102 +231,78 @@ export default function Home() {
   );
 
   const loadGame = useCallback(async () => {
-    let userCoins = 0;
-    let userDifficulty = 1.0;
     let loadedFromCloud = false;
-    let userHighScore = 0;
-
+  
     if (user) {
       const cloudGameState = await loadGameState(user.uid);
       const userData = await getUserData(user.uid);
-      setCoins(userData.coins);
-      setDifficultyRating(userData.difficultyRating);
-      userHighScore = userData.totalScore;
-      setHighScore(userHighScore);
-
-
+  
       if (cloudGameState) {
         try {
-          setBoard(cloudGameState.board);
-          setLevel(cloudGameState.level);
-          setScore(cloudGameState.score);
-          setMovesLeft(cloudGameState.movesLeft);
-          setTargetScore(cloudGameState.targetScore);
-          setPurchasedMoves(cloudGameState.purchasedMoves || 0);
-          if (typeof cloudGameState.idCounter === 'number') {
-            setTileIdCounter(cloudGameState.idCounter);
-          }
-          if (typeof cloudGameState.winStreak === 'number') {
-            setWinStreak(cloudGameState.winStreak);
-          }
-          setDifficultyRating(cloudGameState.difficultyRating || 1.0);
-          
-          setGameState('playing');
-          setIsProcessing(false);
+          updateIdCounter(cloudGameState.idCounter || 0);
+          setCurrentGameState(prev => ({
+            ...prev,
+            ...cloudGameState,
+            coins: userData.coins,
+            highScore: userData.totalScore,
+            gameState: 'playing',
+          }));
           loadedFromCloud = true;
-          // Successfully loaded from cloud, so we can return.
-          return;
         } catch (e) {
-            console.error("Failed to load cloud game state", e);
-            // Fallback to local or new game
+          console.error("Failed to load cloud game state", e);
         }
+      } else {
+         // If no cloud game, still load user's coins/highscore
+         setCurrentGameState(prev => ({
+            ...prev,
+            coins: userData.coins,
+            highScore: userData.totalScore,
+            difficultyRating: userData.difficultyRating,
+        }));
       }
-    } 
+    }
+  
+    if (loadedFromCloud) {
+        setIsProcessing(false);
+        return;
+    }
     
     // This runs for guests, or for logged-in users if cloud load fails or is empty.
     const savedGame = localStorage.getItem('doggyCrushGameState');
     if (savedGame) { 
       try {
-        const {
-          board,
-          level,
-          score,
-          movesLeft,
-          targetScore,
-          idCounter,
-          coins: savedCoins,
-          winStreak: savedWinStreak,
-          purchasedMoves: savedPurchasedMoves,
-          difficultyRating: savedDifficulty,
-        } = JSON.parse(savedGame);
-
-        setBoard(board);
-        setLevel(level);
-        setScore(score);
-        setMovesLeft(movesLeft);
-        setTargetScore(targetScore);
-        setPurchasedMoves(savedPurchasedMoves || 0);
-        if (typeof idCounter === 'number') {
-          setTileIdCounter(idCounter);
-        }
-        if (typeof savedWinStreak === 'number') {
-          setWinStreak(savedWinStreak);
-        }
+        const parsedState = JSON.parse(savedGame);
+        
+        updateIdCounter(parsedState.idCounter || 0);
 
         // For guests, load everything from local storage
         if (!user) {
             const localCoins = localStorage.getItem('doggyCrushCoins');
-            setCoins(localCoins ? parseInt(localCoins, 10) : 0);
             const localDifficulty = localStorage.getItem('doggyCrushDifficulty');
-            setDifficultyRating(localDifficulty ? parseFloat(localDifficulty) : 1.0);
             const localHighScore = localStorage.getItem('doggyCrushHighScore');
-            setHighScore(localHighScore ? parseInt(localHighScore, 10) : 0);
+            parsedState.coins = localCoins ? parseInt(localCoins, 10) : 0;
+            parsedState.difficultyRating = localDifficulty ? parseFloat(localDifficulty) : 1.0;
+            parsedState.highScore = localHighScore ? parseInt(localHighScore, 10) : 0;
         }
         
-        setGameState('playing');
+        setCurrentGameState(prev => ({ ...prev, ...parsedState, gameState: 'playing' }));
         setIsProcessing(false);
       } catch (e) {
+        console.error("Failed to load local game state", e);
         startNewLevel(1, INITIAL_TARGET_SCORE, INITIAL_MOVES);
       }
     } else {
       // No cloud save and no local save, start a fresh game.
       if (!user) {
         const localCoins = localStorage.getItem('doggyCrushCoins');
-        setCoins(localCoins ? parseInt(localCoins, 10) : 0);
         const localDifficulty = localStorage.getItem('doggyCrushDifficulty');
-        setDifficultyRating(localDifficulty ? parseFloat(localDifficulty) : 1.0);
         const localHighScore = localStorage.getItem('doggyCrushHighScore');
-        setHighScore(localHighScore ? parseInt(localHighScore, 10) : 0);
+        setCurrentGameState(prev => ({
+            ...prev,
+            coins: localCoins ? parseInt(localCoins, 10) : 0,
+            difficultyRating: localDifficulty ? parseFloat(localDifficulty) : 1.0,
+            highScore: localHighScore ? parseInt(localHighScore, 10) : 0,
+        }));
       }
       startNewLevel(1, INITIAL_TARGET_SCORE, INITIAL_MOVES);
     }
@@ -257,39 +313,21 @@ export default function Home() {
   }, [loadGame]);
 
   useEffect(() => {
-    if (gameState === 'playing' && board.length > 0 && !isProcessing) {
-      const stateToSave = {
-        board,
-        level,
-        score,
-        movesLeft,
-        targetScore,
-        idCounter: tileIdCounter,
-        winStreak,
-        purchasedMoves,
-        difficultyRating,
-        coins, // only for local
+    if (gameStateRef.current.gameState === 'playing' && gameStateRef.current.board.length > 0 && !isProcessing) {
+      const {board, idCounter, ...stateToSave} = gameStateRef.current;
+      const serializableState = {
+          ...stateToSave,
+          idCounter: tileIdCounter, // Use the module-level counter
       };
+      
       if (user) {
-        saveGameState(user.uid, stateToSave);
+        saveGameState(user.uid, { ...serializableState, board });
       } else {
-        localStorage.setItem('doggyCrushGameState', JSON.stringify(stateToSave));
+        localStorage.setItem('doggyCrushGameState', JSON.stringify({ ...serializableState, board }));
       }
     }
-  }, [
-    board,
-    level,
-    score,
-    movesLeft,
-    targetScore,
-    gameState,
-    coins,
-    winStreak,
-    purchasedMoves,
-    difficultyRating,
-    user,
-    isProcessing,
-  ]);
+  }, [currentGameState, user, isProcessing]);
+
 
   useEffect(() => {
     if (!user) {
@@ -441,7 +479,7 @@ export default function Home() {
       const spawnLocation = emptyCells[Math.floor(Math.random() * emptyCells.length)];
       
       const newBombId = tileIdCounter + 1000;
-      setTileIdCounter(newBombId + 1);
+      updateIdCounter(newBombId + 1);
 
       tempBoard[spawnLocation.row][spawnLocation.col] = {
         id: newBombId,
@@ -717,13 +755,13 @@ export default function Home() {
     // --- Adjust Difficulty Rating ---
     let difficultyAdjustment = 0;
     if (performanceScore > 80) {
-      difficultyAdjustment = 0.025;
+      difficultyAdjustment = 0.05;
     } else if (performanceScore > 60) {
-      difficultyAdjustment = 0.01;
+      difficultyAdjustment = 0.02;
     } else if (performanceScore < 20) {
-      difficultyAdjustment = -0.05;
+      difficultyAdjustment = -0.1;
     } else if (performanceScore < 40) {
-      difficultyAdjustment = -0.025;
+      difficultyAdjustment = -0.05;
     }
     // Clamp the rating between a min and max
     const newDifficultyRating = Math.max(
@@ -733,15 +771,15 @@ export default function Home() {
     setDifficultyRating(newDifficultyRating);
   
     // --- Calculate Next Level Params based on new rating ---
-    const baseTargetIncrease = 300 + level * 75;
-    const baseMoveAdjustment = 5;
+    const baseTargetIncrease = 250 + level * 50;
+    const baseMoveAdjustment = 8;
   
     const newTarget = Math.round(
       (targetScore + baseTargetIncrease) * newDifficultyRating
     );
     // Inverse relationship for moves: higher rating = fewer moves
     const newMoves = Math.max(
-      12,
+      15,
       Math.round(
         (INITIAL_MOVES - nextLevel + baseMoveAdjustment) / newDifficultyRating
       )
@@ -776,7 +814,7 @@ export default function Home() {
         if (user) {
           saveGameState(user.uid, null); // Clear cloud state on final loss
         }
-        setWinStreak(0);
+        setWinStreak(() => 0);
         setCanBuyContinue(false);
       } else {
         setWinStreak(prev => prev + 1);
@@ -794,7 +832,7 @@ export default function Home() {
         setCoins(prev => prev + coinsEarned);
       } else {
         playSound('lose');
-        setCoins(0); // Reset coins locally on loss
+        setCoins(() => 0); // Reset coins locally on loss
       }
   
       if (user) {
