@@ -52,13 +52,15 @@ export async function getLeaderboard(): Promise<LeaderboardEntry[]> {
     const usersCol = collection(db, 'users');
     const q = query(
       usersCol,
+      where('displayName', '!=', null),
+      orderBy('displayName'),
       orderBy('totalScore', 'desc'),
       limit(10)
     );
     const querySnapshot = await getDocs(q);
     const leaderboardList = querySnapshot.docs.map(doc => ({
       id: doc.id,
-      name: doc.data().displayName || 'Anonymous',
+      name: doc.data().displayName,
       totalScore: doc.data().totalScore || 0,
       highestLevel: doc.data().highestLevel || 1,
       wins: doc.data().wins || 0,
@@ -76,20 +78,28 @@ export function getRealtimeLeaderboard(
   callback: (data: LeaderboardEntry[]) => void
 ): () => void {
   const usersCol = collection(db, 'users');
-  const q = query(usersCol, orderBy('totalScore', 'desc'), limit(10));
+  const q = query(
+    usersCol,
+    where('displayName', '!=', null),
+    orderBy('displayName'),
+    orderBy('totalScore', 'desc'),
+    limit(10)
+  );
 
   const unsubscribe = onSnapshot(
     q,
     querySnapshot => {
-      const leaderboardList = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        name: doc.data().displayName || 'Anonymous',
-        totalScore: doc.data().totalScore || 0,
-        highestLevel: doc.data().highestLevel || 1,
-        wins: doc.data().wins || 0,
-        losses: doc.data().losses || 0,
-        totalCoinsEarned: doc.data().totalCoinsEarned || 0,
-      }));
+      const leaderboardList = querySnapshot.docs
+        .filter(doc => doc.data().displayName) // Double-check to ensure displayName exists
+        .map(doc => ({
+          id: doc.id,
+          name: doc.data().displayName,
+          totalScore: doc.data().totalScore || 0,
+          highestLevel: doc.data().highestLevel || 1,
+          wins: doc.data().wins || 0,
+          losses: doc.data().losses || 0,
+          totalCoinsEarned: doc.data().totalCoinsEarned || 0,
+        }));
       callback(leaderboardList);
     },
     error => {
