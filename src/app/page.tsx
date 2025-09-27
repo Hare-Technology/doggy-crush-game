@@ -347,7 +347,7 @@ export default function Home() {
       let localPowerUpsMade = 0;
 
       while (true) {
-        const { matches, powerUps, matchCount } = findMatches(tempBoard);
+        const { matches, powerUps } = findMatches(tempBoard);
         if (matches.length === 0) break;
 
         cascadeCount++;
@@ -365,31 +365,33 @@ export default function Home() {
         const points = matches.length * 10 * cascadeCount * cascadeCount;
         totalPoints += points;
 
-        const matchedTileIds = new Set(matches.map(t => t.id));
-        
         let boardWithPowerups = tempBoard.map(row =>
           row.map(tile => (tile ? { ...tile } : null))
         );
-        
-        const powerUpTiles = new Set<number>();
+
         if (powerUps.length > 0) {
           localPowerUpsMade += powerUps.length;
           powerUps.forEach(p => {
             const { row, col } = p.tile;
-            if (boardWithPowerups[row][col]) {
-                powerUpTiles.add(p.tile.id);
-                boardWithPowerups[row][col] = { ...p.tile, powerUp: p.powerUp };
+            // Ensure we are applying the powerup to the correct tile on the board
+            const tileToUpdate = boardWithPowerups[row]?.[col];
+            if (tileToUpdate) {
+                tileToUpdate.powerUp = p.powerUp;
             }
           });
         }
         
+        const matchedTileIds = new Set(matches.map(t => t.id));
+        const powerUpTileIds = new Set(powerUps.map(p => p.tile.id));
+        
         setIsAnimating(prev => new Set([...prev, ...matchedTileIds]));
         await delay(500);
 
-        let newBoardWithNulls = boardWithPowerups.map(row =>
+        let boardWithNulls = boardWithPowerups.map(row =>
           row.map(tile => {
             if (!tile) return null;
-            if (matchedTileIds.has(tile.id) && !powerUpTiles.has(tile.id)) {
+            // Clear matched tiles, but not if they just became a power-up
+            if (matchedTileIds.has(tile.id) && !powerUpTileIds.has(tile.id)) {
               return null;
             }
             return tile;
@@ -398,7 +400,8 @@ export default function Home() {
         
         setIsAnimating(new Set());
 
-        const boardAfterGravity = applyGravity(fillEmptyTiles(newBoardWithNulls));
+        const boardWithNewTiles = fillEmptyTiles(boardWithNulls);
+        const boardAfterGravity = applyGravity(boardWithNewTiles);
         
         setBoard(boardAfterGravity);
         await delay(700);
@@ -442,8 +445,8 @@ export default function Home() {
       setIsAnimating(new Set());
 
       let boardWithNewTiles = fillEmptyTiles(boardWithNulls);
-
       const boardAfterGravity = applyGravity(boardWithNewTiles);
+
 
       setBoard(boardAfterGravity);
       await delay(700);

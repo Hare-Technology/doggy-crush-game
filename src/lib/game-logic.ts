@@ -1,11 +1,4 @@
 
-
-
-
-
-
-
-
 import { BOARD_SIZE, TILE_TYPES } from './constants';
 import type { Board, Tile, PowerUpType, TileType as TileTypeEnum } from './types';
 
@@ -70,10 +63,12 @@ export const findMatches = (
   powerUps: { tile: Tile; powerUp: PowerUpType }[];
   matchCount: number;
 } => {
-  const horizontalMatches: Tile[][] = [];
-  const verticalMatches: Tile[][] = [];
+  const allMatches = new Set<Tile>();
+  const powerUps: { tile: Tile; powerUp: PowerUpType }[] = [];
+  const processedForPowerUp = new Set<number>();
 
-  // Find horizontal matches
+  // Find all horizontal and vertical matches
+  const horizontalMatches: Tile[][] = [];
   for (let row = 0; row < BOARD_SIZE; row++) {
     for (let col = 0; col < BOARD_SIZE - 2; ) {
       const tile = board[row][col];
@@ -96,7 +91,7 @@ export const findMatches = (
     }
   }
 
-  // Find vertical matches
+  const verticalMatches: Tile[][] = [];
   for (let col = 0; col < BOARD_SIZE; col++) {
     for (let row = 0; row < BOARD_SIZE - 2; ) {
       const tile = board[row][col];
@@ -118,56 +113,82 @@ export const findMatches = (
       }
     }
   }
-  
-  const allFoundMatches = [...horizontalMatches, ...verticalMatches];
-  const allMatches = new Set<Tile>();
-  const powerUps: { tile: Tile; powerUp: PowerUpType }[] = [];
-  const processedForPowerUp = new Set<number>();
 
   const getSwappedTileInMatch = (match: Tile[]): Tile | undefined => {
     if (!swappedTile1 && !swappedTile2) return undefined;
-    // Find the tile on the current board that has the ID of one of the swapped tiles
-    return match.find(
-      tile =>
-        tile.id === swappedTile1?.id || tile.id === swappedTile2?.id
-    );
+    
+    // Find the tile on the current board that corresponds to one of the original swapped tiles
+    const swappedTile1OnBoard = swappedTile1 ? board[swappedTile1.row]?.[swappedTile1.col] : undefined;
+    const swappedTile2OnBoard = swappedTile2 ? board[swappedTile2.row]?.[swappedTile2.col] : undefined;
+
+    if (swappedTile1OnBoard && match.some(t => t.id === swappedTile1OnBoard.id)) {
+        return swappedTile1OnBoard;
+    }
+    if (swappedTile2OnBoard && match.some(t => t.id === swappedTile2OnBoard.id)) {
+        return swappedTile2OnBoard;
+    }
+    return undefined;
   };
-  
-  // L and T shapes -> rainbow
+
+  // Process intersections first (T and L shapes for Rainbow)
   for (const hMatch of horizontalMatches) {
     for (const vMatch of verticalMatches) {
       const intersection = hMatch.find(ht => vMatch.some(vt => vt.id === ht.id));
       if (intersection && !processedForPowerUp.has(intersection.id)) {
-        const fullMatch = new Set([...hMatch, ...vMatch]);
-        fullMatch.forEach(t => processedForPowerUp.add(t.id));
+        const combinedMatch = new Set([...hMatch, ...vMatch]);
+        combinedMatch.forEach(t => {
+          allMatches.add(t);
+          processedForPowerUp.add(t.id);
+        });
         powerUps.push({ tile: intersection, powerUp: 'rainbow' });
       }
     }
   }
 
-  // 5-in-a-row -> bomb
+  const allFoundMatches = [...horizontalMatches, ...verticalMatches];
+
+  // Process 5-in-a-row for Bombs
   for (const match of allFoundMatches) {
-    if (match.length >= 5 && !match.some(t => processedForPowerUp.has(t.id))) {
-      match.forEach(t => processedForPowerUp.add(t.id));
-      const powerUpTile = getSwappedTileInMatch(match) || match[Math.floor(match.length / 2)];
-      powerUps.push({ tile: powerUpTile, powerUp: 'bomb' });
+    if (match.length >= 5) {
+      const isProcessed = match.some(t => processedForPowerUp.has(t.id));
+      if (!isProcessed) {
+        match.forEach(t => {
+          allMatches.add(t);
+          processedForPowerUp.add(t.id);
+        });
+        const powerUpTile = getSwappedTileInMatch(match) || match[Math.floor(match.length / 2)];
+        powerUps.push({ tile: powerUpTile, powerUp: 'bomb' });
+      }
     }
   }
 
-  // 4-in-a-row -> line clear
+  // Process 4-in-a-row for Line Clears
   for (const match of allFoundMatches) {
-    if (match.length === 4 && !match.some(t => processedForPowerUp.has(t.id))) {
-      match.forEach(t => processedForPowerUp.add(t.id));
-      const powerUpTile = getSwappedTileInMatch(match) || match[Math.floor(match.length / 2)];
-      const isHorizontal = match[0].row === match[1].row;
-      powerUps.push({
-        tile: powerUpTile,
-        powerUp: isHorizontal ? 'row_clear' : 'column_clear',
-      });
+    if (match.length === 4) {
+      const isProcessed = match.some(t => processedForPowerUp.has(t.id));
+      if (!isProcessed) {
+        match.forEach(t => {
+          allMatches.add(t);
+          processedForPowerUp.add(t.id);
+        });
+        const powerUpTile = getSwappedTileInMatch(match) || match[Math.floor(match.length / 2)];
+        const isHorizontal = match[0].row === match[1].row;
+        powerUps.push({
+          tile: powerUpTile,
+          powerUp: isHorizontal ? 'row_clear' : 'column_clear',
+        });
+      }
     }
   }
 
-  allFoundMatches.forEach(match => match.forEach(t => allMatches.add(t)));
+  // Add all remaining regular matches
+  allFoundMatches.forEach(match => {
+    match.forEach(t => {
+      if (!processedForPowerUp.has(t.id)) {
+        allMatches.add(t);
+      }
+    });
+  });
 
   return { matches: Array.from(allMatches), powerUps, matchCount: allFoundMatches.length };
 };
@@ -186,12 +207,22 @@ export const applyGravity = (
         columnTiles.push(board[row][col]!);
       }
     }
+     // Also check for tiles "above" the board (negative rows)
+    for (let row = -1; row > -BOARD_SIZE * 2; row--) {
+       const tile = board[row]?.[col];
+       if(tile) {
+         columnTiles.unshift(tile);
+       }
+    }
+
 
     let newRowIndex = BOARD_SIZE - 1;
     for (let i = columnTiles.length - 1; i >= 0; i--) {
+      if (newRowIndex >= 0) {
         const tile = columnTiles[i];
         newBoard[newRowIndex][col] = { ...tile, row: newRowIndex, col };
         newRowIndex--;
+      }
     }
   }
 
@@ -199,34 +230,36 @@ export const applyGravity = (
 };
 
 
-export const fillEmptyTiles = (
-  board: Board
-): Board => {
+export const fillEmptyTiles = (board: Board): Board => {
   const newBoard = board.map(row => [...row]);
-  
-  for (let row = 0; row < BOARD_SIZE; row++) {
-    for (let col = 0; col < BOARD_SIZE; col++) {
+  let newTileRow = -1; // Start creating new tiles above the board
+
+  for (let col = 0; col < BOARD_SIZE; col++) {
+    let emptySpaces = 0;
+    for (let row = BOARD_SIZE - 1; row >= 0; row--) {
       if (newBoard[row][col] === null) {
-        const exclude: string[] = [];
-        // Check left for horizontal match
-        if (col >= 2 && newBoard[row][col - 1]?.type === newBoard[row][col - 2]?.type) {
-            exclude.push(newBoard[row][col - 1]!.type);
-        }
-        // Check below for vertical match from already filled tiles in this pass
-        if (row >= 2 && newBoard[row - 1][col]?.type === newBoard[row - 2][col]?.type) {
-            exclude.push(newBoard[row - 1][col]!.type);
-        }
-        
-        newBoard[row][col] = {
-          id: tileIdCounter++,
-          type: getRandomTileType(exclude),
-          row, 
-          col,
-        };
+        emptySpaces++;
       }
     }
-  }
 
+    for (let i = 0; i < emptySpaces; i++) {
+        if (!newBoard[newTileRow]) {
+            newBoard[newTileRow] = Array(BOARD_SIZE).fill(null);
+        }
+        
+        // This logic can be simpler as it doesn't need to check for matches
+        // because the tiles are off-screen. The initial board creation ensures no starting matches.
+        newBoard[newTileRow][col] = {
+            id: tileIdCounter++,
+            type: getRandomTileType(),
+            row: newTileRow,
+            col: col,
+        };
+        newTileRow--;
+    }
+    // Reset for the next column
+    newTileRow = -1;
+  }
   return newBoard;
 };
 
