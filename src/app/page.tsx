@@ -466,9 +466,9 @@ export default function Home() {
   const handleTileClick = useCallback(
     async (tile: Tile) => {
       if (isProcessing || gameState !== 'playing') return;
-
+  
       resetHintTimer();
-
+  
       if (pendingRainbowPurchase) {
         if (tile.powerUp) {
           toast({
@@ -478,20 +478,23 @@ export default function Home() {
           });
           return;
         }
-
+  
         setIsProcessing(true);
         setPendingRainbowPurchase(false);
         setCoins(prev => prev - 300);
-
+  
         toast({
           title: 'Power-up Activated!',
           description: `Rainbow cleared all ${tile.type}s.`,
         });
-
-        const { clearedTiles } = activatePowerUp(board, tile, tile.type);
+        
+        // Create a temporary rainbow tile to activate
+        const rainbowTile: Tile = { ...tile, powerUp: 'rainbow' };
+  
+        const { clearedTiles } = activatePowerUp(board, rainbowTile, tile.type);
         setScore(prev => prev + clearedTiles.length * 10);
         let currentBoard = await processBoardChanges(board, clearedTiles);
-
+  
         while (!checkBoardForMoves(currentBoard)) {
           toast({ title: 'No moves left, reshuffling!' });
           await delay(700);
@@ -502,17 +505,16 @@ export default function Home() {
           setIsShuffling(false);
           currentBoard = await processMatchesAndCascades(reshuffledBoard);
         }
-
+  
         setBoard(currentBoard);
         setIsProcessing(false);
         return;
       }
-
-
+  
       // Power-ups that activate on click DO NOT use a move
       if (tile.powerUp && !selectedTile) {
         setIsProcessing(true);
-
+  
         const { clearedTiles, secondaryExplosions, spawnBomb } = activatePowerUp(
           board,
           tile,
@@ -524,12 +526,12 @@ export default function Home() {
           board,
           clearedTiles
         );
-
+  
         // Handle the secondary bomb spawn
         if(spawnBomb) {
           currentBoard = await handleBombChainReaction(currentBoard);
         }
-
+  
         if (secondaryExplosions && secondaryExplosions.length > 0) {
           let chainBoard = currentBoard;
           for (const secondaryTile of secondaryExplosions) {
@@ -563,22 +565,22 @@ export default function Home() {
         setIsProcessing(false);
         return;
       }
-
+  
       if (selectedTile) {
         // This is the second tile selection
         const tile1 = selectedTile;
         const tile2 = tile;
         setSelectedTile(null);
-
+  
         if (tile1.id === tile2.id) {
           return; // Clicked the same tile twice
         }
-
+  
         if (!areTilesAdjacent(tile1, tile2)) {
           setSelectedTile(tile); // Select the new tile instead
           return;
         }
-
+  
         // Check for rainbow swap
         const rainbowTile =
           tile1.powerUp === 'rainbow'
@@ -591,11 +593,11 @@ export default function Home() {
             ? tile2
             : tile1
           : null;
-
+  
         if (rainbowTile && otherTile) {
           setIsProcessing(true);
           setMovesLeft(prev => prev - 1);
-
+  
           // Activate rainbow power-up by swapping
           const { clearedTiles } = activatePowerUp(
             board,
@@ -604,7 +606,7 @@ export default function Home() {
           );
           setScore(prev => prev + clearedTiles.length * 10);
           let currentBoard = await processBoardChanges(board, clearedTiles);
-
+  
           while (!checkBoardForMoves(currentBoard)) {
             toast({ title: 'No moves left, reshuffling!' });
             await delay(700);
@@ -615,7 +617,7 @@ export default function Home() {
             setIsShuffling(false);
             currentBoard = await processMatchesAndCascades(reshuffledBoard);
           }
-
+  
           setBoard(currentBoard);
           setIsProcessing(false);
         } else {
@@ -623,7 +625,7 @@ export default function Home() {
           await handleRegularSwap(tile1, tile2);
         }
       } else {
-        // It's a regular tile or a rainbow tile, set it as selected
+        // It's a regular tile or a powerup, set it as selected
         setSelectedTile(tile);
       }
     },
@@ -705,7 +707,9 @@ export default function Home() {
   const handleGameOver = useCallback(
     async (didWin: boolean, newDifficultyRating?: number) => {
       const endTime = Date.now();
-      setLevelEndTime(endTime);
+      if (levelEndTime === 0) {
+        setLevelEndTime(endTime);
+      }
       if (!didWin) {
         localStorage.removeItem('doggyCrushGameState');
         setWinStreak(0);
@@ -766,6 +770,7 @@ export default function Home() {
       powerUpsMade,
       purchasedMoves,
       difficultyRating,
+      levelEndTime,
     ]
   );
   
@@ -1032,5 +1037,3 @@ export default function Home() {
     </div>
   );
 }
-
-    
