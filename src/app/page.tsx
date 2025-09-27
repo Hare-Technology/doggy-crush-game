@@ -340,14 +340,14 @@ export default function Home() {
 
 
   const processMatchesAndCascades = useCallback(
-    async (currentBoard: Board, tile1?: Tile, tile2?: Tile) => {
+    async (currentBoard: Board, initialCombo: number = 0) => {
       let tempBoard = currentBoard;
-      let cascadeCount = 0;
+      let cascadeCount = initialCombo;
       let totalPoints = 0;
       let localPowerUpsMade = 0;
 
       while (true) {
-        const { matches, powerUps } = findMatches(tempBoard, tile1, tile2);
+        const { matches, powerUps, matchCount } = findMatches(tempBoard);
         if (matches.length === 0) break;
 
         cascadeCount++;
@@ -365,29 +365,31 @@ export default function Home() {
         const points = matches.length * 10 * cascadeCount * cascadeCount;
         totalPoints += points;
 
+        const matchedTileIds = new Set(matches.map(t => t.id));
+        
         let boardWithPowerups = tempBoard.map(row =>
           row.map(tile => (tile ? { ...tile } : null))
         );
+        
+        const powerUpTiles = new Set<number>();
         if (powerUps.length > 0) {
           localPowerUpsMade += powerUps.length;
           powerUps.forEach(p => {
             const { row, col } = p.tile;
             if (boardWithPowerups[row][col]) {
-              boardWithPowerups[row][col] = { ...p.tile, powerUp: p.powerUp };
+                powerUpTiles.add(p.tile.id);
+                boardWithPowerups[row][col] = { ...p.tile, powerUp: p.powerUp };
             }
           });
         }
-
-        const matchedTileIds = new Set(matches.map(t => t.id));
+        
         setIsAnimating(prev => new Set([...prev, ...matchedTileIds]));
         await delay(500);
 
         let newBoardWithNulls = boardWithPowerups.map(row =>
           row.map(tile => {
             if (!tile) return null;
-            // Check if the tile is part of a power-up creation. If so, don't remove it yet.
-            const isPowerUpTile = powerUps.some(p => p.tile.row === tile.row && p.tile.col === tile.col);
-            if (matchedTileIds.has(tile.id) && !isPowerUpTile) {
+            if (matchedTileIds.has(tile.id) && !powerUpTiles.has(tile.id)) {
               return null;
             }
             return tile;
@@ -396,9 +398,8 @@ export default function Home() {
         
         setIsAnimating(new Set());
 
-        let boardWithNewTiles = fillEmptyTiles(newBoardWithNulls);
-        const { newBoard: boardAfterGravity } = applyGravity(boardWithNewTiles);
-
+        const boardAfterGravity = applyGravity(fillEmptyTiles(newBoardWithNulls));
+        
         setBoard(boardAfterGravity);
         await delay(700);
 
@@ -442,7 +443,7 @@ export default function Home() {
 
       let boardWithNewTiles = fillEmptyTiles(boardWithNulls);
 
-      const { newBoard: boardAfterGravity } = applyGravity(boardWithNewTiles);
+      const boardAfterGravity = applyGravity(boardWithNewTiles);
 
       setBoard(boardAfterGravity);
       await delay(700);
@@ -510,17 +511,14 @@ export default function Home() {
       let tempBoard = board.map(r => r.map(tile => (tile ? { ...tile } : null)));
       const { row: r1, col: c1 } = tile1;
       const { row: r2, col: c2 } = tile2;
+
+      tempBoard[r1][c1] = { ...tile2, row: r1, col: c1 };
+      tempBoard[r2][c2] = { ...tile1, row: r2, col: c2 };
       
-      const tile1OnBoard = {...tile2, row:r1, col: c1};
-      const tile2OnBoard = {...tile1, row:r2, col: c2};
-
-      tempBoard[r1][c1] = tile1OnBoard;
-      tempBoard[r2][c2] = tile2OnBoard;
-
       setBoard(tempBoard);
       await delay(500);
 
-      const { matches, powerUps } = findMatches(tempBoard, tile1OnBoard, tile2OnBoard);
+      const { matches, matchCount } = findMatches(tempBoard, tile1, tile2);
       
       if (matches.length === 0) {
         setBoard(board); // Swap back
@@ -531,7 +529,15 @@ export default function Home() {
 
       setMovesLeft(prev => prev - 1); // Decrement moves only on a valid swap
 
-      const boardAfterMatches = await processMatchesAndCascades(tempBoard, tile1OnBoard, tile2OnBoard);
+      let initialCombo = 0;
+      if (matchCount > 1) {
+        initialCombo = 1;
+        playSound('combo');
+        setComboMessage('Combo!');
+        setTimeout(() => setComboMessage(''), 1900);
+      }
+
+      const boardAfterMatches = await processMatchesAndCascades(tempBoard, initialCombo);
 
       let finalBoard = boardAfterMatches;
       while (!checkBoardForMoves(finalBoard)) {
@@ -547,7 +553,7 @@ export default function Home() {
       setBoard(finalBoard);
       setIsProcessing(false);
     },
-    [board, processMatchesAndCascades, toast]
+    [board, processMatchesAndCascades, toast, playSound]
   );
 
   const handleTileClick = useCallback(
