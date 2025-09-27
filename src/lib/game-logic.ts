@@ -202,19 +202,13 @@ export const applyGravity = (
 
   for (let col = 0; col < BOARD_SIZE; col++) {
     const columnTiles: Tile[] = [];
-    for (let row = 0; row < BOARD_SIZE; row++) {
-      if (board[row][col]) {
-        columnTiles.push(board[row][col]!);
+    // Start scanning from well above the board to catch all generated tiles
+    for (let row = -BOARD_SIZE * 2; row < BOARD_SIZE; row++) {
+      const tile = board[row]?.[col];
+      if (tile) {
+        columnTiles.push(tile);
       }
     }
-     // Also check for tiles "above" the board (negative rows)
-    for (let row = -1; row > -BOARD_SIZE * 2; row--) {
-       const tile = board[row]?.[col];
-       if(tile) {
-         columnTiles.unshift(tile);
-       }
-    }
-
 
     let newRowIndex = BOARD_SIZE - 1;
     for (let i = columnTiles.length - 1; i >= 0; i--) {
@@ -232,33 +226,41 @@ export const applyGravity = (
 
 export const fillEmptyTiles = (board: Board): Board => {
   const newBoard = board.map(row => [...row]);
-  let newTileRow = -1; // Start creating new tiles above the board
-
+  
   for (let col = 0; col < BOARD_SIZE; col++) {
-    let emptySpaces = 0;
-    for (let row = BOARD_SIZE - 1; row >= 0; row--) {
+    let emptyCount = 0;
+    for (let row = 0; row < BOARD_SIZE; row++) {
       if (newBoard[row][col] === null) {
-        emptySpaces++;
+        emptyCount++;
       }
     }
 
-    for (let i = 0; i < emptySpaces; i++) {
-        if (!newBoard[newTileRow]) {
-            newBoard[newTileRow] = Array(BOARD_SIZE).fill(null);
+    for (let i = 1; i <= emptyCount; i++) {
+        const newRow = -i;
+        if (!newBoard[newRow]) {
+            newBoard[newRow] = Array(BOARD_SIZE).fill(null);
         }
         
-        // This logic can be simpler as it doesn't need to check for matches
-        // because the tiles are off-screen. The initial board creation ensures no starting matches.
-        newBoard[newTileRow][col] = {
+        let tileType: (typeof TILE_TYPES)[number];
+        const exclude: string[] = [];
+
+        // Check potential match with the tile that will be below it after gravity
+        if (i === emptyCount) { // This is the tile that will land at the top of the column
+          const tileBelow = newBoard[0]?.[col];
+          if (newBoard[1]?.[col]?.type === tileBelow?.type) {
+             exclude.push(tileBelow.type);
+          }
+        }
+        
+        tileType = getRandomTileType(exclude);
+        
+        newBoard[newRow][col] = {
             id: tileIdCounter++,
-            type: getRandomTileType(),
-            row: newTileRow,
+            type: tileType,
+            row: newRow,
             col: col,
         };
-        newTileRow--;
     }
-    // Reset for the next column
-    newTileRow = -1;
   }
   return newBoard;
 };
