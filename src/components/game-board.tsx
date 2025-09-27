@@ -85,7 +85,7 @@ const Tile: FC<{
   }
   
   // Always apply transition for gravity and swaps
-  style.transition = 'top 1s cubic-bezier(0.34, 1.56, 0.64, 1), left 0.5s ease-out';
+  style.transition = 'top 1.2s cubic-bezier(0.34, 1.56, 0.64, 1), left 0.7s ease-out';
 
   return (
     <div
@@ -121,7 +121,6 @@ const GameBoard: FC<GameBoardProps> = ({
 
   const allTiles = board.flat().filter(Boolean) as TileType[];
   const stableTileIds = useRef(new Set<number>());
-  const currentTileIds = new Set(allTiles.map(t => t.id));
 
   useEffect(() => {
     // When not processing, it means animations are done and the board is stable.

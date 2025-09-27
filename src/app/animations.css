@@ -87,6 +87,6 @@
 }
 
 .animate-drop-in {
-  animation: drop-in 1s forwards;
+  animation: drop-in 1.2s forwards;
   animation-delay: var(--delay);
 }
