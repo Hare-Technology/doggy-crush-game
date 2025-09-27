@@ -64,22 +64,16 @@
   animation: flash 2s ease-in-out infinite;
 }
 
-@keyframes drop-in {
-  0% {
-    transform: translateY(calc(var(--from-y) - var(--to-y)));
+@keyframes fall {
+  from {
+    transform: translateY(-100%);
   }
-  70% {
-    transform: translateY(0);
-  }
-  85% {
-    transform: translateY(-8px);
-  }
-  100% {
+  to {
     transform: translateY(0);
   }
 }
 
 .animate-drop-in {
-  animation: drop-in 1s ease-out forwards;
+  animation: fall 0.5s ease-out forwards;
   animation-delay: var(--delay);
 }

@@ -385,7 +385,7 @@ export default function Home() {
         const matchedTileIds = new Set(matches.map(t => t.id));
         
         setIsAnimating(prev => new Set([...prev, ...matchedTileIds]));
-        await delay(700);
+        await delay(500);
 
         let boardWithNulls = boardWithPowerups.map(row =>
           row.map(tile => {
@@ -404,7 +404,7 @@ export default function Home() {
 
         let boardAfterGravity = applyGravity(boardWithNulls);
         setBoard(boardAfterGravity);
-        await delay(1000);
+        await delay(500);
         
         let boardWithNewTiles = fillEmptyTiles(boardAfterGravity);
         setBoard(boardWithNewTiles);
@@ -412,7 +412,7 @@ export default function Home() {
         
         boardAfterGravity = applyGravity(boardWithNewTiles);
         setBoard(boardAfterGravity);
-        await delay(1000);
+        await delay(500);
 
         tempBoard = boardAfterGravity;
       }
@@ -437,7 +437,7 @@ export default function Home() {
       const clearedTileIds = new Set(clearedTiles.map(t => t.id));
       setIsAnimating(prev => new Set([...prev, ...clearedTileIds]));
       playSound('bomb');
-      await delay(700);
+      await delay(500);
 
       let boardWithNulls = initialBoard.map(row =>
         row.map(tile => {
@@ -456,7 +456,7 @@ export default function Home() {
 
       let boardAfterGravity = applyGravity(boardWithNulls);
       setBoard(boardAfterGravity);
-      await delay(1000);
+      await delay(500);
 
       let boardWithNewTiles = fillEmptyTiles(boardAfterGravity);
       setBoard(boardWithNewTiles);
@@ -464,7 +464,7 @@ export default function Home() {
       
       boardAfterGravity = applyGravity(boardWithNewTiles);
       setBoard(boardAfterGravity);
-      await delay(1000);
+      await delay(500);
 
       const boardAfterCascade = await processMatchesAndCascades(
         boardAfterGravity
