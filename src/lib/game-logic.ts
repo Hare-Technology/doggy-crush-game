@@ -345,8 +345,9 @@ export const activatePowerUp = (
       if (targetTile) {
         if (targetTile.powerUp && targetTile.id !== tile.id) {
           secondaryExplosions.push(targetTile);
+        } else {
+          clearedTilesMap.set(targetTile.id, targetTile);
         }
-        clearedTilesMap.set(targetTile.id, targetTile);
       }
     }
   } else if (tile.powerUp === 'row_clear') {
@@ -355,8 +356,9 @@ export const activatePowerUp = (
       if (targetTile) {
          if (targetTile.powerUp && targetTile.id !== tile.id) {
           secondaryExplosions.push(targetTile);
+        } else {
+          clearedTilesMap.set(targetTile.id, targetTile);
         }
-        clearedTilesMap.set(targetTile.id, targetTile);
       }
     }
   } else if (tile.powerUp === 'rainbow' || targetType) {
