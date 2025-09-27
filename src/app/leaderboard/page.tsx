@@ -16,8 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { getLeaderboard } from '@/lib/firestore';
 import type { LeaderboardEntry } from '@/lib/firestore';
 import { Trophy, Coins, Loader2 } from 'lucide-react';
 
@@ -26,34 +25,24 @@ export default function LeaderboardPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setLoading(true);
-    const usersCol = collection(db, 'users');
-    const q = query(
-      usersCol,
-      orderBy('totalScore', 'desc'),
-      limit(10)
-    );
+    const fetchLeaderboard = async () => {
+      setLoading(true);
+      try {
+        const data = await getLeaderboard();
+        setLeaderboardData(data);
+      } catch (error) {
+        console.error("Error fetching leaderboard:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const leaderboardList = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        name: doc.data().displayName || 'Anonymous',
-        totalScore: doc.data().totalScore || 0,
-        highestLevel: doc.data().highestLevel || 1,
-        wins: doc.data().wins || 0,
-        losses: doc.data().losses || 0,
-        totalCoinsEarned: doc.data().totalCoinsEarned || 0,
-      }));
-      
-      setLeaderboardData(leaderboardList);
-      setLoading(false);
-    }, (error) => {
-      console.error("Error fetching real-time leaderboard. You may need to create a Firestore index. Check the browser console for a link to create it.", error);
-      setLoading(false);
-    });
+    fetchLeaderboard(); // Initial fetch
+
+    const intervalId = setInterval(fetchLeaderboard, 30000); // Fetch every 30 seconds
 
     // Cleanup subscription on component unmount
-    return () => unsubscribe();
+    return () => clearInterval(intervalId);
   }, []);
 
   return (
