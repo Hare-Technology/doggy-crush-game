@@ -166,8 +166,8 @@ export async function setUserDisplayName(
   }
 }
 
-export async function getUserData(userId: string): Promise<{coins: number, difficultyRating: number}> {
-    if (!userId) return { coins: 0, difficultyRating: 1.0 };
+export async function getUserData(userId: string): Promise<{coins: number, difficultyRating: number, totalScore: number}> {
+    if (!userId) return { coins: 0, difficultyRating: 1.0, totalScore: 0 };
     const userRef = doc(db, 'users', userId);
     try {
       const userDoc = await getDoc(userRef);
@@ -176,12 +176,13 @@ export async function getUserData(userId: string): Promise<{coins: number, diffi
         return {
           coins: data.coins || 0,
           difficultyRating: data.difficultyRating || 1.0,
+          totalScore: data.totalScore || 0,
         };
       }
-      return { coins: 0, difficultyRating: 1.0 };
+      return { coins: 0, difficultyRating: 1.0, totalScore: 0 };
     } catch (error) {
       console.error('Error getting user data:', error);
-      return { coins: 0, difficultyRating: 1.0 };
+      return { coins: 0, difficultyRating: 1.0, totalScore: 0 };
     }
   }
 

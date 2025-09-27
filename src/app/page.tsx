@@ -154,9 +154,17 @@ export default function Home() {
     let userCoins = 0;
     let userDifficulty = 1.0;
     let loadedFromCloud = false;
+    let userHighScore = 0;
 
     if (user) {
       const cloudGameState = await loadGameState(user.uid);
+      const userData = await getUserData(user.uid);
+      setCoins(userData.coins);
+      setDifficultyRating(userData.difficultyRating);
+      userHighScore = userData.totalScore;
+      setHighScore(userHighScore);
+
+
       if (cloudGameState) {
         try {
           setBoard(cloudGameState.board);
@@ -173,10 +181,6 @@ export default function Home() {
           }
           setDifficultyRating(cloudGameState.difficultyRating || 1.0);
           
-          // User-specific data still needs to be fetched
-          const userData = await getUserData(user.uid);
-          setCoins(userData.coins);
-
           setGameState('playing');
           setIsProcessing(false);
           loadedFromCloud = true;
@@ -185,29 +189,23 @@ export default function Home() {
             // Fallback to new game
         }
       }
-
-      // If not loaded from cloud, fetch user specific data
-      if (!loadedFromCloud) {
-        const data = await getUserData(user.uid);
-        userCoins = data.coins;
-        userDifficulty = data.difficultyRating;
-        setCoins(userCoins);
-        setDifficultyRating(userDifficulty);
-      }
     } else {
       // Guest user logic
       const localCoins = localStorage.getItem('doggyCrushCoins');
       userCoins = localCoins ? parseInt(localCoins, 10) : 0;
       const localDifficulty = localStorage.getItem('doggyCrushDifficulty');
       userDifficulty = localDifficulty ? parseFloat(localDifficulty) : 1.0;
+      const localHighScore = localStorage.getItem('doggyCrushHighScore');
+      userHighScore = localHighScore ? parseInt(localHighScore, 10) : 0;
       setCoins(userCoins);
       setDifficultyRating(userDifficulty);
+      setHighScore(userHighScore);
     }
     
     if (loadedFromCloud) return;
 
     const savedGame = localStorage.getItem('doggyCrushGameState');
-    if (savedGame) {
+    if (savedGame && !user) { // Only load from local if not logged in
       try {
         const {
           board,
@@ -234,10 +232,8 @@ export default function Home() {
         if (typeof savedWinStreak === 'number') {
           setWinStreak(savedWinStreak);
         }
-        if (!user) {
-          setCoins(savedCoins || 0);
-          setDifficultyRating(savedDifficulty || 1.0);
-        }
+        setCoins(savedCoins || 0);
+        setDifficultyRating(savedDifficulty || 1.0);
         setGameState('playing');
         setIsProcessing(false);
       } catch (e) {
@@ -291,15 +287,10 @@ export default function Home() {
     if (!user) {
       localStorage.setItem('doggyCrushCoins', coins.toString());
       localStorage.setItem('doggyCrushDifficulty', difficultyRating.toString());
+      localStorage.setItem('doggyCrushHighScore', highScore.toString());
     }
-  }, [coins, difficultyRating, user]);
+  }, [coins, difficultyRating, highScore, user]);
 
-  useEffect(() => {
-    const savedHighScore = localStorage.getItem('doggyCrushHighScore');
-    if (savedHighScore) {
-      setHighScore(parseInt(savedHighScore, 10));
-    }
-  }, []);
 
   const processMatchesAndCascades = useCallback(
     async (currentBoard: Board) => {
@@ -814,6 +805,9 @@ export default function Home() {
               title: 'Score Saved!',
               description: 'Your progress has been saved to the leaderboard.',
             });
+            // Refetch high score after update
+            const userData = await getUserData(user.uid);
+            setHighScore(userData.totalScore);
           }
         } catch (error) {
           toast({
@@ -845,9 +839,8 @@ export default function Home() {
   useEffect(() => {
     if (gameState !== 'playing' || board.length === 0 || isProcessing) return;
 
-    if (score > highScore) {
-      setHighScore(score);
-      localStorage.setItem('doggyCrushHighScore', score.toString());
+    if (score + (user ? highScore : 0) > highScore) {
+      setHighScore(score + (user ? highScore : 0));
     }
 
     if (score >= targetScore) {
@@ -871,6 +864,7 @@ export default function Home() {
     isProcessing,
     canBuyContinue,
     coins,
+    user,
   ]);
 
   const handleLevelEndClick = useCallback(
