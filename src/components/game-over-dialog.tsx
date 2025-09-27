@@ -9,7 +9,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
-import { Loader2, PartyPopper, Frown, RefreshCw, Coins, Star, Zap, GaugeCircle, Repeat } from 'lucide-react';
+import { Loader2, PartyPopper, Frown, RefreshCw, Coins, Star, Zap, GaugeCircle } from 'lucide-react';
 import type { GameState } from '@/lib/types';
 import { useSound } from '@/hooks/use-sound';
 
@@ -28,7 +28,6 @@ interface GameOverDialogProps {
   coins: number;
   canBuyContinue: boolean;
   onBuyExtraMoves: () => void;
-  onRestart: () => void;
 }
 
 export default function GameOverDialog({
@@ -41,7 +40,6 @@ export default function GameOverDialog({
   coins,
   canBuyContinue,
   onBuyExtraMoves,
-  onRestart,
 }: GameOverDialogProps) {
   const isOpen = gameState === 'win' || gameState === 'lose';
   const { playSound } = useSound();

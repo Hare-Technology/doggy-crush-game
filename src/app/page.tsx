@@ -709,31 +709,31 @@ export default function Home() {
     // --- Adjust Difficulty Rating ---
     let difficultyAdjustment = 0;
     if (performanceScore > 80) {
-      difficultyAdjustment = 0.1; // Slower increase
-    } else if (performanceScore > 60) {
       difficultyAdjustment = 0.05;
+    } else if (performanceScore > 60) {
+      difficultyAdjustment = 0.025;
     } else if (performanceScore < 20) {
-      difficultyAdjustment = -0.15; // More forgiving decrease
-    } else if (performanceScore < 40) {
       difficultyAdjustment = -0.1;
+    } else if (performanceScore < 40) {
+      difficultyAdjustment = -0.05;
     }
     // Clamp the rating between a min and max
     const newDifficultyRating = Math.max(
       0.5,
-      Math.min(2.0, difficultyRating + difficultyAdjustment) // Lower max
+      Math.min(2.5, difficultyRating + difficultyAdjustment)
     );
     setDifficultyRating(newDifficultyRating);
   
     // --- Calculate Next Level Params based on new rating ---
-    const baseTargetIncrease = 1000 + level * 200; // Slower increase
-    const baseMoveAdjustment = 2; // More moves
+    const baseTargetIncrease = 500 + level * 100;
+    const baseMoveAdjustment = 3;
   
     const newTarget = Math.round(
       (targetScore + baseTargetIncrease) * newDifficultyRating
     );
     // Inverse relationship for moves: higher rating = fewer moves
     const newMoves = Math.max(
-      8, // Higher move floor
+      10,
       Math.round(
         (INITIAL_MOVES - nextLevel + baseMoveAdjustment) / newDifficultyRating
       )
@@ -796,7 +796,7 @@ export default function Home() {
             level: didWin ? level : 0,
             score,
             didWin,
-            coins: coinsEarned,
+            coins: didWin ? coinsEarned : -1, // Pass -1 to signal a reset
             difficultyRating: newDifficultyRating || difficultyRating,
           });
           // Refetch high score after update, regardless of win/loss
@@ -937,13 +937,6 @@ export default function Home() {
     levelEndTime,
   ]);
 
-  const handleRestart = useCallback(() => {
-    // When restarting a level after a loss, make it a bit easier
-    const newTarget = Math.max(1000, targetScore - 1000);
-    const newMoves = INITIAL_MOVES - level + 5; // Give more moves than the original attempt
-    startNewLevel(level, newTarget, newMoves);
-  }, [startNewLevel, level, targetScore]);
-
   const handleNewGame = useCallback(() => {
     startNewLevel(1, INITIAL_TARGET_SCORE, INITIAL_MOVES);
   }, [startNewLevel]);
@@ -1077,7 +1070,6 @@ export default function Home() {
         gameState={gameState}
         score={score}
         onNextLevel={handleNextLevel}
-        onRestart={handleRestart}
         onNewGame={handleNewGame}
         isProcessing={isProcessing}
         coinBonuses={coinBonuses}
