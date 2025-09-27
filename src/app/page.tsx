@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
@@ -381,16 +382,13 @@ export default function Home() {
         setIsAnimating(prev => new Set([...prev, ...matchedTileIds]));
         await delay(500);
 
-        let newBoardWithNulls = tempBoard.map(row =>
+        let newBoardWithNulls = boardWithPowerups.map(row =>
           row.map(tile => {
             if (!tile) return null;
-            if (matchedTileIds.has(tile.id)) {
+            // Check if the tile is part of a power-up creation. If so, don't remove it yet.
+            const isPowerUpTile = powerUps.some(p => p.tile.row === tile.row && p.tile.col === tile.col);
+            if (matchedTileIds.has(tile.id) && !isPowerUpTile) {
               return null;
-            }
-            // Preserve powerups that were just created in the same move
-            const powerUpHere = powerUps.find(p => p.tile.row === tile.row && p.tile.col === tile.col);
-            if(powerUpHere) {
-                return {...powerUpHere.tile, powerUp: powerUpHere.powerUp};
             }
             return tile;
           })
@@ -512,18 +510,19 @@ export default function Home() {
       let tempBoard = board.map(r => r.map(tile => (tile ? { ...tile } : null)));
       const { row: r1, col: c1 } = tile1;
       const { row: r2, col: c2 } = tile2;
+      
+      const tile1OnBoard = {...tile2, row:r1, col: c1};
+      const tile2OnBoard = {...tile1, row:r2, col: c2};
 
-      const landingTileForT1 = { ...tile2, row: r1, col: c1 };
-      const landingTileForT2 = { ...tile1, row: r2, col: c2 };
-
-      tempBoard[r1][c1] = landingTileForT1;
-      tempBoard[r2][c2] = landingTileForT2;
+      tempBoard[r1][c1] = tile1OnBoard;
+      tempBoard[r2][c2] = tile2OnBoard;
 
       setBoard(tempBoard);
       await delay(500);
 
-      const { matches, powerUps } = findMatches(tempBoard, tile1, tile2);
-      if (matches.length === 0 && powerUps.length === 0) {
+      const { matches, powerUps } = findMatches(tempBoard, tile1OnBoard, tile2OnBoard);
+      
+      if (matches.length === 0) {
         setBoard(board); // Swap back
         await delay(500);
         setIsProcessing(false);
@@ -532,7 +531,7 @@ export default function Home() {
 
       setMovesLeft(prev => prev - 1); // Decrement moves only on a valid swap
 
-      const boardAfterMatches = await processMatchesAndCascades(tempBoard, tile1, tile2);
+      const boardAfterMatches = await processMatchesAndCascades(tempBoard, tile1OnBoard, tile2OnBoard);
 
       let finalBoard = boardAfterMatches;
       while (!checkBoardForMoves(finalBoard)) {

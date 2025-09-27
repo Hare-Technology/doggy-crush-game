@@ -4,6 +4,7 @@
 
 
 
+
 import { BOARD_SIZE, TILE_TYPES } from './constants';
 import type { Board, Tile, PowerUpType, TileType as TileTypeEnum } from './types';
 
@@ -141,8 +142,8 @@ export const findMatches = (
     let powerUpTile: Tile | undefined;
     
     // Find the tile on the current board that was part of the swap
-    const swappedTile1OnBoard = swappedTile1 ? match.find(t => t.id === swappedTile1.id) : undefined;
-    const swappedTile2OnBoard = swappedTile2 ? match.find(t => t.id === swappedTile2.id) : undefined;
+    const swappedTile1OnBoard = swappedTile1 ? match.find(t => t.row === swappedTile1.row && t.col === swappedTile1.col) : undefined;
+    const swappedTile2OnBoard = swappedTile2 ? match.find(t => t.row === swappedTile2.row && t.col === swappedTile2.col) : undefined;
 
     if (swappedTile1OnBoard) {
       powerUpTile = swappedTile1OnBoard;
