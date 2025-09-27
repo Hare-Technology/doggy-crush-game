@@ -50,12 +50,11 @@ const Tile: FC<{
   isAnimating: boolean;
   isShuffling: boolean;
   isHint: boolean;
-}> = ({ tile, onClick, isSelected, isAnimating, isShuffling, isHint }) => {
+  isNew: boolean;
+}> = ({ tile, onClick, isSelected, isAnimating, isShuffling, isHint, isNew }) => {
   const Icon = tile.powerUp
     ? powerUpComponentMap[tile.powerUp]
     : tileComponentMap[tile.type] || PawIcon;
-
-  const allTilesRef = useRef<Map<number, HTMLDivElement | null>>(new Map());
 
   const style: React.CSSProperties = {
     left: `${(tile.col / BOARD_SIZE) * 100}%`,
@@ -64,7 +63,7 @@ const Tile: FC<{
     height: `calc(${100 / BOARD_SIZE}% - 4px)`,
     margin: '2px',
     backgroundColor: `hsl(var(--tile-color-${tile.type}))`,
-    transition: 'top 1s ease-out, left 0.5s ease-out',
+    transition: 'top 0.5s ease-out, left 0.5s ease-out',
   };
 
   let animationClass = '';
@@ -77,6 +76,9 @@ const Tile: FC<{
     animationClass = 'animate-shuffle';
   } else if (isAnimating) {
     animationClass = 'animate-pop';
+  } else if (isNew) {
+    style['--delay'] = `${tile.row * 0.05 + tile.col * 0.02}s`;
+    animationClass = 'animate-drop-in';
   }
 
   return (
@@ -184,6 +186,7 @@ const GameBoard: FC<GameBoardProps> = ({
             isAnimating={isAnimating.has(tile.id)}
             isShuffling={isShuffling}
             isHint={!!(hintTile && hintTile.id === tile.id)}
+            isNew={isNew}
           />
         );
       })}
