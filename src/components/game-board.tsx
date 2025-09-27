@@ -50,7 +50,8 @@ const Tile: FC<{
   isAnimating: boolean;
   isShuffling: boolean;
   isHint: boolean;
-}> = ({ tile, onClick, isSelected, isAnimating, isShuffling, isHint }) => {
+  hasDropped: boolean;
+}> = ({ tile, onClick, isSelected, isAnimating, isShuffling, isHint, hasDropped }) => {
   const Icon = tile.powerUp
     ? powerUpComponentMap[tile.powerUp]
     : tileComponentMap[tile.type] || PawIcon;
@@ -64,26 +65,37 @@ const Tile: FC<{
     height: `calc(${100 / BOARD_SIZE}% - 4px)`,
     margin: '2px',
     backgroundColor: `hsl(var(--tile-color-${tile.type}))`,
-    transitionTimingFunction: 'cubic-bezier(0.34, 1.56, 0.64, 1)',
   };
 
+  let animationClass = '';
   if (isShuffling) {
     style['--x'] = `${left}%`;
     style['--y'] = `${top}%`;
     style['--center-x'] = '50%';
     style['--center-y'] = '50%';
     style['--delay'] = `${Math.random() * 0.3}s`;
+    animationClass = 'animate-shuffle';
+  } else if (isAnimating) {
+    animationClass = 'animate-pop';
+  } else if (!hasDropped) {
+    // Only apply drop-in animation if it hasn't dropped before
+    const delay = (BOARD_SIZE - tile.row - 1) * 0.05 + tile.col * 0.02;
+    style['--delay'] = `${delay}s`;
+    animationClass = 'animate-drop-in';
+  } else {
+     // Normal transition for swaps and gravity
+     style.transition = 'top 0.7s cubic-bezier(0.34, 1.56, 0.64, 1)';
   }
+
 
   return (
     <div
       onClick={onClick}
       className={cn(
-        'absolute rounded-lg flex items-center justify-center cursor-pointer transition-all duration-700',
+        'absolute rounded-lg flex items-center justify-center cursor-pointer',
         'shadow-md',
+        animationClass,
         isSelected && 'ring-4 ring-offset-2 ring-white z-10 scale-110',
-        isAnimating && 'animate-pop',
-        isShuffling && 'animate-shuffle',
         isHint && !isSelected && 'animate-flash',
         tile.powerUp && !isShuffling && 'animate-pulse'
       )}
@@ -109,6 +121,13 @@ const GameBoard: FC<GameBoardProps> = ({
   };
 
   const allTiles = board.flat().filter(Boolean) as TileType[];
+  const prevTileIds = React.useRef(new Set<number>());
+
+  React.useEffect(() => {
+    // Store current tile IDs to compare on next render
+    prevTileIds.current = new Set(allTiles.map(t => t.id));
+  }, [allTiles]);
+
 
   return (
     <div
@@ -170,6 +189,7 @@ const GameBoard: FC<GameBoardProps> = ({
           isAnimating={isAnimating.has(tile.id)}
           isShuffling={isShuffling}
           isHint={!!(hintTile && hintTile.id === tile.id)}
+          hasDropped={prevTileIds.current.has(tile.id)}
         />
       ))}
     </div>

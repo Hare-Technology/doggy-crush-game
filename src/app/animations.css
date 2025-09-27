@@ -63,3 +63,30 @@
 .animate-flash {
   animation: flash 2s ease-in-out infinite;
 }
+
+@keyframes drop-in {
+  0% {
+    transform: translateY(-500%);
+    animation-timing-function: cubic-bezier(0.3, 0, 0.8, 0.15);
+  }
+  25% {
+    transform: translateY(0);
+    animation-timing-function: cubic-bezier(0.2, 0.85, 0.4, 1.2);
+  }
+  50% {
+    transform: translateY(-10%);
+    animation-timing-function: cubic-bezier(0.6, 0, 0.8, 0.15);
+  }
+  75% {
+    transform: translateY(0);
+    animation-timing-function: cubic-bezier(0.2, 0.85, 0.4, 1);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+.animate-drop-in {
+  animation: drop-in 0.7s forwards;
+  animation-delay: var(--delay);
+}
