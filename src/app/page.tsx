@@ -91,7 +91,7 @@ export default function Home() {
   }, [gameState, isProcessing, resetHintTimer]);
 
   const startNewLevel = useCallback(
-    (newLevel: number, newMoves: number, newTarget: number) => {
+    (newLevel: number, newTarget: number, newMoves: number) => {
       resetTileIdCounter();
       setLevel(newLevel);
       setMovesLeft(newMoves);
@@ -179,10 +179,10 @@ export default function Home() {
         setGameState('playing');
         setIsProcessing(false);
       } catch (e) {
-        startNewLevel(1, INITIAL_MOVES, INITIAL_TARGET_SCORE);
+        startNewLevel(1, INITIAL_TARGET_SCORE, INITIAL_MOVES);
       }
     } else {
-      startNewLevel(1, INITIAL_MOVES, INITIAL_TARGET_SCORE);
+      startNewLevel(1, INITIAL_TARGET_SCORE, INITIAL_MOVES);
     }
   }, [user, startNewLevel]);
 
@@ -804,11 +804,11 @@ export default function Home() {
     // When restarting a level after a loss, make it a bit easier
     const newTarget = Math.max(1000, targetScore - 1000);
     const newMoves = INITIAL_MOVES - level + 5; // Give more moves than the original attempt
-    startNewLevel(level, newMoves, newTarget);
+    startNewLevel(level, newTarget, newMoves);
   }, [startNewLevel, level, targetScore]);
 
   const handleNewGame = useCallback(() => {
-    startNewLevel(1, INITIAL_MOVES, INITIAL_TARGET_SCORE);
+    startNewLevel(1, INITIAL_TARGET_SCORE, INITIAL_MOVES);
   }, [startNewLevel]);
 
   const getNextLevelParams = useCallback(() => {
@@ -911,7 +911,7 @@ export default function Home() {
 
   const handleNextLevel = useCallback(() => {
     const { nextLevel, newTarget, newMoves } = getNextLevelParams();
-    startNewLevel(nextLevel, newMoves, newTarget);
+    startNewLevel(nextLevel, newTarget, newMoves);
   }, [startNewLevel, getNextLevelParams]);
 
   const coinBonuses = useMemo(() => {
