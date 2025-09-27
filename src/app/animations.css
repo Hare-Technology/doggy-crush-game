@@ -66,27 +66,30 @@
 
 @keyframes drop-in {
   0% {
-    transform: translateY(-500%);
-    animation-timing-function: cubic-bezier(0.3, 0, 0.8, 0.15);
+    transform: translateY(0); /* Tile starts at top: -10% from JS */
+    animation-timing-function: cubic-bezier(0.3, 0, 0.8, 0.15); /* Ease in */
   }
   25% {
-    transform: translateY(0);
-    animation-timing-function: cubic-bezier(0.2, 0.85, 0.4, 1.2);
+    /* Use var to move to final calculated position */
+    transform: translateY(calc(var(--final-top) + 10%)); 
+    animation-timing-function: cubic-bezier(0.2, 0.85, 0.4, 1.2); /* Overshoot */
   }
   50% {
-    transform: translateY(-10%);
+    transform: translateY(calc(var(--final-top) + 10% - 10%)); /* Bounce back up slightly */
     animation-timing-function: cubic-bezier(0.6, 0, 0.8, 0.15);
   }
   75% {
-    transform: translateY(0);
+    transform: translateY(calc(var(--final-top) + 10%)); /* Settle back down */
     animation-timing-function: cubic-bezier(0.2, 0.85, 0.4, 1);
   }
   100% {
-    transform: translateY(0);
+    /* Final resting position */
+    transform: translateY(calc(var(--final-top) + 10%));
   }
 }
 
 .animate-drop-in {
+  /* It animates transform, but the final position is set by top/left in JS */
   animation: drop-in 1.2s forwards;
   animation-delay: var(--delay);
 }

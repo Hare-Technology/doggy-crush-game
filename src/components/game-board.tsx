@@ -55,11 +55,11 @@ const Tile: FC<{
   const Icon = tile.powerUp
     ? powerUpComponentMap[tile.powerUp]
     : tileComponentMap[tile.type] || PawIcon;
-  const top = (tile.row / BOARD_SIZE) * 100;
+  
   const left = (tile.col / BOARD_SIZE) * 100;
+  let top = (tile.row / BOARD_SIZE) * 100;
 
   const style: React.CSSProperties = {
-    top: `${top}%`,
     left: `${left}%`,
     width: `calc(${100 / BOARD_SIZE}% - 4px)`,
     height: `calc(${100 / BOARD_SIZE}% - 4px)`,
@@ -78,14 +78,25 @@ const Tile: FC<{
   } else if (isAnimating) {
     animationClass = 'animate-pop';
   } else if (isNew) {
-    // Only apply drop-in animation if it's a new tile
+    // If it's a new tile, render it above the board and let the animation bring it down.
+    // This prevents the flicker of it appearing in its final spot for one frame.
+    style.top = '-10%'; // Start above the board
     const delay = (tile.row) * 0.05 + tile.col * 0.02;
     style['--delay'] = `${delay}s`;
+    // The animation will handle moving it to its final `transform: translateY(0)`
     animationClass = 'animate-drop-in';
+    // We still need the final 'top' for the animation's 'to' state to be correct
+    style['--final-top'] = `${top}%`;
+  } else {
+    // For existing tiles that are just moving
+    style.top = `${top}%`;
   }
   
-  // Always apply transition for gravity and swaps
-  style.transition = 'top 1.2s cubic-bezier(0.3, 0, 0.8, 0.15), left 0.7s ease-out';
+  // Always apply transition for gravity and swaps, but not for new tiles animating in.
+  if (!isNew) {
+      style.transition = 'top 1.2s cubic-bezier(0.3, 0, 0.8, 0.15), left 0.7s ease-out';
+  }
+
 
   return (
     <div
