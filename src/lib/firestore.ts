@@ -53,21 +53,21 @@ export async function getLeaderboard(): Promise<LeaderboardEntry[]> {
     const usersCol = collection(db, 'users');
     const q = query(
       usersCol,
-      where('displayName', '!=', null),
-      orderBy('displayName'),
       orderBy('totalScore', 'desc'),
       limit(10)
     );
     const querySnapshot = await getDocs(q);
-    const leaderboardList = querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      name: doc.data().displayName,
-      totalScore: doc.data().totalScore || 0,
-      highestLevel: doc.data().highestLevel || 1,
-      wins: doc.data().wins || 0,
-      losses: doc.data().losses || 0,
-      totalCoinsEarned: doc.data().totalCoinsEarned || 0,
-    }));
+    const leaderboardList = querySnapshot.docs
+      .filter(doc => doc.data().displayName)
+      .map(doc => ({
+        id: doc.id,
+        name: doc.data().displayName,
+        totalScore: doc.data().totalScore || 0,
+        highestLevel: doc.data().highestLevel || 1,
+        wins: doc.data().wins || 0,
+        losses: doc.data().losses || 0,
+        totalCoinsEarned: doc.data().totalCoinsEarned || 0,
+      }));
     return leaderboardList;
   } catch (error) {
     console.error('Error fetching leaderboard: ', error);
@@ -81,7 +81,6 @@ export function getRealtimeLeaderboard(
   const usersCol = collection(db, 'users');
   const q = query(
     usersCol,
-    where('displayName', '!=', null),
     orderBy('totalScore', 'desc'),
     limit(10)
   );
@@ -90,7 +89,7 @@ export function getRealtimeLeaderboard(
     q,
     querySnapshot => {
       const leaderboardList = querySnapshot.docs
-        .filter(doc => doc.data().displayName) // Double-check to ensure displayName exists
+        .filter(doc => doc.data().displayName) // Ensure displayName exists
         .map(doc => ({
           id: doc.id,
           name: doc.data().displayName,
@@ -153,7 +152,8 @@ export async function updateUserStats(stats: UserStats): Promise<void> {
             newCoins += stats.coins;
             newTotalCoinsEarned += stats.coins;
         } else {
-            newCoins = 0; // Reset coins on loss
+            // On loss, reset the coin balance.
+            newCoins = 0; 
         }
 
         const updateData: any = {
