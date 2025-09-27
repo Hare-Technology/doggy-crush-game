@@ -1,6 +1,6 @@
 'use client';
 
-import React, { type FC, useRef, useEffect, useLayoutEffect } from 'react';
+import React, { type FC, useLayoutEffect, useRef } from 'react';
 import type { Board, Tile as TileType } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import {
@@ -50,41 +50,33 @@ const Tile: FC<{
   isAnimating: boolean;
   isShuffling: boolean;
   isHint: boolean;
-  fromY: number;
-}> = ({ tile, onClick, isSelected, isAnimating, isShuffling, isHint, fromY }) => {
+}> = ({ tile, onClick, isSelected, isAnimating, isShuffling, isHint }) => {
   const Icon = tile.powerUp
     ? powerUpComponentMap[tile.powerUp]
     : tileComponentMap[tile.type] || PawIcon;
 
-  const left = (tile.col / BOARD_SIZE) * 100;
-  const top = (tile.row / BOARD_SIZE) * 100;
+  const allTilesRef = useRef<Map<number, HTMLDivElement | null>>(new Map());
 
   const style: React.CSSProperties = {
-    left: `${left}%`,
-    top: `${top}%`,
+    left: `${(tile.col / BOARD_SIZE) * 100}%`,
+    top: `${(tile.row / BOARD_SIZE) * 100}%`,
     width: `calc(${100 / BOARD_SIZE}% - 4px)`,
     height: `calc(${100 / BOARD_SIZE}% - 4px)`,
     margin: '2px',
     backgroundColor: `hsl(var(--tile-color-${tile.type}))`,
-    transition: 'top 0.5s ease-out, left 0.5s ease-out',
+    transition: 'top 1s ease-out, left 0.5s ease-out',
   };
 
   let animationClass = '';
   if (isShuffling) {
-    style['--x'] = `${left}%`;
-    style['--y'] = `${top}%`;
+    style['--x'] = style.left;
+    style['--y'] = style.top;
     style['--center-x'] = '50%';
     style['--center-y'] = '50%';
     style['--delay'] = `${Math.random() * 0.3}s`;
     animationClass = 'animate-shuffle';
   } else if (isAnimating) {
     animationClass = 'animate-pop';
-  } else if (fromY !== top) {
-    style['--from-y'] = `${fromY}%`;
-    style['--to-y'] = `${top}%`;
-    const delay = (BOARD_SIZE - Math.abs(tile.row - (fromY / 100))) * 0.05 + tile.col * 0.02;
-    style['--delay'] = `${delay}s`;
-    animationClass = 'animate-drop-in';
   }
 
   return (
@@ -120,18 +112,15 @@ const GameBoard: FC<GameBoardProps> = ({
   };
   
   const allTiles = board.flat().filter(Boolean) as TileType[];
-  const tilePositions = useRef<Map<number, { top: number; left: number }>>(new Map());
+  const prevAllTiles = useRef<TileType[]>([]);
 
   useLayoutEffect(() => {
-    const newPositions = new Map();
-    allTiles.forEach(tile => {
-      newPositions.set(tile.id, {
-        top: (tile.row / BOARD_SIZE) * 100,
-        left: (tile.col / BOARD_SIZE) * 100,
-      });
-    });
-    tilePositions.current = newPositions;
+    prevAllTiles.current = allTiles;
   });
+
+  const getIsNew = (tile: TileType) => {
+    return !prevAllTiles.current.some(pt => pt.id === tile.id);
+  }
 
   return (
     <div
@@ -185,9 +174,7 @@ const GameBoard: FC<GameBoardProps> = ({
 
       {/* Tiles */}
       {allTiles.map(tile => {
-        const prevPosition = tilePositions.current.get(tile.id);
-        const fromY = prevPosition ? prevPosition.top : (tile.row / BOARD_SIZE) * 100;
-
+        const isNew = getIsNew(tile);
         return (
           <Tile
             key={tile.id}
@@ -197,7 +184,6 @@ const GameBoard: FC<GameBoardProps> = ({
             isAnimating={isAnimating.has(tile.id)}
             isShuffling={isShuffling}
             isHint={!!(hintTile && hintTile.id === tile.id)}
-            fromY={fromY}
           />
         );
       })}
