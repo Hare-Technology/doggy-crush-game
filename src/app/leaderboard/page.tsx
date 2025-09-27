@@ -16,7 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { getLeaderboard } from '@/lib/firestore';
+import { getRealtimeLeaderboard } from '@/lib/firestore';
 import type { LeaderboardEntry } from '@/lib/firestore';
 import { Trophy, Coins, Loader2 } from 'lucide-react';
 
@@ -25,24 +25,14 @@ export default function LeaderboardPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchLeaderboard = async () => {
-      setLoading(true);
-      try {
-        const data = await getLeaderboard();
-        setLeaderboardData(data);
-      } catch (error) {
-        console.error("Error fetching leaderboard:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchLeaderboard(); // Initial fetch
-
-    const intervalId = setInterval(fetchLeaderboard, 30000); // Fetch every 30 seconds
+    setLoading(true);
+    const unsubscribe = getRealtimeLeaderboard(data => {
+      setLeaderboardData(data);
+      setLoading(false);
+    });
 
     // Cleanup subscription on component unmount
-    return () => clearInterval(intervalId);
+    return () => unsubscribe();
   }, []);
 
   return (
