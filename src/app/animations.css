@@ -48,8 +48,13 @@
 
 @keyframes shuffle {
   from {
-    transform: translate(var(--start-x), var(--start-y)) scale(0.5);
+    transform: translate(var(--start-x), var(--start-y)) scale(0);
     opacity: 0;
+  }
+  50% {
+    transform: translate(calc(var(--start-x) * -0.5), calc(var(--start-y) * -0.5))
+      scale(0.75);
+    opacity: 1;
   }
   to {
     transform: translate(0, 0) scale(1);
@@ -58,5 +63,5 @@
 }
 
 .animate-shuffle {
-  animation: shuffle 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  animation: shuffle 1s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { type FC } from 'react';
+import React, { type FC, useMemo } from 'react';
 import type { Board, Tile as TileType } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import {
@@ -55,9 +55,16 @@ const Tile: FC<{
     ? powerUpComponentMap[tile.powerUp]
     : tileComponentMap[tile.type] || PawIcon;
 
-  const boardCenter = (BOARD_SIZE - 1) / 2;
-  const startX = `${(boardCenter - tile.col) * 100}%`;
-  const startY = `${(boardCenter - tile.row) * 100}%`;
+  // Memoize random start positions so they don't change on re-renders
+  const [startX, startY] = useMemo(() => {
+    if (isShuffling) {
+      const angle = Math.random() * Math.PI * 2;
+      const radius = 250; // Start off-screen
+      return [`${Math.cos(angle) * radius}%`, `${Math.sin(angle) * radius}%`];
+    }
+    return ['0%', '0%'];
+  }, [isShuffling]);
+
 
   const style: React.CSSProperties = {
     left: `${(tile.col / BOARD_SIZE) * 100}%`,
