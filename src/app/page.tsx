@@ -270,7 +270,7 @@ export default function Home() {
           playSound('match');
         }
 
-        const points = matches.length * 10 * cascadeCount;
+        const points = matches.length * 10 * cascadeCount * cascadeCount;
         totalPoints += points;
 
         let boardWithPowerups = tempBoard.map(row =>
@@ -654,36 +654,36 @@ export default function Home() {
     // --- Performance Score (0-100+) ---
     let performanceScore = 0;
     // 1. Moves left (up to 40 points)
-    performanceScore += Math.min(40, (movesLeft - purchasedMoves) * 2);
+    performanceScore += Math.min(40, (movesLeft - purchasedMoves) * 4); // easier to get points
     // 2. Time taken (up to 30 points, less time is better)
-    performanceScore += Math.max(0, 30 - (timeTaken - 30) / 5);
+    performanceScore += Math.max(0, 30 - (timeTaken - 60) / 10); // more forgiving time
     // 3. Powerups made (up to 20 points)
-    performanceScore += Math.min(20, powerUpsMade * 4);
+    performanceScore += Math.min(20, powerUpsMade * 5);
     // 4. Highest combo (up to 10 points)
-    performanceScore += Math.min(10, (highestCombo - 1) * 2);
+    performanceScore += Math.min(10, (highestCombo - 1) * 2.5);
   
     // --- Adjust Difficulty Rating ---
     let difficultyAdjustment = 0;
-    if (performanceScore > 75) {
-      difficultyAdjustment = 0.05; // Strong performance, increase difficulty
-    } else if (performanceScore < 40) {
-      difficultyAdjustment = -0.05; // Struggled, decrease difficulty
+    if (performanceScore > 85) {
+      difficultyAdjustment = 0.02; // Very gentle increase
+    } else if (performanceScore < 50) {
+      difficultyAdjustment = -0.08; // More significant decrease
     }
-    // Clamp the rating between a min and max
-    const newDifficultyRating = Math.max(0.5, Math.min(2.0, difficultyRating + difficultyAdjustment));
+     // Clamp the rating between a min and max
+    const newDifficultyRating = Math.max(0.2, Math.min(1.5, difficultyRating + difficultyAdjustment));
     setDifficultyRating(newDifficultyRating);
   
     // --- Calculate Next Level Params based on new rating ---
-    const baseTargetIncrease = 500 + level * 150;
-    const baseMoveAdjustment = 0;
+    const baseTargetIncrease = 250 + level * 100; // Slower increase
+    const baseMoveAdjustment = 5; // Start with more moves
   
     const newTarget = Math.round(
       (targetScore + baseTargetIncrease) * newDifficultyRating
     );
     // Inverse relationship for moves: higher rating = fewer moves
     const newMoves = Math.max(
-      10,
-      Math.round((INITIAL_MOVES - nextLevel + baseMoveAdjustment) / (newDifficultyRating * 0.8))
+      15, // Higher move floor
+      Math.round((INITIAL_MOVES - nextLevel + baseMoveAdjustment) / (newDifficultyRating * 0.9))
     );
   
     return {
@@ -898,7 +898,7 @@ export default function Home() {
         }, 50); // Small delay to ensure state update
     } else {
         const { nextLevel, newTarget, newMoves } = getNextLevelParams();
-        startNewLevel(newLevel, newTarget, newMoves);
+        startNewLevel(nextLevel, newTarget, newMoves);
     }
   }, [startNewLevel, getNextLevelParams, levelEndTime]);
 
