@@ -1,6 +1,6 @@
 'use client';
 
-import React, { type FC, useEffect, useRef } from 'react';
+import React, { type FC, useRef, useEffect } from 'react';
 import type { Board, Tile as TileType } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import {
@@ -85,7 +85,7 @@ const Tile: FC<{
   }
   
   // Always apply transition for gravity and swaps
-  style.transition = 'top 1.2s cubic-bezier(0.34, 1.56, 0.64, 1), left 0.7s ease-out';
+  style.transition = 'top 1.2s cubic-bezier(0.3, 0, 0.8, 0.15), left 0.7s ease-out';
 
   return (
     <div
@@ -120,16 +120,13 @@ const GameBoard: FC<GameBoardProps> = ({
   };
 
   const allTiles = board.flat().filter(Boolean) as TileType[];
-  const stableTileIds = useRef(new Set<number>());
-
+  const prevAllTiles = useRef<TileType[]>([]);
+  
   useEffect(() => {
-    // When not processing, it means animations are done and the board is stable.
-    // We can update the set of "stable" tiles that are visually on the board.
-    if (!isProcessing) {
-      stableTileIds.current = new Set(allTiles.map(t => t.id));
-    }
-  }, [isProcessing, allTiles]);
+    prevAllTiles.current = allTiles;
+  });
 
+  const prevTileIds = new Set(prevAllTiles.current.map(t => t.id));
 
   return (
     <div
@@ -191,7 +188,7 @@ const GameBoard: FC<GameBoardProps> = ({
           isAnimating={isAnimating.has(tile.id)}
           isShuffling={isShuffling}
           isHint={!!(hintTile && hintTile.id === tile.id)}
-          isNew={!stableTileIds.current.has(tile.id)}
+          isNew={!prevTileIds.has(tile.id)}
         />
       ))}
     </div>
