@@ -65,15 +65,21 @@
 }
 
 @keyframes drop-in {
-  from {
+  0% {
     transform: translateY(calc(var(--from-y) - var(--to-y)));
   }
-  to {
+  70% {
+    transform: translateY(0);
+  }
+  85% {
+    transform: translateY(-8px);
+  }
+  100% {
     transform: translateY(0);
   }
 }
 
 .animate-drop-in {
-  animation: drop-in 1s cubic-bezier(0.34, 1.2, 0.64, 1) forwards;
+  animation: drop-in 1s ease-out forwards;
   animation-delay: var(--delay);
 }
