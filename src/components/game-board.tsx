@@ -1,6 +1,6 @@
 'use client';
 
-import React, { type FC, useLayoutEffect, useRef } from 'react';
+import React, { type FC } from 'react';
 import type { Board, Tile as TileType } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import {
@@ -23,7 +23,6 @@ interface GameBoardProps {
   selectedTile: TileType | null;
   isProcessing: boolean;
   isAnimating: Set<number>;
-  isShuffling: boolean;
   hintTile: TileType | null;
 }
 
@@ -48,10 +47,8 @@ const Tile: FC<{
   onClick: () => void;
   isSelected: boolean;
   isAnimating: boolean;
-  isShuffling: boolean;
   isHint: boolean;
-  isNew: boolean;
-}> = ({ tile, onClick, isSelected, isAnimating, isShuffling, isHint, isNew }) => {
+}> = ({ tile, onClick, isSelected, isAnimating, isHint }) => {
   const Icon = tile.powerUp
     ? powerUpComponentMap[tile.powerUp]
     : tileComponentMap[tile.type] || PawIcon;
@@ -63,28 +60,8 @@ const Tile: FC<{
     height: `calc(${100 / BOARD_SIZE}% - 4px)`,
     margin: '2px',
     backgroundColor: `hsl(var(--tile-color-${tile.type}))`,
-    transition: 'top 0.5s ease-out, left 0.5s ease-out',
+    transition: 'top 0.3s ease-out, left 0.3s ease-out',
   };
-
-  let animationClass = '';
-  if (isShuffling) {
-    style['--x'] = style.left;
-    style['--y'] = style.top;
-    style['--center-x'] = '50%';
-    style['--center-y'] = '50%';
-    style['--delay'] = `${Math.random() * 0.3}s`;
-    animationClass = 'animate-shuffle';
-  } else if (isAnimating) {
-    animationClass = 'animate-pop';
-  } else if (isNew) {
-    style['--delay'] = `${(BOARD_SIZE - 1 - tile.row) * 0.05 + tile.col * 0.02}s`;
-    animationClass = 'animate-drop-in';
-  }
-
-  if (isNew) {
-    // For new tiles, remove the transition so it doesn't conflict with the keyframe animation
-    delete style.transition;
-  }
 
   return (
     <div
@@ -92,10 +69,10 @@ const Tile: FC<{
       className={cn(
         'absolute rounded-lg flex items-center justify-center cursor-pointer',
         'shadow-md',
-        animationClass,
+        isAnimating && 'animate-pop',
         isSelected && 'ring-4 ring-offset-2 ring-white z-10 scale-110',
         isHint && !isSelected && 'animate-flash',
-        tile.powerUp && !isShuffling && 'animate-pulse'
+        tile.powerUp && 'animate-pulse'
       )}
       style={style}
     >
@@ -110,7 +87,6 @@ const GameBoard: FC<GameBoardProps> = ({
   selectedTile,
   isProcessing,
   isAnimating,
-  isShuffling,
   hintTile,
 }) => {
   const handleTileClick = (tile: TileType) => {
@@ -119,15 +95,6 @@ const GameBoard: FC<GameBoardProps> = ({
   };
   
   const allTiles = board.flat().filter(Boolean) as TileType[];
-  const prevAllTiles = useRef<TileType[]>([]);
-
-  useLayoutEffect(() => {
-    prevAllTiles.current = allTiles;
-  });
-
-  const getIsNew = (tile: TileType) => {
-    return !prevAllTiles.current.some(pt => pt.id === tile.id);
-  }
 
   return (
     <div
@@ -180,21 +147,16 @@ const GameBoard: FC<GameBoardProps> = ({
       ))}
 
       {/* Tiles */}
-      {allTiles.map(tile => {
-        const isNew = getIsNew(tile);
-        return (
-          <Tile
-            key={tile.id}
-            tile={tile}
-            onClick={() => handleTileClick(tile)}
-            isSelected={!!(selectedTile && selectedTile.id === tile.id)}
-            isAnimating={isAnimating.has(tile.id)}
-            isShuffling={isShuffling}
-            isHint={!!(hintTile && hintTile.id === tile.id)}
-            isNew={isNew}
-          />
-        );
-      })}
+      {allTiles.map(tile => (
+        <Tile
+          key={tile.id}
+          tile={tile}
+          onClick={() => handleTileClick(tile)}
+          isSelected={!!(selectedTile && selectedTile.id === tile.id)}
+          isAnimating={isAnimating.has(tile.id)}
+          isHint={!!(hintTile && hintTile.id === tile.id)}
+        />
+      ))}
     </div>
   );
 };

@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
@@ -137,7 +135,6 @@ export default function Home() {
 
   const [levelStartTime, setLevelStartTime] = useState(0);
   const [levelEndTime, setLevelEndTime] = useState(0);
-  const [isShuffling, setIsShuffling] = useState(false);
   const [hintTile, setHintTile] = useState<Tile | null>(null);
   const hintTimer = useRef<NodeJS.Timeout | null>(null);
   const [canBuyContinue, setCanBuyContinue] = useState(true);
@@ -179,7 +176,6 @@ export default function Home() {
       setIsProcessing(true);
       setLevelStartTime(Date.now());
       setLevelEndTime(0);
-      setIsShuffling(true);
       setCanBuyContinue(true);
       setPendingRainbowPurchase(false);
 
@@ -221,12 +217,7 @@ export default function Home() {
       } while (!checkBoardForMoves(newBoard));
 
       setBoard(newBoard);
-      const doShuffle = async () => {
-        await delay(1000); // Wait for shuffle animation
-        setIsShuffling(false);
-        setIsProcessing(false);
-      };
-      doShuffle();
+      setIsProcessing(false);
     },
     [user]
   );
@@ -385,7 +376,7 @@ export default function Home() {
         const matchedTileIds = new Set(matches.map(t => t.id));
         
         setIsAnimating(prev => new Set([...prev, ...matchedTileIds]));
-        await delay(700);
+        await delay(300);
 
         let boardWithNulls = boardWithPowerups.map(row =>
           row.map(tile => {
@@ -400,19 +391,15 @@ export default function Home() {
         
         setIsAnimating(new Set());
         setBoard(boardWithNulls);
-        await delay(50); // Short delay for board to re-render with nulls before gravity
 
         let boardAfterGravity = applyGravity(boardWithNulls);
         setBoard(boardAfterGravity);
-        await delay(500);
+        await delay(300);
         
         let boardWithNewTiles = fillEmptyTiles(boardAfterGravity);
-        setBoard(boardWithNewTiles);
-        await delay(50); // Short delay for new tiles to render above board
-        
         boardAfterGravity = applyGravity(boardWithNewTiles);
         setBoard(boardAfterGravity);
-        await delay(500);
+        await delay(300);
 
         tempBoard = boardAfterGravity;
       }
@@ -437,7 +424,7 @@ export default function Home() {
       const clearedTileIds = new Set(clearedTiles.map(t => t.id));
       setIsAnimating(prev => new Set([...prev, ...clearedTileIds]));
       playSound('bomb');
-      await delay(700);
+      await delay(300);
 
       let boardWithNulls = initialBoard.map(row =>
         row.map(tile => {
@@ -452,19 +439,15 @@ export default function Home() {
       
       setIsAnimating(new Set());
       setBoard(boardWithNulls);
-      await delay(50);
 
       let boardAfterGravity = applyGravity(boardWithNulls);
       setBoard(boardAfterGravity);
-      await delay(500);
+      await delay(300);
 
       let boardWithNewTiles = fillEmptyTiles(boardAfterGravity);
-      setBoard(boardWithNewTiles);
-      await delay(50);
-      
       boardAfterGravity = applyGravity(boardWithNewTiles);
       setBoard(boardAfterGravity);
-      await delay(500);
+      await delay(300);
 
       const boardAfterCascade = await processMatchesAndCascades(
         boardAfterGravity
@@ -534,13 +517,13 @@ export default function Home() {
       tempBoard[r2][c2] = { ...tile1, row: r2, col: c2 };
       
       setBoard(tempBoard);
-      await delay(500);
+      await delay(300);
 
       const { matches, matchCount } = findMatches(tempBoard, tile1, tile2);
       
       if (matches.length === 0) {
         setBoard(board); // Swap back
-        await delay(500);
+        await delay(300);
         setIsProcessing(false);
         return; // Do not decrement moves
       }
@@ -560,12 +543,12 @@ export default function Home() {
       let finalBoard = boardAfterMatches;
       while (!checkBoardForMoves(finalBoard)) {
         toast({ title: 'No moves left, reshuffling!' });
-        await delay(500);
-        setIsShuffling(true);
-        let reshuffledBoard = createInitialBoard();
+        let reshuffledBoard;
+        do {
+            reshuffledBoard = createInitialBoard();
+        } while (!checkBoardForMoves(reshuffledBoard));
         setBoard(reshuffledBoard);
-        await delay(1000);
-        setIsShuffling(false);
+        await delay(500); // give time for user to see message
         finalBoard = await processMatchesAndCascades(reshuffledBoard);
       }
       setBoard(finalBoard);
@@ -608,12 +591,12 @@ export default function Home() {
   
         while (!checkBoardForMoves(currentBoard)) {
           toast({ title: 'No moves left, reshuffling!' });
-          await delay(500);
-          setIsShuffling(true);
-          let reshuffledBoard = createInitialBoard();
+          let reshuffledBoard;
+          do {
+              reshuffledBoard = createInitialBoard();
+          } while (!checkBoardForMoves(reshuffledBoard));
           setBoard(reshuffledBoard);
-          await delay(1000);
-          setIsShuffling(false);
+          await delay(500);
           currentBoard = await processMatchesAndCascades(reshuffledBoard);
         }
   
@@ -664,12 +647,12 @@ export default function Home() {
         
         while (!checkBoardForMoves(currentBoard)) {
           toast({ title: 'No moves left, reshuffling!' });
-          await delay(500);
-          setIsShuffling(true);
-          let reshuffledBoard = createInitialBoard();
+          let reshuffledBoard;
+          do {
+              reshuffledBoard = createInitialBoard();
+          } while (!checkBoardForMoves(reshuffledBoard));
           setBoard(reshuffledBoard);
-          await delay(1000);
-          setIsShuffling(false);
+          await delay(500);
           currentBoard = await processMatchesAndCascades(reshuffledBoard);
         }
         
@@ -721,12 +704,12 @@ export default function Home() {
   
           while (!checkBoardForMoves(currentBoard)) {
             toast({ title: 'No moves left, reshuffling!' });
-            await delay(500);
-            setIsShuffling(true);
-            let reshuffledBoard = createInitialBoard();
+            let reshuffledBoard;
+            do {
+                reshuffledBoard = createInitialBoard();
+            } while (!checkBoardForMoves(reshuffledBoard));
             setBoard(reshuffledBoard);
-            await delay(1000);
-            setIsShuffling(false);
+            await delay(500);
             currentBoard = await processMatchesAndCascades(reshuffledBoard);
           }
   
@@ -1121,7 +1104,6 @@ export default function Home() {
             selectedTile={selectedTile}
             isProcessing={isProcessing}
             isAnimating={isAnimating}
-            isShuffling={isShuffling}
             hintTile={hintTile}
           />
           <ComboEffect message={comboMessage} />
