@@ -368,21 +368,21 @@ export default function Home() {
         let boardWithPowerups = tempBoard.map(row =>
           row.map(tile => (tile ? { ...tile } : null))
         );
-
+        
+        let powerUpTileIds = new Set<number>();
         if (powerUps.length > 0) {
           localPowerUpsMade += powerUps.length;
           powerUps.forEach(p => {
             const { row, col } = p.tile;
-            // Ensure we are applying the powerup to the correct tile on the board
             const tileToUpdate = boardWithPowerups[row]?.[col];
             if (tileToUpdate) {
                 tileToUpdate.powerUp = p.powerUp;
+                powerUpTileIds.add(tileToUpdate.id);
             }
           });
         }
         
         const matchedTileIds = new Set(matches.map(t => t.id));
-        const powerUpTileIds = new Set(powerUps.map(p => p.tile.id));
         
         setIsAnimating(prev => new Set([...prev, ...matchedTileIds]));
         await delay(700);
@@ -399,12 +399,20 @@ export default function Home() {
         );
         
         setIsAnimating(new Set());
+        setBoard(boardWithNulls);
+        await delay(50); // Short delay for board to re-render with nulls before gravity
 
-        const boardWithNewTiles = fillEmptyTiles(boardWithNulls);
-        const boardAfterGravity = applyGravity(boardWithNewTiles);
-        
+        let boardAfterGravity = applyGravity(boardWithNulls);
         setBoard(boardAfterGravity);
-        await delay(900);
+        await delay(700);
+        
+        let boardWithNewTiles = fillEmptyTiles(boardAfterGravity);
+        setBoard(boardWithNewTiles);
+        await delay(50); // Short delay for new tiles to render above board
+        
+        boardAfterGravity = applyGravity(boardWithNewTiles);
+        setBoard(boardAfterGravity);
+        await delay(700);
 
         tempBoard = boardAfterGravity;
       }
@@ -443,13 +451,20 @@ export default function Home() {
       );
       
       setIsAnimating(new Set());
+      setBoard(boardWithNulls);
+      await delay(50);
 
-      let boardWithNewTiles = fillEmptyTiles(boardWithNulls);
-      const boardAfterGravity = applyGravity(boardWithNewTiles);
-
-
+      let boardAfterGravity = applyGravity(boardWithNulls);
       setBoard(boardAfterGravity);
-      await delay(900);
+      await delay(700);
+
+      let boardWithNewTiles = fillEmptyTiles(boardAfterGravity);
+      setBoard(boardWithNewTiles);
+      await delay(50);
+      
+      boardAfterGravity = applyGravity(boardWithNewTiles);
+      setBoard(boardAfterGravity);
+      await delay(700);
 
       const boardAfterCascade = await processMatchesAndCascades(
         boardAfterGravity
