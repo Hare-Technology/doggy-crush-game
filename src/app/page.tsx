@@ -758,10 +758,10 @@ export default function Home() {
   
     // --- Adjust Difficulty Rating ---
     let difficultyAdjustment = 0;
-    if (performanceScore > 80) {
-      difficultyAdjustment = 0.05;
-    } else if (performanceScore > 60) {
-      difficultyAdjustment = 0.02;
+    if (performanceScore > 85) { // Increased threshold
+      difficultyAdjustment = 0.1; // Increased adjustment
+    } else if (performanceScore > 65) { // Increased threshold
+      difficultyAdjustment = 0.05; // Increased adjustment
     } else if (performanceScore < 20) {
       difficultyAdjustment = -0.1;
     } else if (performanceScore < 40) {
@@ -775,7 +775,7 @@ export default function Home() {
     setDifficultyRating(newDifficultyRating);
   
     // --- Calculate Next Level Params based on new rating ---
-    const baseTargetIncrease = 250 + level * 50;
+    const baseTargetIncrease = 300 + level * 75; // Increased base and per-level amount
     const baseMoveAdjustment = 8;
   
     const newTarget = Math.round(
