@@ -146,7 +146,7 @@ export const findMatches = (
     } else if (match.length === 4) {
       const powerUpTile = match[1] || match[0];
       const newPowerupTile = {...powerUpTile, id: tileIdCounter++};
-      const isVertical = match[0].col === match[1].col;
+      const isVertical = match.every(t => t.col === match[0].col);
       powerUps.push({
         tile: newPowerupTile,
         powerUp: isVertical ? 'column_clear' : 'row_clear',
