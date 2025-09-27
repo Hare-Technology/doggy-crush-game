@@ -400,12 +400,12 @@ export default function Home() {
 
         let boardAfterGravity = applyGravity(boardWithNulls);
         setBoard(boardAfterGravity);
-        await delay(300);
+        await delay(500);
         
         let boardWithNewTiles = fillEmptyTiles(boardAfterGravity);
         boardAfterGravity = applyGravity(boardWithNewTiles);
         setBoard(boardAfterGravity);
-        await delay(300);
+        await delay(500);
 
         tempBoard = boardAfterGravity;
       }
@@ -448,12 +448,12 @@ export default function Home() {
 
       let boardAfterGravity = applyGravity(boardWithNulls);
       setBoard(boardAfterGravity);
-      await delay(300);
+      await delay(500);
 
       let boardWithNewTiles = fillEmptyTiles(boardAfterGravity);
       boardAfterGravity = applyGravity(boardWithNewTiles);
       setBoard(boardAfterGravity);
-      await delay(300);
+      await delay(500);
 
       const boardAfterCascade = await processMatchesAndCascades(
         boardAfterGravity
@@ -523,7 +523,7 @@ export default function Home() {
       tempBoard[r2][c2] = { ...tile1, row: r2, col: c2 };
       
       setBoard(tempBoard);
-      await delay(300);
+      await delay(500);
 
       const { matches, matchCount } = findMatches(tempBoard, tile1, tile2);
       
