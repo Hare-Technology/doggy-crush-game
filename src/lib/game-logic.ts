@@ -247,7 +247,7 @@ export const fillEmptyTiles = (board: Board): Board => {
         // Check potential match with the tile that will be below it after gravity
         if (i === emptyCount) { // This is the tile that will land at the top of the column
           const tileBelow = newBoard[0]?.[col];
-          if (newBoard[1]?.[col]?.type === tileBelow?.type) {
+          if (tileBelow && newBoard[1]?.[col]?.type === tileBelow.type) {
              exclude.push(tileBelow.type);
           }
         }
