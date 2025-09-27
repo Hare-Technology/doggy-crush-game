@@ -129,45 +129,36 @@ export async function updateUserStats(stats: UserStats): Promise<void> {
   try {
     await runTransaction(db, async transaction => {
       const userDoc = await transaction.get(userRef);
+      const currentData = userDoc.exists() ? userDoc.data() : null;
 
-      if (!userDoc.exists()) {
-        // This case is less likely if user is created on signup, but good for safety
-        transaction.set(userRef, {
-          totalScore: stats.score,
-          highestLevel: stats.level,
-          wins: stats.didWin ? 1 : 0,
-          losses: stats.didWin ? 0 : 1,
-          coins: stats.didWin ? stats.coins : 0,
-          totalCoinsEarned: stats.didWin ? stats.coins : 0,
-          difficultyRating: stats.difficultyRating || 1.0,
-        });
-      } else {
-        const currentData = userDoc.data();
-        
-        const newTotalScore = (currentData.totalScore || 0) + stats.score;
-        let newCoins = currentData.coins || 0;
-        let newTotalCoinsEarned = currentData.totalCoinsEarned || 0;
-
-        if (stats.didWin) {
-            newCoins += stats.coins;
-            newTotalCoinsEarned += stats.coins;
-        } else {
-            // On loss, reset the coin balance.
-            newCoins = 0; 
-        }
-
-        const updateData: any = {
-          totalScore: newTotalScore,
-          highestLevel: Math.max(currentData.highestLevel || 1, stats.level),
-          wins: (currentData.wins || 0) + (stats.didWin ? 1 : 0),
-          losses: (currentData.losses || 0) + (stats.didWin ? 0 : 1),
-          difficultyRating: stats.difficultyRating || 1.0,
-          coins: newCoins,
-          totalCoinsEarned: newTotalCoinsEarned,
-        };
-
-        transaction.update(userRef, updateData);
+      if (!currentData?.displayName) {
+          // Don't update stats for users without a display name, prevents anonymous data issues
+          return;
       }
+        
+      const newTotalScore = (currentData.totalScore || 0) + stats.score;
+      let newCoins = currentData.coins || 0;
+      let newTotalCoinsEarned = currentData.totalCoinsEarned || 0;
+
+      if (stats.didWin) {
+          newCoins += stats.coins;
+          newTotalCoinsEarned += stats.coins;
+      } else {
+          // On loss, reset the coin balance.
+          newCoins = 0; 
+      }
+
+      const updateData: any = {
+        totalScore: newTotalScore,
+        highestLevel: Math.max(currentData.highestLevel || 1, stats.level),
+        wins: (currentData.wins || 0) + (stats.didWin ? 1 : 0),
+        losses: (currentData.losses || 0) + (stats.didWin ? 0 : 1),
+        difficultyRating: stats.difficultyRating || 1.0,
+        coins: newCoins,
+        totalCoinsEarned: newTotalCoinsEarned,
+      };
+
+      transaction.update(userRef, updateData);
     });
   } catch (error) {
     console.error('Error updating user stats: ', error);
