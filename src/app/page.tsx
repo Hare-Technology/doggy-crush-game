@@ -222,7 +222,7 @@ export default function Home() {
 
       setBoard(newBoard);
       const doShuffle = async () => {
-        await delay(800); // Wait for shuffle animation
+        await delay(1000); // Wait for shuffle animation
         setIsShuffling(false);
         setIsProcessing(false);
       };
@@ -385,7 +385,7 @@ export default function Home() {
         const matchedTileIds = new Set(matches.map(t => t.id));
         
         setIsAnimating(prev => new Set([...prev, ...matchedTileIds]));
-        await delay(500);
+        await delay(700);
 
         let boardWithNulls = boardWithPowerups.map(row =>
           row.map(tile => {
@@ -404,7 +404,7 @@ export default function Home() {
 
         let boardAfterGravity = applyGravity(boardWithNulls);
         setBoard(boardAfterGravity);
-        await delay(800);
+        await delay(1000);
         
         let boardWithNewTiles = fillEmptyTiles(boardAfterGravity);
         setBoard(boardWithNewTiles);
@@ -412,7 +412,7 @@ export default function Home() {
         
         boardAfterGravity = applyGravity(boardWithNewTiles);
         setBoard(boardAfterGravity);
-        await delay(800);
+        await delay(1000);
 
         tempBoard = boardAfterGravity;
       }
@@ -437,7 +437,7 @@ export default function Home() {
       const clearedTileIds = new Set(clearedTiles.map(t => t.id));
       setIsAnimating(prev => new Set([...prev, ...clearedTileIds]));
       playSound('bomb');
-      await delay(500);
+      await delay(700);
 
       let boardWithNulls = initialBoard.map(row =>
         row.map(tile => {
@@ -456,7 +456,7 @@ export default function Home() {
 
       let boardAfterGravity = applyGravity(boardWithNulls);
       setBoard(boardAfterGravity);
-      await delay(800);
+      await delay(1000);
 
       let boardWithNewTiles = fillEmptyTiles(boardAfterGravity);
       setBoard(boardWithNewTiles);
@@ -464,7 +464,7 @@ export default function Home() {
       
       boardAfterGravity = applyGravity(boardWithNewTiles);
       setBoard(boardAfterGravity);
-      await delay(800);
+      await delay(1000);
 
       const boardAfterCascade = await processMatchesAndCascades(
         boardAfterGravity
@@ -534,13 +534,13 @@ export default function Home() {
       tempBoard[r2][c2] = { ...tile1, row: r2, col: c2 };
       
       setBoard(tempBoard);
-      await delay(300);
+      await delay(500);
 
       const { matches, matchCount } = findMatches(tempBoard, tile1, tile2);
       
       if (matches.length === 0) {
         setBoard(board); // Swap back
-        await delay(300);
+        await delay(500);
         setIsProcessing(false);
         return; // Do not decrement moves
       }
@@ -564,7 +564,7 @@ export default function Home() {
         setIsShuffling(true);
         let reshuffledBoard = createInitialBoard();
         setBoard(reshuffledBoard);
-        await delay(800);
+        await delay(1000);
         setIsShuffling(false);
         finalBoard = await processMatchesAndCascades(reshuffledBoard);
       }
@@ -612,7 +612,7 @@ export default function Home() {
           setIsShuffling(true);
           let reshuffledBoard = createInitialBoard();
           setBoard(reshuffledBoard);
-          await delay(800);
+          await delay(1000);
           setIsShuffling(false);
           currentBoard = await processMatchesAndCascades(reshuffledBoard);
         }
@@ -668,7 +668,7 @@ export default function Home() {
           setIsShuffling(true);
           let reshuffledBoard = createInitialBoard();
           setBoard(reshuffledBoard);
-          await delay(800);
+          await delay(1000);
           setIsShuffling(false);
           currentBoard = await processMatchesAndCascades(reshuffledBoard);
         }
@@ -725,7 +725,7 @@ export default function Home() {
             setIsShuffling(true);
             let reshuffledBoard = createInitialBoard();
             setBoard(reshuffledBoard);
-            await delay(800);
+            await delay(1000);
             setIsShuffling(false);
             currentBoard = await processMatchesAndCascades(reshuffledBoard);
           }

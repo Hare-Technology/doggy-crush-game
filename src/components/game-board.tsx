@@ -66,6 +66,7 @@ const Tile: FC<{
     height: `calc(${100 / BOARD_SIZE}% - 4px)`,
     margin: '2px',
     backgroundColor: `hsl(var(--tile-color-${tile.type}))`,
+    transition: 'top 0.5s ease-out, left 0.5s ease-out',
   };
 
   let animationClass = '';
