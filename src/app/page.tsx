@@ -708,24 +708,28 @@ export default function Home() {
     // --- Adjust Difficulty Rating ---
     let difficultyAdjustment = 0;
     if (performanceScore > 75) {
-      difficultyAdjustment = 0.05; // Stronger increase
+      difficultyAdjustment = 0.1; // Stronger increase
+    } else if (performanceScore > 50) {
+      difficultyAdjustment = 0.05;
+    } else if (performanceScore < 25) {
+      difficultyAdjustment = -0.1; // More forgiving decrease
     } else if (performanceScore < 40) {
-      difficultyAdjustment = -0.05; // Less forgiving decrease
+      difficultyAdjustment = -0.05; 
     }
      // Clamp the rating between a min and max
-    const newDifficultyRating = Math.max(0.5, Math.min(2.0, difficultyRating + difficultyAdjustment));
+    const newDifficultyRating = Math.max(0.5, Math.min(2.5, difficultyRating + difficultyAdjustment));
     setDifficultyRating(newDifficultyRating);
   
     // --- Calculate Next Level Params based on new rating ---
-    const baseTargetIncrease = 500 + level * 200; // Faster increase
-    const baseMoveAdjustment = 0; // Start with fewer moves
+    const baseTargetIncrease = 750 + level * 250; // Faster increase
+    const baseMoveAdjustment = -2; // Start with fewer moves
   
     const newTarget = Math.round(
       (targetScore + baseTargetIncrease) * newDifficultyRating
     );
     // Inverse relationship for moves: higher rating = fewer moves
     const newMoves = Math.max(
-      10, // Lower move floor
+      8, // Lower move floor
       Math.round((INITIAL_MOVES - nextLevel + baseMoveAdjustment) / newDifficultyRating)
     );
   

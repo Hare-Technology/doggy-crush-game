@@ -17,7 +17,6 @@ interface GameOverDialogProps {
   gameState: GameState;
   score: number;
   onNextLevel: () => void;
-  onRestart: () => void;
   onNewGame: () => void;
   isProcessing: boolean;
   coinBonuses: {
@@ -29,19 +28,20 @@ interface GameOverDialogProps {
   coins: number;
   canBuyContinue: boolean;
   onBuyExtraMoves: () => void;
+  onRestart: () => void;
 }
 
 export default function GameOverDialog({
   gameState,
   score,
   onNextLevel,
-  onRestart,
   onNewGame,
   isProcessing,
   coinBonuses,
   coins,
   canBuyContinue,
   onBuyExtraMoves,
+  onRestart,
 }: GameOverDialogProps) {
   const isOpen = gameState === 'win' || gameState === 'lose';
   const { playSound } = useSound();
@@ -49,10 +49,6 @@ export default function GameOverDialog({
   const handleNextLevelClick = () => {
     playSound('click');
     onNextLevel();
-  };
-  const handleRestartClick = () => {
-    playSound('click');
-    onRestart();
   };
   const handleNewGameClick = () => {
     playSound('click');
@@ -155,18 +151,6 @@ export default function GameOverDialog({
                    )}
                 </Button>
               )}
-               <Button
-                onClick={handleRestartClick}
-                disabled={isProcessing}
-                size="lg"
-                variant={showContinue ? "outline" : "default"}
-              >
-                {isProcessing ? (
-                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                ) : (
-                   'Try Again'
-                )}
-              </Button>
                <Button
                 onClick={handleNewGameClick}
                 disabled={isProcessing}
