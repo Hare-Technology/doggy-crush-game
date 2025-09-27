@@ -555,7 +555,8 @@ export default function Home() {
       }
   
       // Power-ups that activate on click DO NOT use a move
-      if (tile.powerUp && !selectedTile) {
+      // Rainbows should NOT activate on a single click
+      if (tile.powerUp && tile.powerUp !== 'rainbow' && !selectedTile) {
         setIsProcessing(true);
   
         const { clearedTiles, secondaryExplosions, spawnBomb } = activatePowerUp(
@@ -823,7 +824,6 @@ export default function Home() {
       purchasedMoves,
       difficultyRating,
       levelEndTime,
-      coins,
       highScore
     ]
   );
