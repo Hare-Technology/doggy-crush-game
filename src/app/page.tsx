@@ -808,8 +808,8 @@ export default function Home() {
     );
 
     // Base progression
-    const baseTargetIncrease = 1000 + level * 250;
-    const baseMoveAdjustment = -2;
+    const baseTargetIncrease = 500 + level * 150;
+    const baseMoveAdjustment = 0;
 
     // Performance Score (0-100+)
     let performanceScore = 0;
@@ -827,36 +827,36 @@ export default function Home() {
 
     if (performanceScore > 90) {
       // Exceptional+
-      targetMultiplier = 1.8;
-      moveAdjustment = -5;
+      targetMultiplier = 1.4;
+      moveAdjustment = -2;
       toast({
         title: 'Incredible!',
-        description: 'A true master! Prepare for a real challenge.',
+        description: 'You are a master! Let\'s see how you do now.',
       });
     } else if (performanceScore > 75) {
       // Strong
-      targetMultiplier = 1.5;
-      moveAdjustment = -3;
+      targetMultiplier = 1.2;
+      moveAdjustment = 0;
       toast({
         title: 'Great job!',
         description: "You're getting good at this. Let's ramp it up.",
       });
     } else if (performanceScore > 40) {
       // Average
-      targetMultiplier = 1.2;
-      moveAdjustment = 0;
+      targetMultiplier = 1.0;
+      moveAdjustment = 2;
     } else if (performanceScore > 20) {
       // Struggled
-      targetMultiplier = 0.9;
-      moveAdjustment = 2;
+      targetMultiplier = 0.8;
+      moveAdjustment = 4;
       toast({
         title: 'Phew, that was close!',
         description: "Let's try a slightly easier one.",
       });
     } else {
       // Mercy
-      targetMultiplier = 0.75;
-      moveAdjustment = 4;
+      targetMultiplier = 0.7;
+      moveAdjustment = 6;
       toast({
         title: "Don't give up!",
         description: "Here's a little boost for the next level.",
@@ -864,8 +864,8 @@ export default function Home() {
     }
 
     if (winStreak >= 3) {
-      targetMultiplier += 0.25; // Extra 25% score target on a streak
-      moveAdjustment -= 3; // 3 fewer moves on a streak
+      targetMultiplier += 0.1; // Extra 10% score target on a streak
+      moveAdjustment += 0; // No move penalty on streak
       toast({
         title: `On a Roll!`,
         description: `You've won ${winStreak} in a row! The heat is on!`,
@@ -876,7 +876,7 @@ export default function Home() {
       (targetScore + baseTargetIncrease) * targetMultiplier
     );
     const newMoves = Math.max(
-      8,
+      10,
       INITIAL_MOVES - nextLevel + baseMoveAdjustment + moveAdjustment
     );
 
