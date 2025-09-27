@@ -15,6 +15,7 @@ import {
 } from 'firebase/firestore';
 import { db } from './firebase';
 import type { Board, Tile } from './types';
+import { BOARD_SIZE } from './constants';
 
 
 export interface LeaderboardEntry {
@@ -28,7 +29,7 @@ export interface LeaderboardEntry {
 }
 
 export interface GameStateDocument {
-  board: Board;
+  flatBoard: (Tile | null)[];
   level: number;
   score: number;
   movesLeft: number;
@@ -81,7 +82,6 @@ export function getRealtimeLeaderboard(
   const q = query(
     usersCol,
     where('displayName', '!=', null),
-    orderBy('displayName'),
     orderBy('totalScore', 'desc'),
     limit(10)
   );
@@ -146,8 +146,15 @@ export async function updateUserStats(stats: UserStats): Promise<void> {
         const currentData = userDoc.data();
         
         const newTotalScore = (currentData.totalScore || 0) + stats.score;
-        const newCoins = stats.didWin ? (currentData.coins || 0) + stats.coins : 0;
-        const newTotalCoinsEarned = stats.didWin ? (currentData.totalCoinsEarned || 0) + stats.coins : currentData.totalCoinsEarned || 0;
+        let newCoins = currentData.coins || 0;
+        let newTotalCoinsEarned = currentData.totalCoinsEarned || 0;
+
+        if (stats.didWin) {
+            newCoins += stats.coins;
+            newTotalCoinsEarned += stats.coins;
+        } else {
+            newCoins = 0; // Reset coins on loss
+        }
 
         const updateData: any = {
           totalScore: newTotalScore,
@@ -217,7 +224,7 @@ export async function getUserData(userId: string): Promise<{coins: number, diffi
   }
 
 // Function to save the entire game state to Firestore
-export async function saveGameState(userId: string, state: GameStateDocument | null): Promise<void> {
+export async function saveGameState(userId: string, state: Omit<GameStateDocument, 'flatBoard'> & { board: Board } | null): Promise<void> {
   if (!userId) return;
   const gameStateRef = doc(db, 'gameState', userId);
   try {
@@ -225,7 +232,9 @@ export async function saveGameState(userId: string, state: GameStateDocument | n
       // If state is null, it means we want to clear the saved game
       await setDoc(gameStateRef, { empty: true });
     } else {
-      await setDoc(gameStateRef, state);
+      const { board, ...restOfState } = state;
+      const flatBoard = board.flat();
+      await setDoc(gameStateRef, { ...restOfState, flatBoard });
     }
   } catch (error) {
     console.error("Error saving game state:", error);
@@ -233,16 +242,24 @@ export async function saveGameState(userId: string, state: GameStateDocument | n
 }
 
 // Function to load the game state from Firestore
-export async function loadGameState(userId: string): Promise<GameStateDocument | null> {
+export async function loadGameState(userId: string): Promise<(Omit<GameStateDocument, 'flatBoard'> & { board: Board }) | null> {
   if (!userId) return null;
   const gameStateRef = doc(db, 'gameState', userId);
   try {
     const docSnap = await getDoc(gameStateRef);
     if (docSnap.exists() && !docSnap.data().empty) {
       // Basic validation to ensure it looks like a game state
-      const data = docSnap.data();
-      if (data.board && typeof data.level === 'number') {
-        return data as GameStateDocument;
+      const data = docSnap.data() as GameStateDocument;
+      if (data.flatBoard && typeof data.level === 'number') {
+        const { flatBoard, ...restOfState } = data;
+        
+        // Un-flatten the board
+        const board: Board = [];
+        for (let i = 0; i < BOARD_SIZE; i++) {
+          board.push(flatBoard.slice(i * BOARD_SIZE, (i + 1) * BOARD_SIZE));
+        }
+
+        return { ...restOfState, board };
       }
     }
     return null;
