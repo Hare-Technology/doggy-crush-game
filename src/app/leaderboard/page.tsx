@@ -16,7 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
+import { collection, query, limit, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { LeaderboardEntry } from '@/lib/firestore';
 import { Trophy, Coins, Loader2 } from 'lucide-react';
@@ -28,10 +28,11 @@ export default function LeaderboardPage() {
   useEffect(() => {
     setLoading(true);
     const usersCol = collection(db, 'users');
+    // Removed orderBy from the query to prevent index-related errors.
+    // Sorting will now be handled on the client.
     const q = query(
       usersCol,
-      orderBy('totalScore', 'desc'),
-      limit(10)
+      limit(25) // Fetch a bit more to sort from
     );
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -44,7 +45,12 @@ export default function LeaderboardPage() {
         losses: doc.data().losses || 0,
         totalCoinsEarned: doc.data().totalCoinsEarned || 0,
       }));
-      setLeaderboardData(leaderboardList);
+      // Sort the data on the client-side and take the top 10
+      const sortedList = leaderboardList
+        .sort((a, b) => b.totalScore - a.totalScore)
+        .slice(0, 10);
+        
+      setLeaderboardData(sortedList);
       setLoading(false);
     }, (error) => {
       console.error("Error fetching real-time leaderboard: ", error);
