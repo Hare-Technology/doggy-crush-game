@@ -135,27 +135,22 @@ export async function updateUserStats(stats: UserStats): Promise<void> {
       } else {
         const currentData = userDoc.data();
         
-        let newCoinTotal;
-        if (stats.didWin) {
-            newCoinTotal = increment(stats.coins);
-        } else if (stats.coins < 0) {
-            // Special case to reset coins to 0 on loss
-            newCoinTotal = 0;
-        } else {
-            newCoinTotal = currentData.coins; // No change if not win and not reset
-        }
-
         const updateData: any = {
           totalScore: increment(stats.score),
           highestLevel: Math.max(currentData.highestLevel || 1, stats.level),
           wins: increment(stats.didWin ? 1 : 0),
           losses: increment(stats.didWin ? 0 : 1),
-          coins: newCoinTotal,
           difficultyRating: stats.difficultyRating || 1.0,
         };
 
-        if (stats.didWin && stats.coins > 0) {
-          updateData.totalCoinsEarned = increment(stats.coins);
+        if (stats.didWin) {
+            updateData.coins = increment(stats.coins);
+            if (stats.coins > 0) {
+              updateData.totalCoinsEarned = increment(stats.coins);
+            }
+        } else {
+            // On loss, reset coins to 0.
+            updateData.coins = 0;
         }
 
         transaction.update(userRef, updateData);

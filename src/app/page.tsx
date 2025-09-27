@@ -708,28 +708,28 @@ export default function Home() {
     // --- Adjust Difficulty Rating ---
     let difficultyAdjustment = 0;
     if (performanceScore > 75) {
-      difficultyAdjustment = 0.1; // Stronger increase
+      difficultyAdjustment = 0.15; // Stronger increase
     } else if (performanceScore > 50) {
-      difficultyAdjustment = 0.05;
+      difficultyAdjustment = 0.08;
     } else if (performanceScore < 25) {
-      difficultyAdjustment = -0.1; // More forgiving decrease
+      difficultyAdjustment = -0.15; // More forgiving decrease
     } else if (performanceScore < 40) {
-      difficultyAdjustment = -0.05; 
+      difficultyAdjustment = -0.08; 
     }
      // Clamp the rating between a min and max
     const newDifficultyRating = Math.max(0.5, Math.min(2.5, difficultyRating + difficultyAdjustment));
     setDifficultyRating(newDifficultyRating);
   
     // --- Calculate Next Level Params based on new rating ---
-    const baseTargetIncrease = 750 + level * 250; // Faster increase
-    const baseMoveAdjustment = -2; // Start with fewer moves
+    const baseTargetIncrease = 1250 + level * 250; // Faster increase
+    const baseMoveAdjustment = -3; // Start with fewer moves
   
     const newTarget = Math.round(
       (targetScore + baseTargetIncrease) * newDifficultyRating
     );
     // Inverse relationship for moves: higher rating = fewer moves
     const newMoves = Math.max(
-      8, // Lower move floor
+      5, // Lower move floor
       Math.round((INITIAL_MOVES - nextLevel + baseMoveAdjustment) / newDifficultyRating)
     );
   
@@ -780,18 +780,7 @@ export default function Home() {
         setCoins(prev => prev + coinsEarned);
       } else {
         playSound('lose');
-        if(user) {
-            // Reset coins to 0 in firestore on loss
-            await updateUserStats({
-                userId: user.uid,
-                level: 0,
-                score: 0,
-                didWin: false,
-                coins: -coins, // This will be used to set coins to 0
-                difficultyRating: newDifficultyRating || difficultyRating
-            })
-        }
-        setCoins(0);
+        setCoins(0); // Reset coins locally on loss
       }
   
       if (user) {
@@ -801,7 +790,9 @@ export default function Home() {
             level: didWin ? level : 0,
             score,
             didWin,
-            coins: didWin ? coinsEarned : 0,
+            // On loss, didWin is false, so coins are not added.
+            // The reset to 0 is handled in the firestore function itself.
+            coins: didWin ? coinsEarned : 0, 
             difficultyRating: newDifficultyRating || difficultyRating,
           });
           if (didWin) {
