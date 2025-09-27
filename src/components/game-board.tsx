@@ -24,6 +24,7 @@ interface GameBoardProps {
   isProcessing: boolean;
   isAnimating: Set<number>;
   hintTile: TileType | null;
+  isShuffling: boolean;
 }
 
 const tileComponentMap: Record<string, React.ElementType> = {
@@ -48,10 +49,15 @@ const Tile: FC<{
   isSelected: boolean;
   isAnimating: boolean;
   isHint: boolean;
-}> = ({ tile, onClick, isSelected, isAnimating, isHint }) => {
+  isShuffling: boolean;
+}> = ({ tile, onClick, isSelected, isAnimating, isHint, isShuffling }) => {
   const Icon = tile.powerUp
     ? powerUpComponentMap[tile.powerUp]
     : tileComponentMap[tile.type] || PawIcon;
+
+  const boardCenter = (BOARD_SIZE - 1) / 2;
+  const startX = `${(boardCenter - tile.col) * 100}%`;
+  const startY = `${(boardCenter - tile.row) * 100}%`;
 
   const style: React.CSSProperties = {
     left: `${(tile.col / BOARD_SIZE) * 100}%`,
@@ -61,7 +67,9 @@ const Tile: FC<{
     margin: '2px',
     backgroundColor: `hsl(var(--tile-color-${tile.type}))`,
     transition: 'top 0.3s ease-out, left 0.3s ease-out',
-  };
+    '--start-x': startX,
+    '--start-y': startY,
+  } as React.CSSProperties;
 
   return (
     <div
@@ -72,7 +80,8 @@ const Tile: FC<{
         isAnimating && 'animate-pop',
         isSelected && 'ring-4 ring-offset-2 ring-white z-10 scale-110',
         isHint && !isSelected && 'animate-flash',
-        tile.powerUp && 'animate-pulse'
+        tile.powerUp && 'animate-pulse',
+        isShuffling && 'animate-shuffle'
       )}
       style={style}
     >
@@ -88,6 +97,7 @@ const GameBoard: FC<GameBoardProps> = ({
   isProcessing,
   isAnimating,
   hintTile,
+  isShuffling,
 }) => {
   const handleTileClick = (tile: TileType) => {
     if (isProcessing) return;
@@ -155,6 +165,7 @@ const GameBoard: FC<GameBoardProps> = ({
           isSelected={!!(selectedTile && selectedTile.id === tile.id)}
           isAnimating={isAnimating.has(tile.id)}
           isHint={!!(hintTile && hintTile.id === tile.id)}
+          isShuffling={isShuffling}
         />
       ))}
     </div>

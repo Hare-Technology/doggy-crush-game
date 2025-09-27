@@ -45,3 +45,18 @@
 .animate-flash {
   animation: flash 2s ease-in-out infinite;
 }
+
+@keyframes shuffle {
+  from {
+    transform: translate(var(--start-x), var(--start-y)) scale(0.5);
+    opacity: 0;
+  }
+  to {
+    transform: translate(0, 0) scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-shuffle {
+  animation: shuffle 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}

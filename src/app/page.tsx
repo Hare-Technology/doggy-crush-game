@@ -139,6 +139,7 @@ export default function Home() {
   const hintTimer = useRef<NodeJS.Timeout | null>(null);
   const [canBuyContinue, setCanBuyContinue] = useState(true);
   const [pendingRainbowPurchase, setPendingRainbowPurchase] = useState(false);
+  const [isShuffling, setIsShuffling] = useState(false);
 
   const scoreNeeded = useMemo(
     () => Math.max(0, targetScore - score),
@@ -174,6 +175,7 @@ export default function Home() {
       resetTileIdCounter();
       setGameState('playing');
       setIsProcessing(true);
+      setIsShuffling(true);
       setLevelStartTime(Date.now());
       setLevelEndTime(0);
       setCanBuyContinue(true);
@@ -217,7 +219,11 @@ export default function Home() {
       } while (!checkBoardForMoves(newBoard));
 
       setBoard(newBoard);
-      setIsProcessing(false);
+      
+      setTimeout(() => {
+        setIsShuffling(false);
+        setIsProcessing(false);
+      }, 1000);
     },
     [user]
   );
@@ -305,7 +311,7 @@ export default function Home() {
   }, [loadGame]);
 
   useEffect(() => {
-    if (gameStateRef.current.gameState === 'playing' && gameStateRef.current.board.length > 0 && !isProcessing) {
+    if (gameStateRef.current.gameState === 'playing' && gameStateRef.current.board.length > 0 && !isProcessing && !isShuffling) {
       const {board, idCounter, ...stateToSave} = gameStateRef.current;
       const serializableState = {
           ...stateToSave,
@@ -318,7 +324,7 @@ export default function Home() {
         localStorage.setItem('doggyCrushGameState', JSON.stringify({ ...serializableState, board }));
       }
     }
-  }, [currentGameState, user, isProcessing]);
+  }, [currentGameState, user, isProcessing, isShuffling]);
 
 
   useEffect(() => {
@@ -544,11 +550,13 @@ export default function Home() {
       while (!checkBoardForMoves(finalBoard)) {
         toast({ title: 'No moves left, reshuffling!' });
         let reshuffledBoard;
+        setIsShuffling(true);
         do {
             reshuffledBoard = createInitialBoard();
         } while (!checkBoardForMoves(reshuffledBoard));
         setBoard(reshuffledBoard);
-        await delay(500); // give time for user to see message
+        await delay(1000); // give time for animation
+        setIsShuffling(false);
         finalBoard = await processMatchesAndCascades(reshuffledBoard);
       }
       setBoard(finalBoard);
@@ -592,11 +600,13 @@ export default function Home() {
         while (!checkBoardForMoves(currentBoard)) {
           toast({ title: 'No moves left, reshuffling!' });
           let reshuffledBoard;
+          setIsShuffling(true);
           do {
               reshuffledBoard = createInitialBoard();
           } while (!checkBoardForMoves(reshuffledBoard));
           setBoard(reshuffledBoard);
-          await delay(500);
+          await delay(1000);
+          setIsShuffling(false);
           currentBoard = await processMatchesAndCascades(reshuffledBoard);
         }
   
@@ -648,11 +658,13 @@ export default function Home() {
         while (!checkBoardForMoves(currentBoard)) {
           toast({ title: 'No moves left, reshuffling!' });
           let reshuffledBoard;
+          setIsShuffling(true);
           do {
               reshuffledBoard = createInitialBoard();
           } while (!checkBoardForMoves(reshuffledBoard));
           setBoard(reshuffledBoard);
-          await delay(500);
+          await delay(1000);
+          setIsShuffling(false);
           currentBoard = await processMatchesAndCascades(reshuffledBoard);
         }
         
@@ -705,11 +717,13 @@ export default function Home() {
           while (!checkBoardForMoves(currentBoard)) {
             toast({ title: 'No moves left, reshuffling!' });
             let reshuffledBoard;
+            setIsShuffling(true);
             do {
                 reshuffledBoard = createInitialBoard();
             } while (!checkBoardForMoves(reshuffledBoard));
             setBoard(reshuffledBoard);
-            await delay(500);
+            await delay(1000);
+            setIsShuffling(false);
             currentBoard = await processMatchesAndCascades(reshuffledBoard);
           }
   
@@ -1105,6 +1119,7 @@ export default function Home() {
             isProcessing={isProcessing}
             isAnimating={isAnimating}
             hintTile={hintTile}
+            isShuffling={isShuffling}
           />
           <ComboEffect message={comboMessage} />
         </div>
