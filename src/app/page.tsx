@@ -184,28 +184,18 @@ export default function Home() {
           setGameState('playing');
           setIsProcessing(false);
           loadedFromCloud = true;
+          // Successfully loaded from cloud, so we can return.
+          return;
         } catch (e) {
             console.error("Failed to load cloud game state", e);
-            // Fallback to new game
+            // Fallback to local or new game
         }
       }
-    } else {
-      // Guest user logic
-      const localCoins = localStorage.getItem('doggyCrushCoins');
-      userCoins = localCoins ? parseInt(localCoins, 10) : 0;
-      const localDifficulty = localStorage.getItem('doggyCrushDifficulty');
-      userDifficulty = localDifficulty ? parseFloat(localDifficulty) : 1.0;
-      const localHighScore = localStorage.getItem('doggyCrushHighScore');
-      userHighScore = localHighScore ? parseInt(localHighScore, 10) : 0;
-      setCoins(userCoins);
-      setDifficultyRating(userDifficulty);
-      setHighScore(userHighScore);
-    }
+    } 
     
-    if (loadedFromCloud) return;
-
+    // This runs for guests, or for logged-in users if cloud load fails or is empty.
     const savedGame = localStorage.getItem('doggyCrushGameState');
-    if (savedGame && !user) { // Only load from local if not logged in
+    if (savedGame) { 
       try {
         const {
           board,
@@ -232,14 +222,32 @@ export default function Home() {
         if (typeof savedWinStreak === 'number') {
           setWinStreak(savedWinStreak);
         }
-        setCoins(savedCoins || 0);
-        setDifficultyRating(savedDifficulty || 1.0);
+
+        // For guests, load everything from local storage
+        if (!user) {
+            const localCoins = localStorage.getItem('doggyCrushCoins');
+            setCoins(localCoins ? parseInt(localCoins, 10) : 0);
+            const localDifficulty = localStorage.getItem('doggyCrushDifficulty');
+            setDifficultyRating(localDifficulty ? parseFloat(localDifficulty) : 1.0);
+            const localHighScore = localStorage.getItem('doggyCrushHighScore');
+            setHighScore(localHighScore ? parseInt(localHighScore, 10) : 0);
+        }
+        
         setGameState('playing');
         setIsProcessing(false);
       } catch (e) {
         startNewLevel(1, INITIAL_TARGET_SCORE, INITIAL_MOVES);
       }
     } else {
+      // No cloud save and no local save, start a fresh game.
+      if (!user) {
+        const localCoins = localStorage.getItem('doggyCrushCoins');
+        setCoins(localCoins ? parseInt(localCoins, 10) : 0);
+        const localDifficulty = localStorage.getItem('doggyCrushDifficulty');
+        setDifficultyRating(localDifficulty ? parseFloat(localDifficulty) : 1.0);
+        const localHighScore = localStorage.getItem('doggyCrushHighScore');
+        setHighScore(localHighScore ? parseInt(localHighScore, 10) : 0);
+      }
       startNewLevel(1, INITIAL_TARGET_SCORE, INITIAL_MOVES);
     }
   }, [user, startNewLevel]);
@@ -709,13 +717,13 @@ export default function Home() {
     // --- Adjust Difficulty Rating ---
     let difficultyAdjustment = 0;
     if (performanceScore > 80) {
-      difficultyAdjustment = 0.05;
-    } else if (performanceScore > 60) {
       difficultyAdjustment = 0.025;
+    } else if (performanceScore > 60) {
+      difficultyAdjustment = 0.01;
     } else if (performanceScore < 20) {
-      difficultyAdjustment = -0.1;
-    } else if (performanceScore < 40) {
       difficultyAdjustment = -0.05;
+    } else if (performanceScore < 40) {
+      difficultyAdjustment = -0.025;
     }
     // Clamp the rating between a min and max
     const newDifficultyRating = Math.max(
@@ -725,15 +733,15 @@ export default function Home() {
     setDifficultyRating(newDifficultyRating);
   
     // --- Calculate Next Level Params based on new rating ---
-    const baseTargetIncrease = 500 + level * 100;
-    const baseMoveAdjustment = 3;
+    const baseTargetIncrease = 300 + level * 75;
+    const baseMoveAdjustment = 5;
   
     const newTarget = Math.round(
       (targetScore + baseTargetIncrease) * newDifficultyRating
     );
     // Inverse relationship for moves: higher rating = fewer moves
     const newMoves = Math.max(
-      10,
+      12,
       Math.round(
         (INITIAL_MOVES - nextLevel + baseMoveAdjustment) / newDifficultyRating
       )
