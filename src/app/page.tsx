@@ -28,7 +28,7 @@ import {
 } from '@/lib/game-logic';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
-import { updateUserStats, getUserCoins } from '@/lib/firestore';
+import { updateUserStats, getUserData } from '@/lib/firestore';
 import { useSound } from '@/hooks/use-sound';
 
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
@@ -60,6 +60,7 @@ export default function Home() {
   const [winStreak, setWinStreak] = useState(0);
   const [canBuyContinue, setCanBuyContinue] = useState(true);
   const [pendingRainbowPurchase, setPendingRainbowPurchase] = useState(false);
+  const [difficultyRating, setDifficultyRating] = useState(1.0);
 
   const scoreNeeded = useMemo(
     () => Math.max(0, targetScore - score),
@@ -116,6 +117,11 @@ export default function Home() {
       ) {
         localStorage.removeItem('doggyCrushGameState');
         setWinStreak(0);
+        // Reset difficulty for a brand new game
+        setDifficultyRating(1.0);
+        if (!user) {
+          localStorage.setItem('doggyCrushDifficulty', '1.0');
+        }
       }
 
       let newBoard: Board;
@@ -131,19 +137,27 @@ export default function Home() {
       };
       doShuffle();
     },
-    []
+    [user]
   );
 
   const loadGame = useCallback(async () => {
     const savedGame = localStorage.getItem('doggyCrushGameState');
     let userCoins = 0;
+    let userDifficulty = 1.0;
+    
     if (user) {
-      userCoins = await getUserCoins(user.uid);
+        const data = await getUserData(user.uid);
+        userCoins = data.coins;
+        userDifficulty = data.difficultyRating;
     } else {
-      const localCoins = localStorage.getItem('doggyCrushCoins');
-      userCoins = localCoins ? parseInt(localCoins, 10) : 0;
+        const localCoins = localStorage.getItem('doggyCrushCoins');
+        userCoins = localCoins ? parseInt(localCoins, 10) : 0;
+        const localDifficulty = localStorage.getItem('doggyCrushDifficulty');
+        userDifficulty = localDifficulty ? parseFloat(localDifficulty) : 1.0;
     }
     setCoins(userCoins);
+    setDifficultyRating(userDifficulty);
+
 
     if (savedGame) {
       try {
@@ -157,6 +171,7 @@ export default function Home() {
           coins: savedCoins,
           winStreak: savedWinStreak,
           purchasedMoves: savedPurchasedMoves,
+          difficultyRating: savedDifficulty,
         } = JSON.parse(savedGame);
 
         setBoard(board);
@@ -171,10 +186,9 @@ export default function Home() {
         if (typeof savedWinStreak === 'number') {
           setWinStreak(savedWinStreak);
         }
-        // If user logs out, keep their local coins.
-        // If they log in, we defer to server coins.
         if (!user) {
           setCoins(savedCoins || 0);
+          setDifficultyRating(savedDifficulty || 1.0);
         }
         setGameState('playing');
         setIsProcessing(false);
@@ -202,6 +216,7 @@ export default function Home() {
         coins,
         winStreak,
         purchasedMoves,
+        difficultyRating,
       };
       localStorage.setItem('doggyCrushGameState', JSON.stringify(stateToSave));
     }
@@ -215,13 +230,15 @@ export default function Home() {
     coins,
     winStreak,
     purchasedMoves,
+    difficultyRating,
   ]);
 
   useEffect(() => {
     if (!user) {
       localStorage.setItem('doggyCrushCoins', coins.toString());
+      localStorage.setItem('doggyCrushDifficulty', difficultyRating.toString());
     }
-  }, [coins, user]);
+  }, [coins, difficultyRating, user]);
 
   useEffect(() => {
     const savedHighScore = localStorage.getItem('doggyCrushHighScore');
@@ -625,41 +642,102 @@ export default function Home() {
     ]
   );
 
+  const getNextLevelParams = useCallback(() => {
+    const nextLevel = level + 1;
+    const timeTaken = Math.max(
+      1,
+      Math.round((levelEndTime - levelStartTime) / 1000)
+    );
+  
+    // --- Performance Score (0-100+) ---
+    let performanceScore = 0;
+    // 1. Moves left (up to 40 points)
+    performanceScore += Math.min(40, (movesLeft - purchasedMoves) * 2);
+    // 2. Time taken (up to 30 points, less time is better)
+    performanceScore += Math.max(0, 30 - (timeTaken - 30) / 5);
+    // 3. Powerups made (up to 20 points)
+    performanceScore += Math.min(20, powerUpsMade * 4);
+    // 4. Highest combo (up to 10 points)
+    performanceScore += Math.min(10, (highestCombo - 1) * 2);
+  
+    // --- Adjust Difficulty Rating ---
+    let difficultyAdjustment = 0;
+    if (performanceScore > 75) {
+      difficultyAdjustment = 0.05; // Strong performance, increase difficulty
+    } else if (performanceScore < 40) {
+      difficultyAdjustment = -0.05; // Struggled, decrease difficulty
+    }
+    // Clamp the rating between a min and max
+    const newDifficultyRating = Math.max(0.5, Math.min(2.0, difficultyRating + difficultyAdjustment));
+    setDifficultyRating(newDifficultyRating);
+  
+    // --- Calculate Next Level Params based on new rating ---
+    const baseTargetIncrease = 500 + level * 150;
+    const baseMoveAdjustment = 0;
+  
+    const newTarget = Math.round(
+      (targetScore + baseTargetIncrease) * newDifficultyRating
+    );
+    // Inverse relationship for moves: higher rating = fewer moves
+    const newMoves = Math.max(
+      10,
+      Math.round((INITIAL_MOVES - nextLevel + baseMoveAdjustment) / (newDifficultyRating * 0.8))
+    );
+  
+    return {
+      nextLevel,
+      newTarget: Math.floor(newTarget / 100) * 100, // Round to nearest 100
+      newMoves,
+      newDifficultyRating,
+    };
+  }, [
+    level,
+    movesLeft,
+    targetScore,
+    levelStartTime,
+    levelEndTime,
+    powerUpsMade,
+    highestCombo,
+    purchasedMoves,
+    difficultyRating,
+  ]);
+
   const handleGameOver = useCallback(
-    async (didWin: boolean) => {
+    async (didWin: boolean, newDifficultyRating?: number) => {
       const endTime = Date.now();
       setLevelEndTime(endTime);
       if (!didWin) {
         localStorage.removeItem('doggyCrushGameState');
         setWinStreak(0);
-        setCanBuyContinue(false); // Can't buy continue after official game over
+        setCanBuyContinue(false);
       } else {
         setWinStreak(prev => prev + 1);
       }
-
+  
       let coinsEarned = 0;
       if (didWin) {
         playSound('win');
-        const timeTaken = Math.round((endTime - levelStartTime) / 1000); // in seconds
-        const timeBonus = Math.floor(Math.max(0, 180 - timeTaken) * 0.5); // 0.5 coin per second under 3 minutes
-        const moveBonus = (movesLeft - purchasedMoves) * 2; // 2 coins per move left, excluding purchased
-        const comboBonus = highestCombo * 10; // 10 coins per max combo
-        const powerUpBonus = powerUpsMade * 15; // 15 coins per power-up created
+        const timeTaken = Math.round((endTime - levelStartTime) / 1000);
+        const timeBonus = Math.floor(Math.max(0, 180 - timeTaken) * 0.5);
+        const moveBonus = (movesLeft - purchasedMoves) * 2;
+        const comboBonus = highestCombo * 10;
+        const powerUpBonus = powerUpsMade * 15;
         coinsEarned = timeBonus + moveBonus + comboBonus + powerUpBonus;
         setCoins(prev => prev + coinsEarned);
       } else {
         playSound('lose');
         setCoins(0);
       }
-
+  
       if (user) {
         try {
           await updateUserStats({
             userId: user.uid,
-            level: didWin ? level : 0, // only update level on win
+            level: didWin ? level : 0,
             score,
             didWin,
             coins: didWin ? coinsEarned : 0,
+            difficultyRating: newDifficultyRating || difficultyRating,
           });
           if (didWin) {
             toast({
@@ -675,10 +753,6 @@ export default function Home() {
           });
         }
       }
-
-      if (!didWin) {
-        // The restart logic will handle setting the level
-      }
     },
     [
       user,
@@ -691,8 +765,10 @@ export default function Home() {
       highestCombo,
       powerUpsMade,
       purchasedMoves,
+      difficultyRating,
     ]
   );
+  
 
   useEffect(() => {
     if (gameState !== 'playing' || board.length === 0 || isProcessing) return;
@@ -774,7 +850,8 @@ export default function Home() {
         const finalBoard = await processMatchesAndCascades(board);
         setBoard(finalBoard);
 
-        await handleGameOver(true);
+        const { newDifficultyRating } = getNextLevelParams();
+        await handleGameOver(true, newDifficultyRating);
         setGameState('win');
         setIsProcessing(false);
       };
@@ -787,6 +864,7 @@ export default function Home() {
     handleLevelEndClick,
     processMatchesAndCascades,
     handleGameOver,
+    getNextLevelParams,
   ]);
 
   const handleRestart = useCallback(() => {
@@ -799,104 +877,6 @@ export default function Home() {
   const handleNewGame = useCallback(() => {
     startNewLevel(1, INITIAL_TARGET_SCORE, INITIAL_MOVES);
   }, [startNewLevel]);
-
-  const getNextLevelParams = useCallback(() => {
-    const nextLevel = level + 1;
-    const timeTaken = Math.max(
-      1,
-      Math.round((levelEndTime - levelStartTime) / 1000)
-    );
-
-    // Base progression
-    const baseTargetIncrease = 500 + level * 150;
-    const baseMoveAdjustment = 0;
-
-    // Performance Score (0-100+)
-    let performanceScore = 0;
-    // 1. Moves left (up to 40 points)
-    performanceScore += Math.min(40, (movesLeft - purchasedMoves) * 2);
-    // 2. Time taken (up to 30 points, less time is better)
-    performanceScore += Math.max(0, 30 - (timeTaken - 30) / 5); // Lose points for every 5s over 30s
-    // 3. Powerups made (up to 20 points)
-    performanceScore += Math.min(20, powerUpsMade * 4);
-    // 4. Highest combo (up to 10 points)
-    performanceScore += Math.min(10, (highestCombo - 1) * 2);
-
-    let targetMultiplier = 1.0;
-    let moveAdjustment = 0;
-
-    if (performanceScore > 90) {
-      // Exceptional+
-      targetMultiplier = 1.4;
-      moveAdjustment = -2;
-      toast({
-        title: 'Incredible!',
-        description: 'You are a master! Let\'s see how you do now.',
-      });
-    } else if (performanceScore > 75) {
-      // Strong
-      targetMultiplier = 1.2;
-      moveAdjustment = 0;
-      toast({
-        title: 'Great job!',
-        description: "You're getting good at this. Let's ramp it up.",
-      });
-    } else if (performanceScore > 40) {
-      // Average
-      targetMultiplier = 1.0;
-      moveAdjustment = 2;
-    } else if (performanceScore > 20) {
-      // Struggled
-      targetMultiplier = 0.8;
-      moveAdjustment = 4;
-      toast({
-        title: 'Phew, that was close!',
-        description: "Let's try a slightly easier one.",
-      });
-    } else {
-      // Mercy
-      targetMultiplier = 0.7;
-      moveAdjustment = 6;
-      toast({
-        title: "Don't give up!",
-        description: "Here's a little boost for the next level.",
-      });
-    }
-
-    if (winStreak >= 3) {
-      targetMultiplier += 0.1; // Extra 10% score target on a streak
-      moveAdjustment += 0; // No move penalty on streak
-      toast({
-        title: `On a Roll!`,
-        description: `You've won ${winStreak} in a row! The heat is on!`,
-      });
-    }
-
-    const newTarget = Math.round(
-      (targetScore + baseTargetIncrease) * targetMultiplier
-    );
-    const newMoves = Math.max(
-      10,
-      INITIAL_MOVES - nextLevel + baseMoveAdjustment + moveAdjustment
-    );
-
-    return {
-      nextLevel,
-      newTarget: Math.floor(newTarget / 100) * 100,
-      newMoves,
-    };
-  }, [
-    level,
-    movesLeft,
-    targetScore,
-    levelStartTime,
-    levelEndTime,
-    powerUpsMade,
-    highestCombo,
-    toast,
-    winStreak,
-    purchasedMoves,
-  ]);
 
   const handleNextLevel = useCallback(() => {
     const { nextLevel, newTarget, newMoves } = getNextLevelParams();

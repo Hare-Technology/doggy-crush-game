@@ -63,6 +63,7 @@ interface UserStats {
   score: number;
   didWin: boolean;
   coins: number;
+  difficultyRating: number;
 }
 
 export async function updateUserStats(stats: UserStats): Promise<void> {
@@ -85,7 +86,7 @@ export async function updateUserStats(stats: UserStats): Promise<void> {
           losses: stats.didWin ? 0 : 1,
           coins: stats.didWin ? stats.coins : 0,
           totalCoinsEarned: stats.didWin ? stats.coins : 0,
-          // Note: displayName is not available here, it's set on signup
+          difficultyRating: stats.difficultyRating || 1.0,
         });
       } else {
         const currentData = userDoc.data();
@@ -103,6 +104,7 @@ export async function updateUserStats(stats: UserStats): Promise<void> {
           wins: increment(stats.didWin ? 1 : 0),
           losses: increment(stats.didWin ? 0 : 1),
           coins: newCoinTotal,
+          difficultyRating: stats.difficultyRating || 1.0,
         };
 
         if (stats.didWin && stats.coins > 0) {
@@ -136,17 +138,22 @@ export async function setUserDisplayName(
   }
 }
 
-export async function getUserCoins(userId: string): Promise<number> {
-  if (!userId) return 0;
-  const userRef = doc(db, 'users', userId);
-  try {
-    const userDoc = await getDoc(userRef);
-    if (userDoc.exists()) {
-      return userDoc.data().coins || 0;
+export async function getUserData(userId: string): Promise<{coins: number, difficultyRating: number}> {
+    if (!userId) return { coins: 0, difficultyRating: 1.0 };
+    const userRef = doc(db, 'users', userId);
+    try {
+      const userDoc = await getDoc(userRef);
+      if (userDoc.exists()) {
+        const data = userDoc.data();
+        return {
+          coins: data.coins || 0,
+          difficultyRating: data.difficultyRating || 1.0,
+        };
+      }
+      return { coins: 0, difficultyRating: 1.0 };
+    } catch (error) {
+      console.error('Error getting user data:', error);
+      return { coins: 0, difficultyRating: 1.0 };
     }
-    return 0;
-  } catch (error) {
-    console.error('Error getting user coins:', error);
-    return 0;
   }
-}
+
