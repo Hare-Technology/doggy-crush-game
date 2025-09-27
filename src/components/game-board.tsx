@@ -1,6 +1,6 @@
 'use client';
 
-import type { FC } from 'react';
+import React, { type FC } from 'react';
 import type { Board, Tile as TileType } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import {
