@@ -65,11 +65,11 @@ export const findMatches = (
   for (let row = 0; row < BOARD_SIZE; row++) {
     for (let col = 0; col < BOARD_SIZE - 2; ) {
       const tile = board[row][col];
-      if (tile) {
-        let match: Tile[] = [tile];
+      if (tile && !tile.powerUp) {
+        const match: Tile[] = [tile];
         for (let i = col + 1; i < BOARD_SIZE; i++) {
           const nextTile = board[row][i];
-          if (nextTile && nextTile.type === tile.type) {
+          if (nextTile && !nextTile.powerUp && nextTile.type === tile.type) {
             match.push(nextTile);
           } else {
             break;
@@ -89,11 +89,11 @@ export const findMatches = (
   for (let col = 0; col < BOARD_SIZE; col++) {
     for (let row = 0; row < BOARD_SIZE - 2; ) {
       const tile = board[row][col];
-      if (tile) {
-        let match: Tile[] = [tile];
+      if (tile && !tile.powerUp) {
+        const match: Tile[] = [tile];
         for (let i = row + 1; i < BOARD_SIZE; i++) {
           const nextTile = board[i][col];
-          if (nextTile && nextTile.type === tile.type) {
+          if (nextTile && !nextTile.powerUp && nextTile.type === tile.type) {
             match.push(nextTile);
           } else {
             break;
@@ -109,10 +109,7 @@ export const findMatches = (
     }
   }
   
-  const combinedMatches = [...horizontalMatches, ...verticalMatches].filter(match => 
-    // Filter out matches that are composed entirely of existing power-ups
-    !match.every(tile => !!tile.powerUp)
-  );
+  const combinedMatches = [...horizontalMatches, ...verticalMatches];
 
   // Detect intersections for rainbow power-ups
   for (const hMatch of horizontalMatches) {
@@ -122,7 +119,7 @@ export const findMatches = (
       const intersection = hMatch.find(ht =>
         vMatch.some(vt => vt.id === ht.id)
       );
-      if (intersection && !intersection.powerUp) {
+      if (intersection && !tilesInPowerups.has(intersection.id)) {
         const newPowerupTile = {...intersection, id: tileIdCounter++};
         hMatch.forEach(t => tilesInPowerups.add(t.id));
         vMatch.forEach(t => tilesInPowerups.add(t.id));
@@ -133,7 +130,8 @@ export const findMatches = (
 
   // Detect straight-line matches for other power-ups
   for (const match of combinedMatches) {
-    if (match.some(t => tilesInPowerups.has(t.id) || t.powerUp)) continue;
+    // If any tile in this match is already part of a power-up creation, skip it
+    if (match.some(t => tilesInPowerups.has(t.id))) continue;
     
     if (match.length >= 5) {
        const powerUpTile = match[Math.floor(match.length / 2)] || match[0];
