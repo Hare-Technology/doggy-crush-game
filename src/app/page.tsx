@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
@@ -909,6 +910,10 @@ export default function Home() {
     if (gameState !== 'level_end' || isProcessing) {
       return;
     }
+    // Set end time here, right before calculating next level params
+    if (levelEndTime === 0) {
+      setLevelEndTime(Date.now());
+    }
 
     const powerUpsOnBoard = board.flat().filter((t): t is Tile => !!t?.powerUp);
 
@@ -918,10 +923,7 @@ export default function Home() {
     } else {
       const finishLevel = async () => {
         setIsProcessing(true);
-        // Set end time here, right before calculating next level params
-        if (levelEndTime === 0) {
-          setLevelEndTime(Date.now());
-        }
+
         const finalBoard = await processMatchesAndCascades(board);
         setBoard(finalBoard);
 
@@ -955,18 +957,9 @@ export default function Home() {
   }, [startNewLevel]);
 
   const handleNextLevel = useCallback(() => {
-    if (levelEndTime === 0) {
-        // This is a fallback in case the useEffect didn't set it in time
-        setLevelEndTime(Date.now());
-        setTimeout(() => {
-            const { nextLevel, newTarget, newMoves } = getNextLevelParams();
-            startNewLevel(nextLevel, newTarget, newMoves);
-        }, 50); // Small delay to ensure state update
-    } else {
-        const { nextLevel, newTarget, newMoves } = getNextLevelParams();
-        startNewLevel(nextLevel, newTarget, newMoves);
-    }
-  }, [startNewLevel, getNextLevelParams, levelEndTime]);
+    const { nextLevel, newTarget, newMoves } = getNextLevelParams();
+    startNewLevel(nextLevel, newTarget, newMoves);
+  }, [startNewLevel, getNextLevelParams]);
 
   const coinBonuses = useMemo(() => {
     if (gameState !== 'win' || levelEndTime === 0) return null;
