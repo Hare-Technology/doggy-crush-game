@@ -698,9 +698,9 @@ export default function Home() {
     // --- Performance Score (0-100+) ---
     let performanceScore = 0;
     // 1. Moves left (up to 40 points)
-    performanceScore += Math.min(40, (movesLeft - purchasedMoves) * 2); 
+    performanceScore += Math.min(40, (movesLeft - purchasedMoves) * 2);
     // 2. Time taken (up to 30 points, less time is better)
-    performanceScore += Math.max(0, 30 - (timeTaken - 30) / 5);
+    performanceScore += Math.max(0, 30 - (timeTaken - 30) / 3); // More sensitive
     // 3. Powerups made (up to 20 points)
     performanceScore += Math.min(20, powerUpsMade * 4);
     // 4. Highest combo (up to 10 points)
@@ -708,30 +708,35 @@ export default function Home() {
   
     // --- Adjust Difficulty Rating ---
     let difficultyAdjustment = 0;
-    if (performanceScore > 75) {
-      difficultyAdjustment = 0.15; // Stronger increase
-    } else if (performanceScore > 50) {
-      difficultyAdjustment = 0.08;
-    } else if (performanceScore < 25) {
-      difficultyAdjustment = -0.15; // More forgiving decrease
+    if (performanceScore > 80) {
+      difficultyAdjustment = 0.25; // Stronger increase for high performance
+    } else if (performanceScore > 60) {
+      difficultyAdjustment = 0.15;
+    } else if (performanceScore < 20) {
+      difficultyAdjustment = -0.10; // Less forgiving decrease
     } else if (performanceScore < 40) {
-      difficultyAdjustment = -0.08; 
+      difficultyAdjustment = -0.05;
     }
-     // Clamp the rating between a min and max
-    const newDifficultyRating = Math.max(0.5, Math.min(2.5, difficultyRating + difficultyAdjustment));
+    // Clamp the rating between a min and max
+    const newDifficultyRating = Math.max(
+      0.5,
+      Math.min(3.0, difficultyRating + difficultyAdjustment) // Higher max
+    );
     setDifficultyRating(newDifficultyRating);
   
     // --- Calculate Next Level Params based on new rating ---
-    const baseTargetIncrease = 1250 + level * 250; // Faster increase
-    const baseMoveAdjustment = -3; // Start with fewer moves
+    const baseTargetIncrease = 1500 + level * 300; // Faster increase
+    const baseMoveAdjustment = -4; // Start with fewer moves
   
     const newTarget = Math.round(
       (targetScore + baseTargetIncrease) * newDifficultyRating
     );
     // Inverse relationship for moves: higher rating = fewer moves
     const newMoves = Math.max(
-      5, // Lower move floor
-      Math.round((INITIAL_MOVES - nextLevel + baseMoveAdjustment) / newDifficultyRating)
+      4, // Lower move floor
+      Math.round(
+        (INITIAL_MOVES - nextLevel + baseMoveAdjustment) / newDifficultyRating
+      )
     );
   
     return {
@@ -791,7 +796,7 @@ export default function Home() {
             level: didWin ? level : 0,
             score,
             didWin,
-            coins: didWin ? coinsEarned : 0, 
+            coins: didWin ? coinsEarned : -1, // Use -1 to signal a reset on loss
             difficultyRating: newDifficultyRating || difficultyRating,
           });
           // Refetch high score after update, regardless of win/loss
