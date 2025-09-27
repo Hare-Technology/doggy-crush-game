@@ -327,10 +327,7 @@ export default function Home() {
       let boardWithNulls = initialBoard.map(row =>
         row.map(tile => {
           if (!tile) return null;
-          // This check is important: don't nullify a tile that became a power-up
-          if (tile.powerUp && !clearedTileIds.has(tile.id)) {
-            return tile;
-          }
+          // If a tile is in the cleared set, it must be removed.
           if (clearedTileIds.has(tile.id)) {
             return null;
           }
@@ -359,9 +356,11 @@ export default function Home() {
   
   const handleBombChainReaction = useCallback(
     async (boardAfterPrimary: Board) => {
+      let tempBoard = boardAfterPrimary.map(r => r.map(t => t ? {...t} : null));
+
       // Find a random empty spot to spawn the new bomb
       const emptyCells: { row: number; col: number }[] = [];
-      boardAfterPrimary.forEach((row, r) => {
+      tempBoard.forEach((row, r) => {
         row.forEach((cell, c) => {
           if (!cell) {
             emptyCells.push({ row: r, col: c });
@@ -369,42 +368,33 @@ export default function Home() {
         });
       });
 
-      if (emptyCells.length === 0) return boardAfterPrimary;
+      if (emptyCells.length === 0) return tempBoard;
 
       const spawnLocation = emptyCells[Math.floor(Math.random() * emptyCells.length)];
       
-      let tempBoard = boardAfterPrimary.map(r => [...r]);
       const newBombId = tileIdCounter + 1000;
-      tempBoard = fillEmptyTiles(tempBoard, [{
-          row: spawnLocation.row,
-          col: spawnLocation.col,
-          powerUp: 'bomb',
-          id: newBombId,
-      }]);
+      setTileIdCounter(newBombId + 1);
 
+      tempBoard[spawnLocation.row][spawnLocation.col] = {
+        id: newBombId,
+        type: 'paw', // placeholder
+        row: spawnLocation.row,
+        col: spawnLocation.col,
+        powerUp: 'bomb',
+      };
+      
+      setBoard(tempBoard);
+      await delay(250); // Fuse time
 
-      const { newBoard: gravityBoard } = applyGravity(tempBoard);
-
-      setBoard(gravityBoard);
-      await delay(700); // Let gravity animation finish
-
-      // Now find the bomb on the board to detonate it
-      const bombToDetonate = gravityBoard.flat().find(t => t?.id === newBombId);
-
-      if (bombToDetonate) {
-        await delay(250); // Fuse time
-
-        const { clearedTiles: secondaryCleared } = activatePowerUp(
-          gravityBoard,
-          bombToDetonate,
-          undefined,
-          false // This is NOT a primary activation
-        );
-        setScore(prev => prev + secondaryCleared.length * 10);
-        const finalBoard = await processBoardChanges(gravityBoard, secondaryCleared);
-        return finalBoard;
-      }
-      return gravityBoard;
+      const { clearedTiles: secondaryCleared } = activatePowerUp(
+        tempBoard,
+        tempBoard[spawnLocation.row][spawnLocation.col]!,
+        undefined,
+        false // This is NOT a primary activation
+      );
+      setScore(prev => prev + secondaryCleared.length * 10);
+      const finalBoard = await processBoardChanges(tempBoard, secondaryCleared);
+      return finalBoard;
     },
     [processBoardChanges]
   );
@@ -474,7 +464,6 @@ export default function Home() {
 
         setIsProcessing(true);
         setPendingRainbowPurchase(false);
-        setMovesLeft(prev => prev - 1);
         setCoins(prev => prev - 300);
 
         toast({
@@ -742,7 +731,7 @@ export default function Home() {
 
       setIsProcessing(true);
 
-      const { clearedTiles, secondaryExplosions, spawnBomb } = activatePowerUp(
+      const { clearedTiles, secondaryExplosions } = activatePowerUp(
         board,
         tile
       );
