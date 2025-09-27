@@ -790,20 +790,12 @@ export default function Home() {
             level: didWin ? level : 0,
             score,
             didWin,
-            // On loss, didWin is false, so coins are not added.
-            // The reset to 0 is handled in the firestore function itself.
             coins: didWin ? coinsEarned : 0, 
             difficultyRating: newDifficultyRating || difficultyRating,
           });
-          if (didWin) {
-            toast({
-              title: 'Score Saved!',
-              description: 'Your progress has been saved to the leaderboard.',
-            });
-            // Refetch high score after update
-            const userData = await getUserData(user.uid);
-            setHighScore(userData.totalScore);
-          }
+          // Refetch high score after update, regardless of win/loss
+          const userData = await getUserData(user.uid);
+          setHighScore(userData.totalScore);
         } catch (error) {
           toast({
             title: 'Sync Error',
@@ -811,6 +803,11 @@ export default function Home() {
             variant: 'destructive',
           });
         }
+      } else {
+        // Handle guest high score
+         if (score > highScore) {
+            setHighScore(score);
+         }
       }
     },
     [
@@ -827,6 +824,7 @@ export default function Home() {
       difficultyRating,
       levelEndTime,
       coins,
+      highScore
     ]
   );
   
@@ -834,9 +832,8 @@ export default function Home() {
   useEffect(() => {
     if (gameState !== 'playing' || board.length === 0 || isProcessing) return;
 
-    const currentTotalScore = score + (user ? highScore - score : 0);
-    if (currentTotalScore > highScore) {
-      setHighScore(currentTotalScore);
+    if (score > highScore) {
+        setHighScore(score);
     }
   
     if (score >= targetScore) {
