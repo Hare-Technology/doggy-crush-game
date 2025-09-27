@@ -77,9 +77,13 @@ const Tile: FC<{
   } else if (isAnimating) {
     animationClass = 'animate-pop';
   } else if (isNew) {
-    style.transition = 'left 0.5s ease-out'; // only transition left for new tiles, top is handled by animation
-    style['--delay'] = `${tile.row * 0.05 + tile.col * 0.02}s`;
+    style['--delay'] = `${(BOARD_SIZE - 1 - tile.row) * 0.05 + tile.col * 0.02}s`;
     animationClass = 'animate-drop-in';
+  }
+
+  if (isNew) {
+    // For new tiles, remove the transition so it doesn't conflict with the keyframe animation
+    delete style.transition;
   }
 
   return (
