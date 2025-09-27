@@ -28,7 +28,12 @@ import {
 } from '@/lib/game-logic';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
-import { updateUserStats, getUserData } from '@/lib/firestore';
+import {
+  updateUserStats,
+  getUserData,
+  saveGameState,
+  loadGameState,
+} from '@/lib/firestore';
 import { useSound } from '@/hooks/use-sound';
 
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
@@ -115,7 +120,11 @@ export default function Home() {
         newMoves === INITIAL_MOVES &&
         newTarget === INITIAL_TARGET_SCORE
       ) {
+        // Clear local storage for new game start, cloud state handled separately
         localStorage.removeItem('doggyCrushGameState');
+        if (user) {
+          saveGameState(user.uid, null); // Clear cloud state
+        }
         setWinStreak(0);
         // Reset difficulty for a brand new game
         setDifficultyRating(1.0);
@@ -141,24 +150,62 @@ export default function Home() {
   );
 
   const loadGame = useCallback(async () => {
-    const savedGame = localStorage.getItem('doggyCrushGameState');
     let userCoins = 0;
     let userDifficulty = 1.0;
-    
+    let loadedFromCloud = false;
+
     if (user) {
+      const cloudGameState = await loadGameState(user.uid);
+      if (cloudGameState) {
+        try {
+          setBoard(cloudGameState.board);
+          setLevel(cloudGameState.level);
+          setScore(cloudGameState.score);
+          setMovesLeft(cloudGameState.movesLeft);
+          setTargetScore(cloudGameState.targetScore);
+          setPurchasedMoves(cloudGameState.purchasedMoves || 0);
+          if (typeof cloudGameState.idCounter === 'number') {
+            setTileIdCounter(cloudGameState.idCounter);
+          }
+          if (typeof cloudGameState.winStreak === 'number') {
+            setWinStreak(cloudGameState.winStreak);
+          }
+          setDifficultyRating(cloudGameState.difficultyRating || 1.0);
+          
+          // User-specific data still needs to be fetched
+          const userData = await getUserData(user.uid);
+          setCoins(userData.coins);
+
+          setGameState('playing');
+          setIsProcessing(false);
+          loadedFromCloud = true;
+        } catch (e) {
+            console.error("Failed to load cloud game state", e);
+            // Fallback to new game
+        }
+      }
+
+      // If not loaded from cloud, fetch user specific data
+      if (!loadedFromCloud) {
         const data = await getUserData(user.uid);
         userCoins = data.coins;
         userDifficulty = data.difficultyRating;
+        setCoins(userCoins);
+        setDifficultyRating(userDifficulty);
+      }
     } else {
-        const localCoins = localStorage.getItem('doggyCrushCoins');
-        userCoins = localCoins ? parseInt(localCoins, 10) : 0;
-        const localDifficulty = localStorage.getItem('doggyCrushDifficulty');
-        userDifficulty = localDifficulty ? parseFloat(localDifficulty) : 1.0;
+      // Guest user logic
+      const localCoins = localStorage.getItem('doggyCrushCoins');
+      userCoins = localCoins ? parseInt(localCoins, 10) : 0;
+      const localDifficulty = localStorage.getItem('doggyCrushDifficulty');
+      userDifficulty = localDifficulty ? parseFloat(localDifficulty) : 1.0;
+      setCoins(userCoins);
+      setDifficultyRating(userDifficulty);
     }
-    setCoins(userCoins);
-    setDifficultyRating(userDifficulty);
+    
+    if (loadedFromCloud) return;
 
-
+    const savedGame = localStorage.getItem('doggyCrushGameState');
     if (savedGame) {
       try {
         const {
@@ -205,7 +252,7 @@ export default function Home() {
   }, [loadGame]);
 
   useEffect(() => {
-    if (gameState === 'playing' && board.length > 0) {
+    if (gameState === 'playing' && board.length > 0 && !isProcessing) {
       const stateToSave = {
         board,
         level,
@@ -213,12 +260,16 @@ export default function Home() {
         movesLeft,
         targetScore,
         idCounter: tileIdCounter,
-        coins,
         winStreak,
         purchasedMoves,
         difficultyRating,
+        coins, // only for local
       };
-      localStorage.setItem('doggyCrushGameState', JSON.stringify(stateToSave));
+      if (user) {
+        saveGameState(user.uid, stateToSave);
+      } else {
+        localStorage.setItem('doggyCrushGameState', JSON.stringify(stateToSave));
+      }
     }
   }, [
     board,
@@ -231,6 +282,8 @@ export default function Home() {
     winStreak,
     purchasedMoves,
     difficultyRating,
+    user,
+    isProcessing,
   ]);
 
   useEffect(() => {
@@ -297,16 +350,14 @@ export default function Home() {
             if (matchedTileIds.has(tile.id)) {
               return null;
             }
+            // Preserve powerups that were just created in the same move
+            const powerUpHere = powerUps.find(p => p.tile.row === tile.row && p.tile.col === tile.col);
+            if(powerUpHere) {
+                return {...powerUpHere.tile, powerUp: powerUpHere.powerUp};
+            }
             return tile;
           })
         );
-
-        if (powerUps.length > 0) {
-          powerUps.forEach(p => {
-            const { row, col } = p.tile;
-            newBoardWithNulls[row][col] = { ...p.tile, powerUp: p.powerUp };
-          });
-        }
 
         setIsAnimating(new Set());
 
@@ -712,6 +763,9 @@ export default function Home() {
       }
       if (!didWin) {
         localStorage.removeItem('doggyCrushGameState');
+        if (user) {
+          saveGameState(user.uid, null); // Clear cloud state on final loss
+        }
         setWinStreak(0);
         setCanBuyContinue(false);
       } else {
@@ -730,6 +784,17 @@ export default function Home() {
         setCoins(prev => prev + coinsEarned);
       } else {
         playSound('lose');
+        if(user) {
+            // Reset coins to 0 in firestore on loss
+            await updateUserStats({
+                userId: user.uid,
+                level: 0,
+                score: 0,
+                didWin: false,
+                coins: -coins, // This will be used to set coins to 0
+                difficultyRating: newDifficultyRating || difficultyRating
+            })
+        }
         setCoins(0);
       }
   
@@ -771,6 +836,7 @@ export default function Home() {
       purchasedMoves,
       difficultyRating,
       levelEndTime,
+      coins,
     ]
   );
   

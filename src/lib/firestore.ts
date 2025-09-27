@@ -13,6 +13,8 @@ import {
   where,
 } from 'firebase/firestore';
 import { db } from './firebase';
+import type { Board, Tile } from './types';
+
 
 export interface LeaderboardEntry {
   id: string;
@@ -22,6 +24,18 @@ export interface LeaderboardEntry {
   wins: number;
   losses: number;
   totalCoinsEarned: number;
+}
+
+export interface GameStateDocument {
+  board: Board;
+  level: number;
+  score: number;
+  movesLeft: number;
+  targetScore: number;
+  idCounter: number;
+  winStreak: number;
+  purchasedMoves: number;
+  difficultyRating: number;
 }
 
 export async function isDisplayNameTaken(displayName: string): Promise<boolean> {
@@ -79,6 +93,7 @@ export async function updateUserStats(stats: UserStats): Promise<void> {
       const userDoc = await transaction.get(userRef);
 
       if (!userDoc.exists()) {
+        // This case is less likely if user is created on signup, but good for safety
         transaction.set(userRef, {
           totalScore: stats.score,
           highestLevel: stats.level,
@@ -91,11 +106,14 @@ export async function updateUserStats(stats: UserStats): Promise<void> {
       } else {
         const currentData = userDoc.data();
         
-        let newCoinTotal = currentData.coins || 0;
+        let newCoinTotal;
         if (stats.didWin) {
-            newCoinTotal += stats.coins;
+            newCoinTotal = increment(stats.coins);
+        } else if (stats.coins < 0) {
+            // Special case to reset coins to 0 on loss
+            newCoinTotal = 0;
         } else {
-            newCoinTotal = 0; // Reset coins on loss
+            newCoinTotal = currentData.coins; // No change if not win and not reset
         }
 
         const updateData: any = {
@@ -131,7 +149,17 @@ export async function setUserDisplayName(
   const userRef = doc(db, 'users', userId);
   try {
     // Set or update the user document with the display name.
-    await setDoc(userRef, { displayName }, { merge: true });
+    // Also initializes stats if they don't exist
+    await setDoc(userRef, { 
+        displayName: displayName,
+        totalScore: 0,
+        highestLevel: 1,
+        wins: 0,
+        losses: 0,
+        coins: 0,
+        totalCoinsEarned: 0,
+        difficultyRating: 1.0
+    }, { merge: true });
   } catch (error) {
     console.error('Error setting display name: ', error);
     throw new Error('Could not set display name.');
@@ -157,3 +185,38 @@ export async function getUserData(userId: string): Promise<{coins: number, diffi
     }
   }
 
+// Function to save the entire game state to Firestore
+export async function saveGameState(userId: string, state: GameStateDocument | null): Promise<void> {
+  if (!userId) return;
+  const gameStateRef = doc(db, 'gameState', userId);
+  try {
+    if (state === null) {
+      // If state is null, it means we want to clear the saved game
+      await setDoc(gameStateRef, { empty: true });
+    } else {
+      await setDoc(gameStateRef, state);
+    }
+  } catch (error) {
+    console.error("Error saving game state:", error);
+  }
+}
+
+// Function to load the game state from Firestore
+export async function loadGameState(userId: string): Promise<GameStateDocument | null> {
+  if (!userId) return null;
+  const gameStateRef = doc(db, 'gameState', userId);
+  try {
+    const docSnap = await getDoc(gameStateRef);
+    if (docSnap.exists() && !docSnap.data().empty) {
+      // Basic validation to ensure it looks like a game state
+      const data = docSnap.data();
+      if (data.board && typeof data.level === 'number') {
+        return data as GameStateDocument;
+      }
+    }
+    return null;
+  } catch (error) {
+    console.error("Error loading game state:", error);
+    return null;
+  }
+}
