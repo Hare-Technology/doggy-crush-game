@@ -2,6 +2,7 @@
 
 
 
+
 import { BOARD_SIZE, TILE_TYPES } from './constants';
 import type { Board, Tile, PowerUpType, TileType as TileTypeEnum } from './types';
 
@@ -137,19 +138,15 @@ export const findMatches = (
     if (match.some(t => tilesInPowerups.has(t.id))) continue;
 
     let powerUpTile: Tile | undefined;
-    if (swappedTile1 && match.some(t => t.id === swappedTile1.id)) {
-      powerUpTile = swappedTile1;
-    } else if (swappedTile2 && match.some(t => t.id === swappedTile2.id)) {
-      powerUpTile = swappedTile2;
-    }
+    
+    // Find the tile on the current board that was part of the swap
+    const swappedTile1OnBoard = swappedTile1 ? match.find(t => t.id === swappedTile1.id) : undefined;
+    const swappedTile2OnBoard = swappedTile2 ? match.find(t => t.id === swappedTile2.id) : undefined;
 
-    if (!powerUpTile && swappedTile1) {
-        const adjacentTile = match.find(t => areTilesAdjacent(t, swappedTile1!));
-        if(adjacentTile) powerUpTile = adjacentTile;
-    }
-     if (!powerUpTile && swappedTile2) {
-        const adjacentTile = match.find(t => areTilesAdjacent(t, swappedTile2!));
-        if(adjacentTile) powerUpTile = adjacentTile;
+    if (swappedTile1OnBoard) {
+      powerUpTile = swappedTile1OnBoard;
+    } else if (swappedTile2OnBoard) {
+      powerUpTile = swappedTile2OnBoard;
     }
 
     if (!powerUpTile) {
@@ -217,13 +214,11 @@ export const fillEmptyTiles = (
     for (let col = 0; col < BOARD_SIZE; col++) {
       if (newBoard[row][col] === null) {
         const exclude: string[] = [];
-
-        // Check for horizontal matches
+        // Check left for horizontal match
         if (col >= 2 && newBoard[row][col - 1]?.type === newBoard[row][col - 2]?.type) {
             exclude.push(newBoard[row][col - 1]!.type);
         }
-
-        // Check for vertical matches
+        // Check below for vertical match
         if (row >= 2 && newBoard[row - 1][col]?.type === newBoard[row - 2][col]?.type) {
             exclude.push(newBoard[row - 1][col]!.type);
         }
