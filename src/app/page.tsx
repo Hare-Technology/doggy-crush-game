@@ -339,14 +339,14 @@ export default function Home() {
 
 
   const processMatchesAndCascades = useCallback(
-    async (currentBoard: Board) => {
+    async (currentBoard: Board, tile1?: Tile, tile2?: Tile) => {
       let tempBoard = currentBoard;
       let cascadeCount = 0;
       let totalPoints = 0;
       let localPowerUpsMade = 0;
 
       while (true) {
-        const { matches, powerUps } = findMatches(tempBoard);
+        const { matches, powerUps } = findMatches(tempBoard, tile1, tile2);
         if (matches.length === 0) break;
 
         cascadeCount++;
@@ -372,8 +372,7 @@ export default function Home() {
           powerUps.forEach(p => {
             const { row, col } = p.tile;
             if (boardWithPowerups[row][col]) {
-              boardWithPowerups[row][col] = p.tile;
-              boardWithPowerups[row][col]!.powerUp = p.powerUp;
+              boardWithPowerups[row][col] = { ...p.tile, powerUp: p.powerUp };
             }
           });
         }
@@ -396,7 +395,7 @@ export default function Home() {
             return tile;
           })
         );
-
+        
         setIsAnimating(new Set());
 
         let boardWithNewTiles = fillEmptyTiles(newBoardWithNulls);
@@ -523,7 +522,7 @@ export default function Home() {
       setBoard(tempBoard);
       await delay(500);
 
-      const { matches, powerUps } = findMatches(tempBoard);
+      const { matches, powerUps } = findMatches(tempBoard, tile1, tile2);
       if (matches.length === 0 && powerUps.length === 0) {
         setBoard(board); // Swap back
         await delay(500);
@@ -533,7 +532,7 @@ export default function Home() {
 
       setMovesLeft(prev => prev - 1); // Decrement moves only on a valid swap
 
-      const boardAfterMatches = await processMatchesAndCascades(tempBoard);
+      const boardAfterMatches = await processMatchesAndCascades(tempBoard, tile1, tile2);
 
       let finalBoard = boardAfterMatches;
       while (!checkBoardForMoves(finalBoard)) {

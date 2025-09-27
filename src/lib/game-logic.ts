@@ -1,5 +1,6 @@
 
 
+
 import { BOARD_SIZE, TILE_TYPES } from './constants';
 import type { Board, Tile, PowerUpType, TileType as TileTypeEnum } from './types';
 
@@ -52,7 +53,9 @@ export const createInitialBoard = (): Board => {
 
 
 export const findMatches = (
-  board: Board
+  board: Board,
+  swappedTile1?: Tile,
+  swappedTile2?: Tile
 ): {
   matches: Tile[];
   powerUps: { tile: Tile; powerUp: PowerUpType }[];
@@ -61,102 +64,115 @@ export const findMatches = (
   const powerUps: { tile: Tile; powerUp: PowerUpType }[] = [];
   const tilesInPowerups = new Set<number>();
 
-  const horizontalMatches: Tile[][] = [];
+  const processMatch = (match: Tile[], isHorizontal: boolean) => {
+    if (match.length < 3) return;
+
+    // Check if this match has already been used to form a power-up
+    if (match.some(t => tilesInPowerups.has(t.id))) {
+      match.forEach(t => allMatches.add(t));
+      return;
+    }
+
+    let powerUpTile: Tile | undefined = undefined;
+
+    // Prioritize the swapped tile for power-up creation
+    if (swappedTile1 && match.some(t => t.id === swappedTile1.id)) {
+      powerUpTile = swappedTile1;
+    } else if (swappedTile2 && match.some(t => t.id === swappedTile2.id)) {
+      powerUpTile = swappedTile2;
+    } else {
+      // Fallback to the middle tile if swapped tiles aren't in this match
+      powerUpTile = match[Math.floor(match.length / 2)];
+    }
+    
+    if (!powerUpTile) return;
+
+    // A match of 4 or 5 that also includes a swapped tile can create a power-up
+    if (match.length >= 5) {
+      powerUps.push({
+        tile: powerUpTile,
+        powerUp: 'bomb',
+      });
+      match.forEach(t => tilesInPowerups.add(t.id));
+    } else if (match.length === 4) {
+      powerUps.push({
+        tile: powerUpTile,
+        powerUp: isHorizontal ? 'row_clear' : 'column_clear',
+      });
+      match.forEach(t => tilesInPowerups.add(t.id));
+    }
+    
+    match.forEach(t => allMatches.add(t));
+  };
+  
+  // Find horizontal matches
   for (let row = 0; row < BOARD_SIZE; row++) {
     for (let col = 0; col < BOARD_SIZE - 2; ) {
       const tile = board[row][col];
-      if (tile && !tile.powerUp) {
-        const match: Tile[] = [tile];
-        for (let i = col + 1; i < BOARD_SIZE; i++) {
-          const nextTile = board[row][i];
-          if (nextTile && !nextTile.powerUp && nextTile.type === tile.type) {
-            match.push(nextTile);
-          } else {
-            break;
-          }
+      if (tile) {
+        let matchLength = 1;
+        while (
+          col + matchLength < BOARD_SIZE &&
+          board[row][col + matchLength]?.type === tile.type
+        ) {
+          matchLength++;
         }
-        if (match.length >= 3) {
-          horizontalMatches.push(match);
+        if (matchLength >= 3) {
+          const match = Array.from({ length: matchLength }, (_, i) => board[row][col + i]!);
+          processMatch(match, true);
         }
-        col += match.length > 1 ? match.length : 1;
+        col += matchLength;
       } else {
         col++;
       }
     }
   }
 
-  const verticalMatches: Tile[][] = [];
+  // Find vertical matches
   for (let col = 0; col < BOARD_SIZE; col++) {
     for (let row = 0; row < BOARD_SIZE - 2; ) {
       const tile = board[row][col];
-      if (tile && !tile.powerUp) {
-        const match: Tile[] = [tile];
-        for (let i = row + 1; i < BOARD_SIZE; i++) {
-          const nextTile = board[i][col];
-          if (nextTile && !nextTile.powerUp && nextTile.type === tile.type) {
-            match.push(nextTile);
-          } else {
-            break;
-          }
+      if (tile) {
+        let matchLength = 1;
+        while (
+          row + matchLength < BOARD_SIZE &&
+          board[row + matchLength][col]?.type === tile.type
+        ) {
+          matchLength++;
         }
-        if (match.length >= 3) {
-          verticalMatches.push(match);
+        if (matchLength >= 3) {
+          const match = Array.from({ length: matchLength }, (_, i) => board[row + i][col]!);
+          processMatch(match, false);
         }
-        row += match.length > 1 ? match.length : 1;
+        row += matchLength;
       } else {
         row++;
       }
     }
   }
-  
-  const combinedMatches = [...horizontalMatches, ...verticalMatches];
 
   // Detect intersections for rainbow power-ups
-  for (const hMatch of horizontalMatches) {
-    if (hMatch.length < 3) continue;
-    for (const vMatch of verticalMatches) {
-       if (vMatch.length < 3) continue;
-      const intersection = hMatch.find(ht =>
-        vMatch.some(vt => vt.id === ht.id)
-      );
-      if (intersection && !tilesInPowerups.has(intersection.id)) {
-        const newPowerupTile = {...intersection, id: tileIdCounter++};
-        hMatch.forEach(t => tilesInPowerups.add(t.id));
-        vMatch.forEach(t => tilesInPowerups.add(t.id));
-        powerUps.push({ tile: newPowerupTile, powerUp: 'rainbow' });
+  for(let r=0; r<BOARD_SIZE; r++) {
+    for(let c=0; c<BOARD_SIZE; c++) {
+      const tile = board[r][c];
+      if(!tile) continue;
+
+      const hMatch = board[r].filter(t => t?.type === tile.type);
+      const vMatch = board.map(row => row[c]).filter(t => t?.type === tile.type);
+
+      if(hMatch.length >=3 && vMatch.length >=3) {
+         const intersectionTile = tile;
+         if(!tilesInPowerups.has(intersectionTile.id)) {
+            powerUps.push({tile: intersectionTile, powerUp: 'rainbow'});
+            hMatch.forEach(t => t && tilesInPowerups.add(t.id));
+            vMatch.forEach(t => t && tilesInPowerups.add(t.id));
+            hMatch.forEach(t => t && allMatches.add(t));
+            vMatch.forEach(t => t && allMatches.add(t));
+         }
       }
     }
   }
 
-  // Detect straight-line matches for other power-ups
-  for (const match of combinedMatches) {
-    // If any tile in this match is already part of a power-up creation, skip it
-    if (match.some(t => tilesInPowerups.has(t.id))) continue;
-    
-    if (match.length >= 5) {
-       const powerUpTile = match[Math.floor(match.length / 2)] || match[0];
-       const newPowerupTile = {...powerUpTile, id: tileIdCounter++};
-       powerUps.push({
-        tile: newPowerupTile,
-        powerUp: 'bomb',
-      });
-      match.forEach(t => tilesInPowerups.add(t.id));
-    } else if (match.length === 4) {
-      const powerUpTile = match[1] || match[0];
-      const newPowerupTile = {...powerUpTile, id: tileIdCounter++};
-      const isVertical = match.every(t => t.col === match[0].col);
-      powerUps.push({
-        tile: newPowerupTile,
-        powerUp: isVertical ? 'column_clear' : 'row_clear',
-      });
-      match.forEach(t => tilesInPowerups.add(t.id));
-    }
-  }
-  
-  combinedMatches.flat().forEach(tile => {
-      // Add all tiles from any valid match (including those that form powerups)
-      allMatches.add(tile);
-  })
 
   return { matches: Array.from(allMatches), powerUps };
 };
