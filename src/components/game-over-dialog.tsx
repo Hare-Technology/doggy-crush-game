@@ -167,6 +167,18 @@ export default function GameOverDialog({
                    'Try Again'
                 )}
               </Button>
+               <Button
+                onClick={handleNewGameClick}
+                disabled={isProcessing}
+                size="lg"
+                variant="outline"
+              >
+                {isProcessing ? (
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                ) : (
+                   'New Game'
+                )}
+              </Button>
             </>
           )}
         </AlertDialogFooter>
