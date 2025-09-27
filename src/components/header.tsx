@@ -18,6 +18,11 @@ export default function Header() {
   const handleLogout = async () => {
     try {
       await signOut(auth);
+      // Clear local storage to prevent data leakage between users
+      localStorage.removeItem('doggyCrushGameState');
+      localStorage.removeItem('doggyCrushCoins');
+      localStorage.removeItem('doggyCrushDifficulty');
+      localStorage.removeItem('doggyCrushHighScore');
       toast({
         title: 'Signed Out',
         description: 'You have been successfully signed out.',
