@@ -1,6 +1,6 @@
 'use client';
 
-import React, { type FC } from 'react';
+import React, { type FC, useEffect, useRef } from 'react';
 import type { Board, Tile as TileType } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import {
@@ -50,8 +50,8 @@ const Tile: FC<{
   isAnimating: boolean;
   isShuffling: boolean;
   isHint: boolean;
-  hasDropped: boolean;
-}> = ({ tile, onClick, isSelected, isAnimating, isShuffling, isHint, hasDropped }) => {
+  isNew: boolean;
+}> = ({ tile, onClick, isSelected, isAnimating, isShuffling, isHint, isNew }) => {
   const Icon = tile.powerUp
     ? powerUpComponentMap[tile.powerUp]
     : tileComponentMap[tile.type] || PawIcon;
@@ -77,16 +77,15 @@ const Tile: FC<{
     animationClass = 'animate-shuffle';
   } else if (isAnimating) {
     animationClass = 'animate-pop';
-  } else if (!hasDropped) {
-    // Only apply drop-in animation if it hasn't dropped before
-    const delay = (BOARD_SIZE - tile.row - 1) * 0.05 + tile.col * 0.02;
+  } else if (isNew) {
+    // Only apply drop-in animation if it's a new tile
+    const delay = (tile.row) * 0.05 + tile.col * 0.02;
     style['--delay'] = `${delay}s`;
     animationClass = 'animate-drop-in';
-  } else {
-     // Normal transition for swaps and gravity
-     style.transition = 'top 1s cubic-bezier(0.34, 1.56, 0.64, 1)';
   }
-
+  
+  // Always apply transition for gravity and swaps
+  style.transition = 'top 1s cubic-bezier(0.34, 1.56, 0.64, 1), left 0.5s ease-out';
 
   return (
     <div
@@ -121,12 +120,16 @@ const GameBoard: FC<GameBoardProps> = ({
   };
 
   const allTiles = board.flat().filter(Boolean) as TileType[];
-  const prevTileIds = React.useRef(new Set<number>());
+  const stableTileIds = useRef(new Set<number>());
+  const currentTileIds = new Set(allTiles.map(t => t.id));
 
-  React.useEffect(() => {
-    // Store current tile IDs to compare on next render
-    prevTileIds.current = new Set(allTiles.map(t => t.id));
-  }, [allTiles]);
+  useEffect(() => {
+    // When not processing, it means animations are done and the board is stable.
+    // We can update the set of "stable" tiles that are visually on the board.
+    if (!isProcessing) {
+      stableTileIds.current = new Set(allTiles.map(t => t.id));
+    }
+  }, [isProcessing, allTiles]);
 
 
   return (
@@ -189,7 +192,7 @@ const GameBoard: FC<GameBoardProps> = ({
           isAnimating={isAnimating.has(tile.id)}
           isShuffling={isShuffling}
           isHint={!!(hintTile && hintTile.id === tile.id)}
-          hasDropped={prevTileIds.current.has(tile.id)}
+          isNew={!stableTileIds.current.has(tile.id)}
         />
       ))}
     </div>
